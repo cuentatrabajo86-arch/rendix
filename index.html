@@ -1304,15 +1304,15 @@
         <input class="rx-fin" id="cliNombre" type="text" placeholder="Ej. María Pérez" value="${editar?escapar(cli.nombre||''):''}" />
       </div>
       <div class="rx-form-campo">
-        <label for="cliCedula">Cédula <span style="color:var(--niebla);font-weight:400">(opcional)</span></label>
+        <label for="cliCedula">Cédula</label>
         <input class="rx-fin" id="cliCedula" type="text" inputmode="numeric" placeholder="Número de documento" value="${editar?escapar(cli.cedula||''):''}" />
       </div>
       <div class="rx-form-campo">
-        <label for="cliTel">Teléfono <span style="color:var(--niebla);font-weight:400">(opcional)</span></label>
+        <label for="cliTel">Teléfono</label>
         <input class="rx-fin" id="cliTel" type="tel" inputmode="tel" placeholder="Celular" value="${editar?escapar(cli.telefono||''):''}" />
       </div>
       <div class="rx-form-campo">
-        <label for="cliDir">Dirección <span style="color:var(--niebla);font-weight:400">(opcional)</span></label>
+        <label for="cliDir">Dirección</label>
         <input class="rx-fin" id="cliDir" type="text" placeholder="Casa / negocio" value="${editar?escapar(cli.direccion||''):''}" />
       </div>
       ${esAdmin ? `
@@ -1336,6 +1336,9 @@
     const direccion = $('cliDir').value.trim();
     $('cliErr').classList.remove('visible');
     if(!nombre) return valErr('cliErr','Escribe el nombre del cliente.');
+    if(!cedula) return valErr('cliErr','La cédula es obligatoria.');
+    if(!telefono) return valErr('cliErr','El teléfono es obligatorio.');
+    if(!direccion) return valErr('cliErr','La dirección es obligatoria.');
 
     let cobradorId, rutaId='';
     if(S.rol==='admin'){
@@ -1368,6 +1371,9 @@
     const direccion = $('cliDir').value.trim();
     $('cliErr').classList.remove('visible');
     if(!nombre) return valErr('cliErr','El nombre no puede quedar vacío.');
+    if(!cedula) return valErr('cliErr','La cédula es obligatoria.');
+    if(!telefono) return valErr('cliErr','El teléfono es obligatorio.');
+    if(!direccion) return valErr('cliErr','La dirección es obligatoria.');
     const datos = { nombre, cedula, telefono, direccion };
     if(S.rol==='admin'){
       const cobradorId = $('cliCob').value;
@@ -1391,6 +1397,8 @@
     const c = S.clientes.find(x=>x.id===id); if(!c) return;
     const esAdmin = S.rol==='admin';
     const pres = prestamosDe(id).slice().sort((a,b)=> (a.estado==='pagado'?1:0)-(b.estado==='pagado'?1:0));
+    const tieneActivo = pres.some(p => p.estado !== 'pagado');
+    const puedePrestar = esAdmin || !tieneActivo;
     const listaPres = pres.length===0
       ? `<div style="text-align:center;color:var(--niebla);font-size:.9rem;padding:14px 0">Sin préstamos todavía.</div>`
       : pres.map(p=>{
@@ -1418,7 +1426,8 @@
       <div class="rx-detalle-fila"><span class="et">Dirección</span><span class="va">${escapar(c.direccion||'—')}</span></div>
       ${esAdmin?`<div class="rx-detalle-fila"><span class="et">Cobrador</span><span class="va">${escapar(nombreCobrador(c.cobradorId)||'—')}</span></div>`:''}
       <div class="rx-detalle-fila"><span class="et">Ruta</span><span class="va">${escapar(nombreRuta(c.rutaId)||'—')}</span></div>
-      <div class="rx-ficha-sub"><span>Préstamos</span><button class="rx-mini" id="fcliPrestar">+ Prestar</button></div>
+      <div class="rx-ficha-sub"><span>Préstamos</span>${puedePrestar ? `<button class="rx-mini" id="fcliPrestar">+ Prestar</button>` : `<span class="rx-mini" style="opacity:.45;pointer-events:none">Préstamo activo</span>`}</div>
+      ${(!esAdmin && tieneActivo) ? `<div class="hint" style="margin-top:2px;margin-bottom:6px">Este cliente ya tiene un préstamo en curso. Para entregarle otro, pide autorización al supervisor.</div>` : ''}
       ${listaPres}
       <div class="rx-acciones" style="margin-top:18px">
         <button class="rx-btn-fant" id="fcliEditar">Editar datos</button>
@@ -1426,7 +1435,15 @@
       </div>`);
     $('fcliCerrar').onclick = cerrarHoja;
     $('fcliEditar').onclick = ()=> formCliente(c);
-    $('fcliPrestar').onclick = ()=> formPrestamo(c);
+    if(puedePrestar){
+      $('fcliPrestar').onclick = ()=> {
+        if(esAdmin && tieneActivo){
+          if(confirm('Este cliente ya tiene un préstamo activo. ¿Autorizas entregarle OTRO préstamo?')) formPrestamo(c);
+        } else {
+          formPrestamo(c);
+        }
+      };
+    }
     $('rxHojaContenido').querySelectorAll('[data-pres]').forEach(el=>{
       el.onclick = ()=> fichaPrestamo(el.dataset.pres);
     });

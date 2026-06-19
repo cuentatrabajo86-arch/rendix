@@ -1,0 +1,1571 @@
+<!DOCTYPE html>
+<html lang="es-CO">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#11302A" />
+<meta name="description" content="Rendix — Control de préstamos y cobros por rutas." />
+<title>Rendix · Control de Cobros</title>
+<link rel="manifest" href="./manifest.json" />
+<link rel="icon" type="image/png" href="./favicon-64.png" />
+<link rel="apple-touch-icon" href="./icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Rendix" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* ===== RENDIX · Sistema de diseño (Etapa 2) ===================== */
+  :root{
+    --verde-profundo:#11302A;
+    --verde:#1C5C4A;
+    --verde-claro:#2E7D5B;
+    --dorado:#C9A227;
+    --dorado-claro:#E4C766;
+    --marfil:#F6F4EE;
+    --marfil-2:#EFEBE0;
+    --tinta:#14211D;
+    --niebla:#7E8A84;
+    --linea:rgba(20,33,29,.12);
+    --ok:#2E7D5B;
+    --alerta:#C0532B;
+    --peligro:#B23A33;
+    --sombra:0 10px 30px rgba(8,24,20,.18);
+    --r:16px;
+    --display:"Bricolage Grotesque",-apple-system,system-ui,sans-serif;
+    --texto:"Hanken Grotesk",-apple-system,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:var(--texto);
+    color:var(--tinta);
+    background:var(--marfil);
+    -webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums;
+    line-height:1.5;
+  }
+  h1,h2,h3{font-family:var(--display);font-weight:700;line-height:1.12;letter-spacing:-.01em}
+
+  /* ===== Vistas raíz ===== */
+  .rx-vista{display:none;min-height:100dvh}
+  .rx-vista.activa{display:block}
+
+  /* ===== LOGIN ===== */
+  #vistaLogin{
+    display:none;min-height:100dvh;
+    background:radial-gradient(120% 90% at 50% -10%, #205141 0%, var(--verde-profundo) 55%, #0C241F 100%);
+    color:var(--marfil);
+    padding:max(28px,env(safe-area-inset-top)) 22px max(28px,env(safe-area-inset-bottom));
+    flex-direction:column;justify-content:space-between;align-items:center;
+  }
+  #vistaLogin.activa{display:flex}
+  .rx-login-top{width:100%;max-width:420px;text-align:center;padding-top:8vh}
+  .rx-marca{font-family:var(--display);font-weight:800;font-size:2.9rem;letter-spacing:-.02em;color:var(--marfil)}
+  .rx-marca b{color:var(--dorado-claro)}
+  .rx-regla{height:3px;width:64px;margin:14px auto 0;border-radius:3px;background:linear-gradient(90deg,var(--dorado),var(--dorado-claro))}
+  .rx-tagline{margin-top:14px;color:#CFE0D8;font-size:.96rem;max-width:300px;margin-left:auto;margin-right:auto}
+  .rx-login-card{
+    width:100%;max-width:420px;background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.12);border-radius:var(--r);
+    padding:22px 20px;backdrop-filter:blur(6px);
+  }
+  .rx-campo{margin-bottom:14px;text-align:left}
+  .rx-campo label{display:block;font-size:.82rem;font-weight:600;color:#CFE0D8;margin-bottom:6px}
+  .rx-input{
+    width:100%;font-family:var(--texto);font-size:1.02rem;padding:13px 14px;border-radius:12px;
+    border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.95);color:var(--tinta);
+  }
+  .rx-input:focus{outline:none;border-color:var(--dorado);box-shadow:0 0 0 3px rgba(201,162,39,.35)}
+  .rx-btn{
+    width:100%;font-family:var(--texto);font-weight:700;font-size:1.04rem;padding:14px;border:none;border-radius:12px;cursor:pointer;
+    background:linear-gradient(180deg,var(--dorado-claro),var(--dorado));color:#3A2D05;letter-spacing:.01em;transition:transform .06s ease,filter .2s ease;
+  }
+  .rx-btn:active{transform:translateY(1px)}
+  .rx-btn[disabled]{opacity:.6;cursor:progress}
+  .rx-error{
+    display:none;margin-top:12px;font-size:.9rem;font-weight:500;color:#FFE0D6;background:rgba(178,58,51,.28);
+    border:1px solid rgba(255,150,135,.4);border-radius:10px;padding:10px 12px;
+  }
+  .rx-error.visible{display:block}
+  .rx-firma{font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(228,199,102,.85);text-align:center;width:100%;max-width:420px}
+  .rx-firma b{color:var(--dorado-claro)}
+
+  /* ===== APP shell ===== */
+  .rx-app-bg{background:var(--marfil);min-height:100dvh;padding-bottom:84px}
+  .rx-topbar{
+    position:sticky;top:0;z-index:5;background:var(--verde-profundo);color:var(--marfil);
+    padding:max(14px,env(safe-area-inset-top)) 18px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;
+    box-shadow:0 2px 12px rgba(8,24,20,.25);
+  }
+  .rx-topbar .marca{font-family:var(--display);font-weight:800;font-size:1.35rem;letter-spacing:-.01em}
+  .rx-topbar .marca b{color:var(--dorado-claro)}
+  .rx-empresa{font-size:.74rem;color:#BFD3CB;letter-spacing:.04em}
+  .rx-salir{
+    font-family:var(--texto);font-weight:600;font-size:.82rem;background:rgba(255,255,255,.1);color:var(--marfil);
+    border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:8px 14px;cursor:pointer;white-space:nowrap;
+  }
+  .rx-salir:active{transform:translateY(1px)}
+
+  .rx-cont{max-width:680px;margin:0 auto;padding:18px 18px 0}
+
+  /* pestaña (panel de cada sección) */
+  .rx-tab{display:none}
+  .rx-tab.activa{display:block;animation:rx-fade .22s ease}
+  @keyframes rx-fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* pill conexión */
+  .rx-pill{display:inline-flex;align-items:center;gap:7px;font-size:.74rem;font-weight:600;padding:5px 11px;border-radius:999px;margin-bottom:14px}
+  .rx-pill .punto{width:8px;height:8px;border-radius:50%}
+  .rx-pill.online{background:rgba(46,125,91,.14);color:#1d5c43}
+  .rx-pill.online .punto{background:var(--ok)}
+  .rx-pill.offline{background:rgba(192,83,43,.14);color:#8a3a1c}
+  .rx-pill.offline .punto{background:var(--alerta)}
+
+  .rx-rol-tag{display:inline-block;font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--verde-profundo);background:var(--dorado-claro);padding:4px 10px;border-radius:6px}
+  .rx-saludo{margin:14px 0 4px;font-size:1.75rem}
+  .rx-sub{color:var(--niebla);font-size:.95rem;margin-bottom:6px}
+
+  .rx-banner{
+    margin:16px 0;padding:13px 15px;border-radius:12px;font-size:.9rem;font-weight:500;
+    background:rgba(192,83,43,.1);border:1px solid rgba(192,83,43,.3);color:#8a3a1c;display:flex;gap:10px;align-items:flex-start;
+  }
+  .rx-banner.ok{background:rgba(46,125,91,.1);border-color:rgba(46,125,91,.3);color:#1d5c43}
+
+  .rx-info{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 6px}
+  .rx-chip{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:11px 14px;flex:1;min-width:130px}
+  .rx-chip .k{font-size:.72rem;color:var(--niebla);letter-spacing:.04em}
+  .rx-chip .v{font-family:var(--display);font-weight:700;font-size:1.05rem;color:var(--tinta);margin-top:2px}
+
+  .rx-seccion-titulo{font-size:.78rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--niebla);margin:24px 0 12px;display:flex;justify-content:space-between;align-items:center}
+
+  /* módulos grid (inicio) */
+  .rx-modulos{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:380px){.rx-modulos{grid-template-columns:1fr}}
+  .rx-modulo{
+    position:relative;background:#fff;border:1px solid var(--linea);border-radius:14px;padding:16px 14px;min-height:104px;
+    display:flex;flex-direction:column;justify-content:space-between;text-align:left;font-family:var(--texto);cursor:pointer;transition:transform .06s,box-shadow .2s;
+  }
+  .rx-modulo:active{transform:scale(.98)}
+  .rx-modulo.bloq{opacity:.66;cursor:default}
+  .rx-modulo .ico{font-size:1.5rem;line-height:1}
+  .rx-modulo .nom{font-family:var(--display);font-weight:700;font-size:1rem;margin-top:8px;color:var(--tinta)}
+  .rx-modulo .etapa{position:absolute;top:10px;right:10px;font-size:.62rem;font-weight:700;letter-spacing:.06em;color:var(--verde);background:rgba(28,92,74,.1);padding:3px 7px;border-radius:6px}
+  .rx-modulo .conteo{position:absolute;top:9px;right:10px;font-size:.72rem;font-weight:700;color:#fff;background:var(--verde);min-width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;border-radius:11px;padding:0 6px}
+
+  /* encabezado de sección con acción */
+  .rx-sec-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0 16px}
+  .rx-sec-head h2{font-size:1.5rem}
+  .rx-sec-head .rx-mini{font-family:var(--texto);font-weight:700;font-size:.86rem;color:#fff;background:var(--verde);border:none;border-radius:999px;padding:9px 15px;cursor:pointer;white-space:nowrap}
+  .rx-sec-head .rx-mini:active{transform:translateY(1px)}
+
+  /* lista de tarjetas (cobradores / rutas) */
+  .rx-lista{display:flex;flex-direction:column;gap:10px}
+  .rx-card{
+    background:#fff;border:1px solid var(--linea);border-radius:14px;padding:14px 15px;display:flex;align-items:center;gap:13px;cursor:pointer;transition:transform .06s,box-shadow .2s;
+  }
+  .rx-card:active{transform:scale(.99)}
+  .rx-avatar{width:44px;height:44px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:800;font-size:1.15rem;color:var(--verde-profundo);background:linear-gradient(160deg,var(--dorado-claro),#d9b94a)}
+  .rx-avatar.ruta{background:linear-gradient(160deg,#bfe0d3,#9ecbb9);color:var(--verde-profundo);font-size:1.3rem}
+  .rx-card .cuerpo{flex:1;min-width:0}
+  .rx-card .nom{font-family:var(--display);font-weight:700;font-size:1.04rem;color:var(--tinta);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rx-card .meta{font-size:.82rem;color:var(--niebla);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rx-card .estado{font-size:.7rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border-radius:7px;white-space:nowrap}
+  .rx-estado-ok{color:#1d5c43;background:rgba(46,125,91,.13)}
+  .rx-estado-bloq{color:#8a3a1c;background:rgba(192,83,43,.14)}
+  .rx-estado-libre{color:#7E8A84;background:rgba(126,138,132,.14)}
+
+  /* estado vacío */
+  .rx-vacio{text-align:center;padding:46px 24px;color:var(--niebla)}
+  .rx-vacio .ico{font-size:2.6rem;opacity:.7}
+  .rx-vacio h3{font-family:var(--display);font-weight:700;font-size:1.15rem;color:var(--tinta);margin:12px 0 4px}
+  .rx-vacio p{font-size:.92rem;max-width:300px;margin:0 auto 18px}
+
+  /* ===== Navegación inferior ===== */
+  .rx-nav{
+    position:fixed;left:0;right:0;bottom:0;z-index:20;display:none;
+    background:#fff;border-top:1px solid var(--linea);
+    padding:6px 6px max(6px,env(safe-area-inset-bottom));
+    box-shadow:0 -6px 24px rgba(8,24,20,.08);
+  }
+  .rx-nav.activa{display:flex}
+  .rx-nav button{
+    flex:1;background:none;border:none;font-family:var(--texto);cursor:pointer;color:var(--niebla);
+    padding:8px 4px 6px;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.68rem;font-weight:600;transition:color .15s;
+  }
+  .rx-nav button .ng{font-size:1.32rem;line-height:1}
+  .rx-nav button.activa{color:var(--verde-profundo)}
+
+  /* ===== Hoja modal (bottom sheet) ===== */
+  .rx-modal{position:fixed;inset:0;z-index:40;display:none}
+  .rx-modal.activa{display:block}
+  .rx-modal-bg{position:absolute;inset:0;background:rgba(10,24,20,.55);backdrop-filter:blur(2px);animation:rx-fadebg .2s ease}
+  @keyframes rx-fadebg{from{opacity:0}to{opacity:1}}
+  .rx-hoja{
+    position:absolute;left:0;right:0;bottom:0;max-height:92dvh;overflow-y:auto;
+    background:var(--marfil);border-radius:22px 22px 0 0;
+    padding:8px 20px max(22px,env(safe-area-inset-bottom));animation:rx-subir .26s cubic-bezier(.2,.8,.2,1);
+  }
+  @keyframes rx-subir{from{transform:translateY(100%)}to{transform:none}}
+  .rx-hoja-asa{width:42px;height:5px;border-radius:5px;background:var(--linea);margin:8px auto 16px}
+  .rx-hoja h2{font-size:1.45rem;margin-bottom:4px}
+  .rx-hoja .sub{color:var(--niebla);font-size:.92rem;margin-bottom:20px}
+  .rx-form-campo{margin-bottom:15px}
+  .rx-form-campo label{display:block;font-size:.84rem;font-weight:600;color:var(--tinta);margin-bottom:6px}
+  .rx-form-campo .hint{font-size:.76rem;color:var(--niebla);margin-top:5px}
+  .rx-fin{
+    width:100%;font-family:var(--texto);font-size:1.02rem;padding:13px 14px;border-radius:12px;
+    border:1px solid var(--linea);background:#fff;color:var(--tinta);
+  }
+  .rx-fin:focus{outline:none;border-color:var(--dorado);box-shadow:0 0 0 3px rgba(201,162,39,.25)}
+  select.rx-fin{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%237E8A84' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px}
+  .rx-form-err{display:none;font-size:.88rem;font-weight:500;color:#8a3a1c;background:rgba(192,83,43,.1);border:1px solid rgba(192,83,43,.3);border-radius:10px;padding:10px 12px;margin-bottom:14px}
+  .rx-form-err.visible{display:block}
+  .rx-acciones{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+  .rx-btn-prim{width:100%;font-family:var(--texto);font-weight:700;font-size:1.04rem;padding:14px;border:none;border-radius:12px;cursor:pointer;background:linear-gradient(180deg,var(--verde-claro),var(--verde));color:#fff}
+  .rx-btn-prim:active{transform:translateY(1px)}
+  .rx-btn-prim[disabled]{opacity:.6;cursor:progress}
+  .rx-btn-fant{width:100%;font-family:var(--texto);font-weight:600;font-size:.98rem;padding:13px;border:1px solid var(--linea);border-radius:12px;cursor:pointer;background:#fff;color:var(--tinta)}
+
+  /* detalle (ficha) */
+  .rx-detalle-fila{display:flex;justify-content:space-between;gap:12px;padding:13px 0;border-bottom:1px solid var(--linea)}
+  .rx-detalle-fila .et{color:var(--niebla);font-size:.9rem}
+  .rx-detalle-fila .va{font-weight:600;font-size:.95rem;text-align:right}
+
+  /* toast */
+  #rxToast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(20px);z-index:60;
+    background:var(--tinta);color:#fff;font-size:.9rem;font-weight:500;padding:12px 18px;border-radius:12px;
+    box-shadow:var(--sombra);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;max-width:88vw;text-align:center}
+  #rxToast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  #rxToast.err{background:#7a2b22}
+
+  .rx-pie{max-width:680px;margin:30px auto 0;padding:18px;text-align:center;border-top:1px solid var(--linea)}
+  .rx-pie .firma{font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--niebla)}
+  .rx-pie .firma b{color:var(--dorado)}
+
+  /* estado / error pantalla completa */
+  #vistaEstado{display:none;min-height:100dvh;background:radial-gradient(120% 90% at 50% -10%, #205141 0%, var(--verde-profundo) 60%, #0C241F 100%);color:var(--marfil);padding:32px 24px;flex-direction:column;justify-content:center;align-items:center;text-align:center}
+  #vistaEstado.activa{display:flex}
+  #vistaEstado .ico{font-size:2.6rem;margin-bottom:14px}
+  #vistaEstado h2{font-size:1.5rem;margin-bottom:10px}
+  #vistaEstado p{color:#CFE0D8;max-width:380px;font-size:.96rem;margin-bottom:8px}
+  #vistaEstado .det{font-family:ui-monospace,monospace;font-size:.78rem;color:#9FB8AE;background:rgba(0,0,0,.2);border-radius:8px;padding:8px 12px;margin-top:10px;word-break:break-word;max-width:380px}
+  #vistaEstado .rx-btn{max-width:280px;margin-top:22px}
+
+  /* ===== Etapa 3: clientes y préstamos ===== */
+  .rx-est{font-size:.68rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border-radius:7px;white-space:nowrap}
+  .rx-est-ok{color:#1d5c43;background:rgba(46,125,91,.14)}
+  .rx-est-mora{color:#8a3a1c;background:rgba(192,83,43,.16)}
+  .rx-est-pago{color:#5a6b64;background:rgba(126,138,132,.16)}
+  .rx-avatar.cli{background:linear-gradient(160deg,#cfe6dc,#a9d0c0);color:var(--verde-profundo);font-size:1.15rem}
+
+  /* sub-encabezado dentro de una ficha */
+  .rx-ficha-sub{font-size:.74rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--niebla);margin:22px 0 10px;display:flex;justify-content:space-between;align-items:center}
+  .rx-ficha-sub .rx-mini{font-family:var(--texto);font-weight:700;font-size:.8rem;color:#fff;background:var(--verde);border:none;border-radius:999px;padding:7px 13px;cursor:pointer}
+
+  /* tarjeta de préstamo (en ficha de cliente) */
+  .rx-pres{background:#fff;border:1px solid var(--linea);border-radius:13px;padding:13px 14px;margin-bottom:10px;cursor:pointer;transition:transform .06s}
+  .rx-pres:active{transform:scale(.99)}
+  .rx-pres .top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
+  .rx-pres .monto{font-family:var(--display);font-weight:700;font-size:1.06rem;color:var(--tinta)}
+  .rx-pres .barra{height:7px;border-radius:5px;background:var(--marfil-2);overflow:hidden;margin:9px 0 7px}
+  .rx-pres .barra i{display:block;height:100%;background:linear-gradient(90deg,var(--verde-claro),var(--verde));border-radius:5px}
+  .rx-pres .pie{display:flex;justify-content:space-between;font-size:.8rem;color:var(--niebla)}
+  .rx-pres .pie b{color:var(--tinta);font-weight:700}
+
+  /* mini-card de cliente dentro de ficha de cobrador (drill-down) */
+  .rx-mini-cli{display:flex;align-items:center;gap:11px;background:#fff;border:1px solid var(--linea);border-radius:12px;padding:11px 13px;margin-bottom:8px;cursor:pointer}
+  .rx-mini-cli:active{transform:scale(.99)}
+  .rx-mini-cli .av{width:38px;height:38px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:800;font-size:.95rem;color:var(--verde-profundo);background:linear-gradient(160deg,#cfe6dc,#a9d0c0)}
+  .rx-mini-cli .cu{flex:1;min-width:0}
+  .rx-mini-cli .nm{font-weight:700;font-size:.94rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rx-mini-cli .mt{font-size:.78rem;color:var(--niebla)}
+
+  /* resumen económico ( filas con énfasis) */
+  .rx-res{display:flex;gap:10px;margin:14px 0 4px}
+  .rx-res .c{flex:1;background:#fff;border:1px solid var(--linea);border-radius:12px;padding:12px 13px;text-align:center}
+  .rx-res .c .k{font-size:.7rem;color:var(--niebla);letter-spacing:.04em}
+  .rx-res .c .v{font-family:var(--display);font-weight:700;font-size:1.12rem;margin-top:3px}
+  .rx-res .c.mora .v{color:var(--alerta)}
+
+  /* calculadora en vivo del formulario de préstamo */
+  .rx-calc{background:var(--verde-profundo);color:var(--marfil);border-radius:13px;padding:14px 16px;margin:6px 0 16px}
+  .rx-calc .fila{display:flex;justify-content:space-between;padding:5px 0;font-size:.92rem;color:#CFE0D8}
+  .rx-calc .fila.tot{border-top:1px solid rgba(255,255,255,.15);margin-top:6px;padding-top:10px;font-size:1.04rem;color:#fff}
+  .rx-calc .fila b{font-family:var(--display);font-weight:700;color:var(--dorado-claro)}
+
+  /* carga inicial */
+  #cargando{position:fixed;inset:0;background:var(--verde-profundo);color:var(--dorado-claro);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:50}
+  #cargando.oculto{display:none}
+  .rx-spin{width:30px;height:30px;border:3px solid rgba(228,199,102,.25);border-top-color:var(--dorado-claro);border-radius:50%;animation:rx-girar .8s linear infinite}
+  .rx-cargando-marca{font-family:var(--display);font-weight:800;font-size:1.4rem;letter-spacing:.02em}
+  @keyframes rx-girar{to{transform:rotate(360deg)}}
+  @media(prefers-reduced-motion:reduce){.rx-spin{animation:none}}
+</style>
+</head>
+<body>
+
+  <!-- Carga inicial -->
+  <div id="cargando">
+    <div class="rx-cargando-marca">Rendix</div>
+    <div class="rx-spin" aria-hidden="true"></div>
+  </div>
+
+  <!-- ===== LOGIN ===== -->
+  <section id="vistaLogin" class="rx-vista">
+    <div class="rx-login-top">
+      <div class="rx-marca">Rend<b>ix</b></div>
+      <div class="rx-regla"></div>
+      <p class="rx-tagline">Control de préstamos y cobros por rutas. Cada peso, cuadrado.</p>
+    </div>
+    <form class="rx-login-card" id="formLogin" novalidate>
+      <div class="rx-campo">
+        <label for="email">Correo</label>
+        <input class="rx-input" type="email" id="email" autocomplete="username" inputmode="email" placeholder="tucorreo@ejemplo.com" required />
+      </div>
+      <div class="rx-campo">
+        <label for="clave">Contraseña</label>
+        <input class="rx-input" type="password" id="clave" autocomplete="current-password" placeholder="••••••••" required />
+      </div>
+      <button class="rx-btn" type="submit" id="btnEntrar">Entrar</button>
+      <div class="rx-error" id="errLogin" role="alert"></div>
+    </form>
+    <div class="rx-firma">Rendix · Powered by <b>Iván Jiménez</b></div>
+  </section>
+
+  <!-- ===== APP ===== -->
+  <section id="vistaApp" class="rx-vista">
+    <div class="rx-app-bg">
+      <header class="rx-topbar">
+        <div>
+          <div class="marca">Rend<b>ix</b></div>
+          <div class="rx-empresa" id="appEmpresa">—</div>
+        </div>
+        <button class="rx-salir" id="btnSalir">Salir</button>
+      </header>
+
+      <main class="rx-cont">
+        <div class="rx-tab" id="tabInicio"></div>
+        <div class="rx-tab" id="tabCobradores"></div>
+        <div class="rx-tab" id="tabClientes"></div>
+        <div class="rx-tab" id="tabRutas"></div>
+      </main>
+
+      <footer class="rx-pie">
+        <div class="firma">Rendix · Powered by <b>Iván Jiménez</b></div>
+      </footer>
+    </div>
+
+    <nav class="rx-nav" id="navInferior">
+      <button data-tab="inicio" class="activa"><span class="ng">🏠</span>Inicio</button>
+      <button data-tab="cobradores"><span class="ng">👥</span>Cobradores</button>
+      <button data-tab="clientes"><span class="ng">🧾</span>Clientes</button>
+      <button data-tab="rutas"><span class="ng">🗺️</span>Rutas</button>
+    </nav>
+  </section>
+
+  <!-- ===== ESTADO / ERROR ===== -->
+  <section id="vistaEstado" class="rx-vista">
+    <div class="ico" id="estIco">⚠️</div>
+    <h2 id="estTitulo">Algo no está listo</h2>
+    <p id="estMsg"></p>
+    <div class="det" id="estDet" style="display:none"></div>
+    <button class="rx-btn" id="estBtn" style="display:none"></button>
+  </section>
+
+  <!-- ===== Hoja modal ===== -->
+  <div class="rx-modal" id="rxModal">
+    <div class="rx-modal-bg" id="rxModalBg"></div>
+    <div class="rx-hoja" id="rxHoja">
+      <div class="rx-hoja-asa"></div>
+      <div id="rxHojaContenido"></div>
+    </div>
+  </div>
+
+  <div id="rxToast"></div>
+
+<!-- ===================== LÓGICA ===================== -->
+<script type="module">
+  // Firebase v12 — SDK modular por CDN (sin compilación, funciona desde el teléfono)
+  import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+  import {
+    getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut,
+    createUserWithEmailAndPassword
+  } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+  import {
+    initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
+    doc, getDoc, getDocs, setDoc, updateDoc, addDoc, deleteDoc,
+    collection, query, where, orderBy,
+    onSnapshot, serverTimestamp, writeBatch
+  } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+  // ============================================================
+  //  PEGA AQUÍ TU CONFIG DE FIREBASE
+  //  (Consola Firebase → Configuración del proyecto → Tus apps → SDK)
+  //  Reemplaza TODO el objeto de abajo por el tuyo.
+  // ============================================================
+  const firebaseConfig = {
+    apiKey: "AIzaSyBhM170j3MNEcq-0iB1nStS_YJOATBJsr0",
+    authDomain: "rendix-8f7d8.firebaseapp.com",
+    projectId: "rendix-8f7d8",
+    storageBucket: "rendix-8f7d8.firebasestorage.app",
+    messagingSenderId: "13871004442",
+    appId: "1:13871004442:web:9ffd6334c188fe3e7f0aa3"
+  };
+  // ============================================================
+
+  const $ = (id) => document.getElementById(id);
+  const vistas = { login:$('vistaLogin'), app:$('vistaApp'), estado:$('vistaEstado') };
+  function mostrar(nombre){
+    $('cargando').classList.add('oculto');
+    Object.values(vistas).forEach(v=>v.classList.remove('activa'));
+    vistas[nombre].classList.add('activa');
+  }
+  function pantallaEstado({ico='⚠️', titulo, msg, detalle, btnTexto, btnAccion}){
+    $('estIco').textContent = ico;
+    $('estTitulo').textContent = titulo;
+    $('estMsg').textContent = msg || '';
+    const d = $('estDet');
+    if(detalle){ d.textContent = detalle; d.style.display='block'; } else { d.style.display='none'; }
+    const b = $('estBtn');
+    if(btnTexto){ b.textContent=btnTexto; b.style.display='block'; b.onclick=btnAccion; }
+    else { b.style.display='none'; }
+    mostrar('estado');
+  }
+  function toast(msg, esError){
+    const t = $('rxToast'); t.textContent = msg;
+    t.className = 'show' + (esError ? ' err' : '');
+    clearTimeout(toast._t); toast._t = setTimeout(()=>{ t.className=''; }, 2600);
+  }
+
+  // ---- guardia: ¿ya pegaste la config? ----
+  if (firebaseConfig.apiKey === "PEGA_AQUI") {
+    pantallaEstado({
+      ico:'🔌', titulo:'Falta conectar Firebase',
+      msg:'Abre index.html y reemplaza el objeto firebaseConfig con las credenciales de tu proyecto. Está marcado con "PEGA AQUÍ TU CONFIG DE FIREBASE".',
+    });
+    throw new Error('Config de Firebase sin reemplazar.');
+  }
+
+  let auth, db;
+  try {
+    const app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = initializeFirestore(app, {
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+    });
+  } catch (e) {
+    pantallaEstado({ titulo:'No se pudo iniciar Firebase', msg:'Revisa que la config esté completa y bien escrita.', detalle:String(e.message||e) });
+    throw e;
+  }
+
+  // ---- estado global de la sesión ----
+  const S = { uid:null, empresaId:null, rol:null, nombre:null, empresaNombre:null, perfil:null, licenciaActiva:true,
+              cobradores:[], rutas:[], clientes:[], prestamos:[],
+              unsubCob:null, unsubRut:null, unsubCli:null, unsubPres:null, tab:'inicio' };
+
+  // ---- helpers de texto / formato ----
+  function escapar(s){ return String(s ?? '').replace(/[&<>"']/g, c => (
+    {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function primerNombre(n){ return String(n||'').trim().split(/\s+/)[0] || 'Usuario'; }
+  function iniciales(n){
+    const p = String(n||'').trim().split(/\s+/);
+    return ((p[0]?.[0]||'') + (p[1]?.[0]||'')).toUpperCase() || '?';
+  }
+  function pesos(n){ const v = Number(n)||0; return '$ ' + v.toLocaleString('es-CO'); }
+  function soloPesos(n){ const v = Number(n)||0; return v.toLocaleString('es-CO'); }
+
+  // ===========================================================
+  //  MOTOR DE CÁLCULO  (validado · Etapa 3)
+  //  PRINCIPIO SAGRADO: el saldo SIEMPRE se deriva de los
+  //  movimientos. Interés fijo 20% → factor 1.20.
+  // ===========================================================
+  const RX_FACTOR = 1.20;
+  const RX_DIAS_CUOTA = { diario:1, semanal:7, quincenal:15, mensual:30 };
+  const RX_MODALIDADES = [
+    { v:'diario', t:'Diario' }, { v:'semanal', t:'Semanal' },
+    { v:'quincenal', t:'Quincenal' }, { v:'mensual', t:'Mensual' }
+  ];
+  const rxRedondea = n => Math.round(Number(n)||0);
+  function rxSaldoInicial(monto){ return rxRedondea(monto * RX_FACTOR); }
+  function rxValorCuota(monto, numeroCuotas){
+    if(!numeroCuotas) return 0;
+    return rxRedondea((monto * RX_FACTOR) / numeroCuotas);
+  }
+  // Reconstruye el estado de un préstamo a partir de sus movimientos
+  function rxResumen(prestamo, movimientos, hoy){
+    hoy = hoy || new Date();
+    const monto = Number(prestamo.monto)||0;
+    const cuotas = Number(prestamo.numeroCuotas)||0;
+    const cuota = Number(prestamo.valorCuota) || rxValorCuota(monto, cuotas);
+    let saldo = monto * RX_FACTOR;
+    let cobrado=0, multas=0, reembolsos=0;
+    (movimientos||[]).forEach(m=>{
+      const v = Number(m.monto)||0;
+      if(m.tipo==='cobro'){ saldo-=v; cobrado+=v; }
+      else if(m.tipo==='multa'){ saldo+=v; multas+=v; }
+      else if(m.tipo==='reembolso'){ saldo+=v; reembolsos+=v; }
+      else if(m.tipo==='renovacion'){ saldo-=v; }
+    });
+    saldo = Math.max(0, rxRedondea(saldo));
+    const cuotasPagadas = cuota>0 ? cobrado/cuota : 0;
+    let dias = Math.floor((hoy - rxFecha(prestamo.fechaInicio)) / 86400000);
+    if(dias<0) dias=0;
+    const paso = RX_DIAS_CUOTA[prestamo.modalidad] || 1;
+    let esperadas = Math.floor(dias / paso);
+    if(esperadas>cuotas) esperadas=cuotas;
+    const cuotasAtraso = Math.max(0, esperadas - cuotasPagadas);
+    let estado;
+    if(saldo<=0) estado='pagado';
+    else if(cuotasAtraso>=1) estado='atrasado';
+    else estado='al_dia';
+    return {
+      saldo, cuota, cobrado:rxRedondea(cobrado), multas:rxRedondea(multas),
+      cuotasPagadas:Math.round(cuotasPagadas*100)/100,
+      cuotasPendientes:Math.round((cuotas-cuotasPagadas)*100)/100,
+      cuotasAtraso:Math.round(cuotasAtraso*100)/100,
+      montoAtraso: rxRedondea(cuotasAtraso*cuota),
+      estado
+    };
+  }
+  function rxFecha(f){
+    if(!f) return new Date();
+    if(f instanceof Date) return f;
+    if(typeof f?.toDate === 'function') return f.toDate(); // Timestamp Firestore
+    return new Date(f);
+  }
+  const RX_ESTADO = {
+    al_dia:   { t:'Al día',    c:'rx-est-ok'   },
+    atrasado: { t:'Atrasado',  c:'rx-est-mora' },
+    pagado:   { t:'Pagado',    c:'rx-est-pago' }
+  };
+
+  // ---- indicador de conexión ----
+  function pintarConexion(){
+    document.querySelectorAll('.rx-pill').forEach(el=>{
+      const on = navigator.onLine;
+      el.className = 'rx-pill ' + (on ? 'online' : 'offline');
+      const txt = el.querySelector('.txt');
+      if(txt) txt.textContent = on ? 'En línea · sincronizado' : 'Sin conexión · trabajando offline';
+    });
+  }
+  window.addEventListener('online', pintarConexion);
+  window.addEventListener('offline', pintarConexion);
+
+  // ---- traducir errores de Auth a español ----
+  function mensajeError(code){
+    const m = {
+      'auth/invalid-email':'El correo no tiene un formato válido.',
+      'auth/invalid-credential':'Correo o contraseña incorrectos.',
+      'auth/wrong-password':'Correo o contraseña incorrectos.',
+      'auth/user-not-found':'No existe un usuario con ese correo.',
+      'auth/user-disabled':'Este usuario está deshabilitado.',
+      'auth/email-already-in-use':'Ya existe una cuenta con ese correo.',
+      'auth/weak-password':'La contraseña debe tener al menos 6 caracteres.',
+      'auth/too-many-requests':'Demasiados intentos. Espera un momento e inténtalo de nuevo.',
+      'auth/network-request-failed':'Sin conexión. Revisa tu internet e inténtalo otra vez.'
+    };
+    return m[code] || 'Ocurrió un error. Inténtalo de nuevo.';
+  }
+
+  // ===========================================================
+  //  HOJA MODAL
+  // ===========================================================
+  function abrirHoja(html){
+    $('rxHojaContenido').innerHTML = html;
+    $('rxModal').classList.add('activa');
+  }
+  function cerrarHoja(){ $('rxModal').classList.remove('activa'); $('rxHojaContenido').innerHTML=''; }
+  $('rxModalBg').addEventListener('click', cerrarHoja);
+
+  // ===========================================================
+  //  LOGIN
+  // ===========================================================
+  $('formLogin').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const email = $('email').value.trim();
+    const clave = $('clave').value;
+    const err = $('errLogin');
+    const btn = $('btnEntrar');
+    err.classList.remove('visible');
+    if(!email || !clave){ err.textContent='Escribe tu correo y contraseña.'; err.classList.add('visible'); return; }
+    btn.disabled = true; btn.textContent = 'Entrando…';
+    try {
+      await signInWithEmailAndPassword(auth, email, clave);
+    } catch (e) {
+      err.textContent = mensajeError(e.code);
+      err.classList.add('visible');
+      btn.disabled = false; btn.textContent = 'Entrar';
+    }
+  });
+
+  function wireSalir(){
+    const b = $('btnSalir');
+    if(b) b.onclick = async () => { limpiarListeners(); try { await signOut(auth); } catch(_){} };
+  }
+  function limpiarListeners(){
+    if(S.unsubCob){ S.unsubCob(); S.unsubCob=null; }
+    if(S.unsubRut){ S.unsubRut(); S.unsubRut=null; }
+    if(S.unsubCli){ S.unsubCli(); S.unsubCli=null; }
+    if(S.unsubPres){ S.unsubPres(); S.unsubPres=null; }
+  }
+
+  // ===========================================================
+  //  SESIÓN
+  // ===========================================================
+  onAuthStateChanged(auth, async (user) => {
+    if(!user){
+      limpiarListeners();
+      $('btnEntrar').disabled = false; $('btnEntrar').textContent = 'Entrar';
+      $('errLogin').classList.remove('visible'); $('formLogin').reset();
+      $('navInferior').classList.remove('activa');
+      mostrar('login');
+      return;
+    }
+    await cargarPerfilYRender(user);
+  });
+
+  async function cargarPerfilYRender(user){
+    try {
+      const mapSnap = await getDoc(doc(db, 'usuariosGlobal', user.uid));
+      if(!mapSnap.exists()){
+        return pantallaEstado({
+          ico:'🪪', titulo:'Usuario sin configurar',
+          msg:'Tu cuenta existe pero falta su registro en usuariosGlobal. Créalo en la consola (ver guía de la Etapa 1).',
+          detalle:'uid: ' + user.uid, btnTexto:'Cerrar sesión', btnAccion:()=>signOut(auth)
+        });
+      }
+      const map = mapSnap.data();
+      if(map.bloqueado === true){
+        return pantallaEstado({
+          ico:'🔒', titulo:'Acceso bloqueado',
+          msg:'El administrador bloqueó tu acceso. Comunícate con él para reactivarlo.',
+          btnTexto:'Cerrar sesión', btnAccion:()=>signOut(auth)
+        });
+      }
+      const empresaId = map.empresaId, rol = map.rol;
+      const [empSnap, userSnap] = await Promise.all([
+        getDoc(doc(db, 'empresas', empresaId)),
+        getDoc(doc(db, 'empresas', empresaId, 'usuarios', user.uid))
+      ]);
+      if(!empSnap.exists()){
+        return pantallaEstado({
+          ico:'🏢', titulo:'Empresa no encontrada',
+          msg:'El registro de tu empresa no existe en Firestore. Revisa el documento empresas/'+empresaId+'.',
+          btnTexto:'Cerrar sesión', btnAccion:()=>signOut(auth)
+        });
+      }
+      const emp = empSnap.data();
+      const perfil = userSnap.exists() ? userSnap.data() : {};
+
+      S.uid = user.uid; S.empresaId = empresaId; S.rol = rol;
+      S.nombre = perfil.nombre || user.email || 'Usuario';
+      S.empresaNombre = emp.nombre || 'Mi empresa';
+      S.licenciaActiva = emp.licenciaActiva !== false;
+      S.perfil = perfil;
+
+      arrancarApp();
+    } catch (e) {
+      pantallaEstado({
+        ico:'📡', titulo:'No se pudo cargar tu perfil',
+        msg: navigator.onLine
+          ? 'Ocurrió un error leyendo tus datos. Revisa las reglas de seguridad y la semilla.'
+          : 'Estás sin conexión y aún no hay datos guardados en este dispositivo. Conéctate una vez para sincronizar.',
+        detalle:String(e.message||e), btnTexto:'Reintentar', btnAccion:()=>location.reload()
+      });
+    }
+  }
+
+  // ===========================================================
+  //  ARRANQUE
+  // ===========================================================
+  function arrancarApp(){
+    $('appEmpresa').textContent = S.empresaNombre;
+    wireSalir();
+    const esAdmin = S.rol === 'admin';
+
+    if(esAdmin){
+      document.querySelectorAll('#navInferior button').forEach(b=> b.style.display='');
+      escucharCobradores();
+      escucharRutas();
+      escucharClientes();   // admin: toda la empresa
+      escucharPrestamos();  // admin: toda la empresa
+      cablearNav();
+      $('navInferior').classList.add('activa');
+      irATab('inicio');
+    } else {
+      // Cobrador: navegación reducida (Inicio + Clientes), solo ve lo suyo
+      document.querySelectorAll('#navInferior button').forEach(b=>{
+        b.style.display = (b.dataset.tab==='inicio' || b.dataset.tab==='clientes') ? '' : 'none';
+      });
+      escucharClientes();   // cobrador: filtrado por su uid
+      escucharPrestamos();  // cobrador: filtrado por su uid
+      cablearNav();
+      $('navInferior').classList.add('activa');
+      activarTab('inicio');
+      cargarInicioCobrador();
+    }
+    pintarConexion();
+    mostrar('app');
+  }
+
+  // ---- navegación por pestañas (admin) ----
+  function cablearNav(){
+    document.querySelectorAll('#navInferior button').forEach(b=>{
+      b.onclick = ()=> irATab(b.dataset.tab);
+    });
+  }
+  function activarTab(nombre){
+    S.tab = nombre;
+    ['Inicio','Cobradores','Clientes','Rutas'].forEach(n=>{
+      const el = $('tab'+n); if(el) el.classList.toggle('activa', n.toLowerCase()===nombre);
+    });
+    document.querySelectorAll('#navInferior button').forEach(b=> b.classList.toggle('activa', b.dataset.tab===nombre));
+    window.scrollTo({top:0, behavior:'instant'});
+  }
+  function irATab(nombre){
+    activarTab(nombre);
+    const esAdmin = S.rol === 'admin';
+    if(nombre==='inicio')      esAdmin ? renderInicioAdmin() : renderInicioCobrador();
+    if(nombre==='cobradores')  renderCobradores();
+    if(nombre==='clientes')    renderClientes();
+    if(nombre==='rutas')       renderRutas();
+  }
+
+  // ===========================================================
+  //  ESCUCHAR DATOS EN VIVO (onSnapshot)
+  // ===========================================================
+  function escucharCobradores(){
+    const ref = collection(db, 'empresas', S.empresaId, 'usuarios');
+    S.unsubCob = onSnapshot(ref, (snap)=>{
+      S.cobradores = snap.docs.map(d=>({ id:d.id, ...d.data() }))
+        .filter(u => u.rol === 'cobrador')
+        .sort((a,b)=> (a.nombre||'').localeCompare(b.nombre||''));
+      if(S.tab==='cobradores') renderCobradores();
+      if(S.tab==='inicio') renderInicioAdmin();
+      if(S.tab==='rutas') renderRutas();
+    }, (err)=> console.warn('cobradores:', err.message));
+  }
+  function escucharRutas(){
+    const ref = collection(db, 'empresas', S.empresaId, 'rutas');
+    S.unsubRut = onSnapshot(ref, (snap)=>{
+      S.rutas = snap.docs.map(d=>({ id:d.id, ...d.data() }))
+        .sort((a,b)=> (a.nombre||'').localeCompare(b.nombre||''));
+      if(S.tab==='rutas') renderRutas();
+      if(S.tab==='cobradores') renderCobradores();
+      if(S.tab==='inicio') renderInicioAdmin();
+    }, (err)=> console.warn('rutas:', err.message));
+  }
+  function escucharClientes(){
+    const base = collection(db, 'empresas', S.empresaId, 'clientes');
+    const ref = (S.rol==='admin') ? base : query(base, where('cobradorId','==',S.uid));
+    S.unsubCli = onSnapshot(ref, (snap)=>{
+      S.clientes = snap.docs.map(d=>({ id:d.id, ...d.data() }))
+        .filter(c=> c.activo !== false)
+        .sort((a,b)=> (a.nombre||'').localeCompare(b.nombre||''));
+      if(S.tab==='clientes') renderClientes();
+      if(S.tab==='inicio') (S.rol==='admin'?renderInicioAdmin:renderInicioCobrador)();
+    }, (err)=> console.warn('clientes:', err.message));
+  }
+  function escucharPrestamos(){
+    const base = collection(db, 'empresas', S.empresaId, 'prestamos');
+    const ref = (S.rol==='admin') ? base : query(base, where('cobradorId','==',S.uid));
+    S.unsubPres = onSnapshot(ref, (snap)=>{
+      S.prestamos = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+      if(S.tab==='clientes') renderClientes();
+      if(S.tab==='inicio') (S.rol==='admin'?renderInicioAdmin:renderInicioCobrador)();
+    }, (err)=> console.warn('prestamos:', err.message));
+  }
+  // préstamos activos de un cliente (sin cargar movimientos: saldo inicial)
+  function prestamosDe(clienteId){
+    return S.prestamos.filter(p=> p.clienteId===clienteId);
+  }
+  function deudaCliente(clienteId){
+    // En 3A (aún sin cobros) la deuda = suma de saldos iniciales de préstamos activos.
+    return prestamosDe(clienteId)
+      .filter(p=> p.estado!=='pagado')
+      .reduce((t,p)=> t + rxSaldoInicial(p.monto), 0);
+  }
+
+  function nombreRuta(rutaId){
+    if(!rutaId) return null;
+    const r = S.rutas.find(x=>x.id===rutaId);
+    return r ? r.nombre : '(ruta eliminada)';
+  }
+  function nombreCobrador(uid){
+    if(!uid) return null;
+    const c = S.cobradores.find(x=>x.id===uid);
+    return c ? c.nombre : '(sin asignar)';
+  }
+
+  // ===========================================================
+  //  INICIO — ADMIN
+  // ===========================================================
+  function renderInicioAdmin(){
+    const activos = S.cobradores.filter(c=>!c.bloqueado).length;
+    const carteraCalle = S.prestamos.filter(p=>p.estado!=='pagado')
+      .reduce((t,p)=> t + rxSaldoInicial(p.monto), 0);
+    const banner = S.licenciaActiva ? ''
+      : `<div class="rx-banner">⚠️ La licencia de esta empresa figura como inactiva. La gestión de licencias llega en la Etapa 5.</div>`;
+    $('tabInicio').innerHTML = `
+      <span class="rx-pill online"><span class="punto"></span><span class="txt">En línea</span></span>
+      <div><span class="rx-rol-tag">Administrador</span></div>
+      <h1 class="rx-saludo">Hola, ${escapar(primerNombre(S.nombre))}</h1>
+      <p class="rx-sub">Este es tu panel. Todo tu negocio, en una pantalla.</p>
+      ${banner}
+      <div class="rx-info">
+        <div class="rx-chip"><div class="k">Capital en la calle</div><div class="v">${pesos(carteraCalle)}</div></div>
+        <div class="rx-chip"><div class="k">Clientes</div><div class="v">${S.clientes.length}</div></div>
+      </div>
+      <div class="rx-info">
+        <div class="rx-chip"><div class="k">Cobradores activos</div><div class="v">${activos}</div></div>
+        <div class="rx-chip"><div class="k">Rutas</div><div class="v">${S.rutas.length}</div></div>
+      </div>
+      <div class="rx-seccion-titulo"><span>Gestión</span></div>
+      <div class="rx-modulos">
+        <button class="rx-modulo" data-ir="clientes">
+          <div class="ico">🧾</div><div class="nom">Clientes y préstamos</div>
+          <span class="conteo">${S.clientes.length}</span>
+        </button>
+        <button class="rx-modulo" data-ir="cobradores">
+          <div class="ico">👥</div><div class="nom">Cobradores</div>
+          <span class="conteo">${S.cobradores.length}</span>
+        </button>
+        <button class="rx-modulo" data-ir="rutas">
+          <div class="ico">🗺️</div><div class="nom">Rutas</div>
+          <span class="conteo">${S.rutas.length}</span>
+        </button>
+        <div class="rx-modulo bloq"><div class="ico">📊</div><div class="nom">Cierres y jornadas</div><span class="etapa">Etapa 4</span></div>
+      </div>
+      <div class="rx-banner ok" style="margin-top:22px">✓ Etapa 3: registra clientes y entrégales préstamos. El cobro diario y el cierre llegan enseguida.</div>`;
+    $('tabInicio').querySelectorAll('[data-ir]').forEach(b=> b.onclick=()=>irATab(b.dataset.ir));
+    pintarConexion();
+  }
+
+  // ===========================================================
+  //  INICIO — COBRADOR
+  // ===========================================================
+  async function cargarInicioCobrador(){
+    if(S.perfil.rutaId){
+      try {
+        const rs = await getDoc(doc(db,'empresas',S.empresaId,'rutas',S.perfil.rutaId));
+        S.rutas = rs.exists() ? [{ id:rs.id, ...rs.data() }] : [];
+      } catch(_){ /* sin conexión: se mostrará un texto neutro */ }
+    }
+    renderInicioCobrador();
+  }
+  function renderInicioCobrador(){
+    let ruta = 'Sin asignar';
+    if(S.perfil.rutaId){
+      const r = S.rutas.find(x=>x.id===S.perfil.rutaId);
+      ruta = escapar(r ? r.nombre : 'Asignada');
+    }
+    const base = (S.perfil.baseAsignada ?? null) !== null && S.perfil.baseAsignada !== ''
+      ? pesos(S.perfil.baseAsignada) : 'Sin asignar';
+    const miCartera = S.prestamos.filter(p=>p.estado!=='pagado')
+      .reduce((t,p)=> t + rxSaldoInicial(p.monto), 0);
+    $('tabInicio').innerHTML = `
+      <span class="rx-pill online"><span class="punto"></span><span class="txt">En línea</span></span>
+      <div><span class="rx-rol-tag">Cobrador</span></div>
+      <h1 class="rx-saludo">Hola, ${escapar(primerNombre(S.nombre))}</h1>
+      <p class="rx-sub">Esta es tu base. Tus clientes, tus préstamos y el cierre del día.</p>
+      <div class="rx-info">
+        <div class="rx-chip"><div class="k">Tu ruta</div><div class="v">${ruta}</div></div>
+        <div class="rx-chip"><div class="k">Base del día</div><div class="v">${base}</div></div>
+      </div>
+      <div class="rx-info">
+        <div class="rx-chip"><div class="k">En la calle</div><div class="v">${pesos(miCartera)}</div></div>
+        <div class="rx-chip"><div class="k">Mis clientes</div><div class="v">${S.clientes.length}</div></div>
+      </div>
+      <div class="rx-seccion-titulo"><span>Tus módulos</span></div>
+      <div class="rx-modulos">
+        <button class="rx-modulo" data-ir="clientes"><div class="ico">🧾</div><div class="nom">Mis clientes</div><span class="conteo">${S.clientes.length}</span></button>
+        <div class="rx-modulo bloq"><div class="ico">💵</div><div class="nom">Cobrar el día</div><span class="etapa">Etapa 3B</span></div>
+        <div class="rx-modulo bloq"><div class="ico">🧮</div><div class="nom">Cierre de caja</div><span class="etapa">Etapa 4</span></div>
+        <div class="rx-modulo bloq"><div class="ico">📝</div><div class="nom">Notas de visita</div><span class="etapa">pronto</span></div>
+      </div>
+      <div class="rx-banner ok" style="margin-top:22px">✓ Etapa 3: ya puedes registrar tus clientes y entregarles préstamos. Pronto, el cobro del día.</div>`;
+    $('tabInicio').querySelectorAll('[data-ir]').forEach(b=> b.onclick=()=>irATab(b.dataset.ir));
+    pintarConexion();
+  }
+
+  // ===========================================================
+  //  MÓDULO COBRADORES (admin)
+  // ===========================================================
+  function renderCobradores(){
+    const cuerpo = S.cobradores.length === 0
+      ? `<div class="rx-vacio"><div class="ico">👥</div><h3>Aún no hay cobradores</h3>
+           <p>Crea el primero para empezar a repartir clientes y rutas.</p>
+           <button class="rx-btn-prim" style="max-width:260px;margin:0 auto" id="vacioNuevoCob">+ Crear cobrador</button></div>`
+      : `<div class="rx-lista">${S.cobradores.map(c=>{
+          const est = c.bloqueado
+            ? '<span class="estado rx-estado-bloq">Bloqueado</span>'
+            : '<span class="estado rx-estado-ok">Activo</span>';
+          const r = c.rutaId ? (nombreRuta(c.rutaId) || '—') : 'Sin ruta';
+          return `<div class="rx-card" data-cob="${c.id}">
+            <div class="rx-avatar">${iniciales(c.nombre)}</div>
+            <div class="cuerpo">
+              <div class="nom">${escapar(c.nombre||'Sin nombre')}</div>
+              <div class="meta">${escapar(r)} · base ${pesos(c.baseAsignada)}</div>
+            </div>
+            ${est}
+          </div>`;
+        }).join('')}</div>`;
+    $('tabCobradores').innerHTML = `
+      <div class="rx-sec-head">
+        <h2>Cobradores</h2>
+        <button class="rx-mini" id="btnNuevoCob">+ Nuevo</button>
+      </div>
+      ${cuerpo}`;
+    $('btnNuevoCob').onclick = ()=> formCobrador();
+    const v = $('vacioNuevoCob'); if(v) v.onclick = ()=> formCobrador();
+    $('tabCobradores').querySelectorAll('[data-cob]').forEach(card=>{
+      card.onclick = ()=> fichaCobrador(card.dataset.cob);
+    });
+  }
+
+  function opcionesRutas(seleccionada){
+    const libres = `<option value="">— Sin ruta —</option>`;
+    const items = S.rutas.map(r=>`<option value="${r.id}" ${r.id===seleccionada?'selected':''}>${escapar(r.nombre)}</option>`).join('');
+    return libres + items;
+  }
+
+  // ---- formulario crear / editar cobrador ----
+  function formCobrador(cob){
+    const editar = !!cob;
+    abrirHoja(`
+      <h2>${editar ? 'Editar cobrador' : 'Nuevo cobrador'}</h2>
+      <div class="sub">${editar ? 'Actualiza los datos de este cobrador.' : 'Crea la cuenta con la que entrará a su ruta.'}</div>
+      <div class="rx-form-err" id="cobErr"></div>
+      <div class="rx-form-campo">
+        <label for="cobNombre">Nombre completo</label>
+        <input class="rx-fin" id="cobNombre" type="text" placeholder="Ej. José Martínez" value="${editar?escapar(cob.nombre||''):''}" />
+      </div>
+      ${editar ? '' : `
+      <div class="rx-form-campo">
+        <label for="cobCorreo">Correo (será su usuario)</label>
+        <input class="rx-fin" id="cobCorreo" type="email" inputmode="email" placeholder="jose@ejemplo.com" />
+      </div>
+      <div class="rx-form-campo">
+        <label for="cobClave">Contraseña inicial</label>
+        <input class="rx-fin" id="cobClave" type="text" placeholder="Mínimo 6 caracteres" />
+        <div class="hint">Se la entregas al cobrador; él puede usarla tal cual.</div>
+      </div>`}
+      <div class="rx-form-campo">
+        <label for="cobRuta">Ruta asignada</label>
+        <select class="rx-fin" id="cobRuta">${opcionesRutas(editar?cob.rutaId:'')}</select>
+        ${S.rutas.length===0 ? '<div class="hint">No tienes rutas aún. Puedes crearla luego y asignarla.</div>' : ''}
+      </div>
+      <div class="rx-form-campo">
+        <label for="cobBase">Base del día (efectivo asignado)</label>
+        <input class="rx-fin" id="cobBase" type="number" inputmode="numeric" min="0" placeholder="0" value="${editar?(cob.baseAsignada??''):''}" />
+        <div class="hint">Cuánto efectivo arranca cargando. Se usa en el cierre (Etapa 4).</div>
+      </div>
+      <div class="rx-acciones">
+        <button class="rx-btn-prim" id="cobGuardar">${editar?'Guardar cambios':'Crear cobrador'}</button>
+        <button class="rx-btn-fant" id="cobCancelar">Cancelar</button>
+      </div>`);
+    $('cobCancelar').onclick = cerrarHoja;
+    $('cobGuardar').onclick = ()=> editar ? guardarEdicionCobrador(cob) : crearCobrador();
+  }
+
+  function valErr(id, msg){ const e=$(id); e.textContent=msg; e.classList.add('visible'); }
+
+  // ---- CREAR cobrador (con segunda instancia de Firebase) ----
+  async function crearCobrador(){
+    const nombre = $('cobNombre').value.trim();
+    const correo = $('cobCorreo').value.trim();
+    const clave  = $('cobClave').value;
+    const rutaId = $('cobRuta').value;
+    const base   = $('cobBase').value === '' ? 0 : Number($('cobBase').value);
+    $('cobErr').classList.remove('visible');
+
+    if(!nombre) return valErr('cobErr','Escribe el nombre del cobrador.');
+    if(!correo) return valErr('cobErr','Escribe el correo del cobrador.');
+    if(!clave || clave.length < 6) return valErr('cobErr','La contraseña debe tener al menos 6 caracteres.');
+    if(!navigator.onLine) return valErr('cobErr','Crear un cobrador necesita conexión. Inténtalo con internet.');
+
+    const btn = $('cobGuardar'); btn.disabled = true; btn.textContent = 'Creando…';
+
+    // App secundaria temporal: crea la cuenta SIN sacarte de tu sesión de admin.
+    let appSec;
+    try {
+      appSec = initializeApp(firebaseConfig, 'rx-sec-' + Date.now());
+      const authSec = getAuth(appSec);
+      const cred = await createUserWithEmailAndPassword(authSec, correo, clave);
+      const uid = cred.user.uid;
+
+      // Escrituras con TU sesión (la principal): mapa global + perfil en la empresa.
+      const lote = writeBatch(db);
+      lote.set(doc(db, 'usuariosGlobal', uid), { empresaId:S.empresaId, rol:'cobrador', bloqueado:false });
+      lote.set(doc(db, 'empresas', S.empresaId, 'usuarios', uid), {
+        nombre, correo, rol:'cobrador', rutaId: rutaId||'', baseAsignada: base,
+        bloqueado:false, creadoEn: serverTimestamp()
+      });
+      if(rutaId) lote.update(doc(db, 'empresas', S.empresaId, 'rutas', rutaId), { cobradorId: uid });
+      await lote.commit();
+
+      try { await signOut(authSec); } catch(_){}
+      cerrarHoja();
+      toast('Cobrador creado ✓');
+    } catch (e) {
+      btn.disabled = false; btn.textContent = 'Crear cobrador';
+      valErr('cobErr', mensajeError(e.code) + (e.code ? '' : ' ('+(e.message||e)+')'));
+    } finally {
+      if(appSec){ try { await deleteApp(appSec); } catch(_){} }
+    }
+  }
+
+  // ---- GUARDAR edición de cobrador ----
+  async function guardarEdicionCobrador(cob){
+    const nombre = $('cobNombre').value.trim();
+    const rutaId = $('cobRuta').value;
+    const base   = $('cobBase').value === '' ? 0 : Number($('cobBase').value);
+    $('cobErr').classList.remove('visible');
+    if(!nombre) return valErr('cobErr','El nombre no puede quedar vacío.');
+
+    const btn = $('cobGuardar'); btn.disabled = true; btn.textContent = 'Guardando…';
+    try {
+      const lote = writeBatch(db);
+      lote.update(doc(db, 'empresas', S.empresaId, 'usuarios', cob.id), { nombre, rutaId: rutaId||'', baseAsignada: base });
+      if((cob.rutaId||'') !== (rutaId||'')){
+        if(cob.rutaId) lote.update(doc(db,'empresas',S.empresaId,'rutas',cob.rutaId), { cobradorId:'' });
+        if(rutaId)     lote.update(doc(db,'empresas',S.empresaId,'rutas',rutaId),     { cobradorId: cob.id });
+      }
+      await lote.commit();
+      cerrarHoja(); toast('Cambios guardados ✓');
+    } catch(e){
+      btn.disabled=false; btn.textContent='Guardar cambios';
+      valErr('cobErr', mensajeError(e.code) + (e.code?'':' ('+(e.message||e)+')'));
+    }
+  }
+
+  // ---- ficha (detalle) de cobrador con drill-down a sus clientes ----
+  function fichaCobrador(uid){
+    const c = S.cobradores.find(x=>x.id===uid); if(!c) return;
+    const r = c.rutaId ? (nombreRuta(c.rutaId)||'—') : 'Sin ruta';
+    const estado = c.bloqueado
+      ? '<span class="estado rx-estado-bloq">Bloqueado</span>'
+      : '<span class="estado rx-estado-ok">Activo</span>';
+    const susClientes = S.clientes.filter(x=>x.cobradorId===uid);
+    const suCartera = susClientes.reduce((t,x)=> t + deudaCliente(x.id), 0);
+    const listaCli = susClientes.length===0
+      ? `<div style="text-align:center;color:var(--niebla);font-size:.88rem;padding:10px 0">Este cobrador aún no tiene clientes.</div>`
+      : susClientes.map(x=>{
+          const np = prestamosDe(x.id).filter(p=>p.estado!=='pagado').length;
+          const d = deudaCliente(x.id);
+          return `<div class="rx-mini-cli" data-cli="${x.id}">
+            <div class="av">${iniciales(x.nombre)}</div>
+            <div class="cu">
+              <div class="nm">${escapar(x.nombre)}</div>
+              <div class="mt">${escapar(x.telefono||'Sin teléfono')} · ${np} préstamo${np===1?'':'s'}</div>
+            </div>
+            <span class="rx-est ${d>0?'rx-est-ok':'rx-est-pago'}">${d>0?pesos(d):'—'}</span>
+          </div>`;
+        }).join('');
+    abrirHoja(`
+      <div style="display:flex;align-items:center;gap:14px;margin:4px 0 16px">
+        <div class="rx-avatar" style="width:54px;height:54px;font-size:1.35rem">${iniciales(c.nombre)}</div>
+        <div style="flex:1;min-width:0">
+          <h2 style="margin:0">${escapar(c.nombre||'Sin nombre')}</h2>
+          <div style="margin-top:4px">${estado}</div>
+        </div>
+      </div>
+      <div class="rx-res">
+        <div class="c"><div class="k">En la calle</div><div class="v">${pesos(suCartera)}</div></div>
+        <div class="c"><div class="k">Clientes</div><div class="v">${susClientes.length}</div></div>
+      </div>
+      <div class="rx-detalle-fila"><span class="et">Correo</span><span class="va">${escapar(c.correo||'—')}</span></div>
+      <div class="rx-detalle-fila"><span class="et">Ruta</span><span class="va">${escapar(r)}</span></div>
+      <div class="rx-detalle-fila"><span class="et">Base del día</span><span class="va">${pesos(c.baseAsignada)}</span></div>
+      <div class="rx-ficha-sub"><span>Sus clientes</span></div>
+      ${listaCli}
+      <div class="rx-acciones" style="margin-top:18px">
+        <button class="rx-btn-prim" id="fcEditar">Editar datos</button>
+        <button class="rx-btn-fant" id="fcBloq">${c.bloqueado?'Reactivar acceso':'Bloquear acceso'}</button>
+        <button class="rx-btn-fant" id="fcCerrar">Cerrar</button>
+      </div>`);
+    $('fcCerrar').onclick = cerrarHoja;
+    $('fcEditar').onclick = ()=> formCobrador(c);
+    $('fcBloq').onclick   = ()=> alternarBloqueo(c);
+    $('rxHojaContenido').querySelectorAll('[data-cli]').forEach(el=>{
+      el.onclick = ()=> fichaCliente(el.dataset.cli);
+    });
+  }
+
+  // ---- bloquear / reactivar cobrador ----
+  async function alternarBloqueo(c){
+    const nuevo = !c.bloqueado;
+    const btn = $('fcBloq'); btn.disabled=true; btn.textContent = nuevo?'Bloqueando…':'Reactivando…';
+    try {
+      const lote = writeBatch(db);
+      lote.update(doc(db,'usuariosGlobal',c.id), { bloqueado:nuevo });
+      lote.update(doc(db,'empresas',S.empresaId,'usuarios',c.id), { bloqueado:nuevo });
+      await lote.commit();
+      cerrarHoja();
+      toast(nuevo ? 'Cobrador bloqueado' : 'Cobrador reactivado ✓');
+    } catch(e){
+      btn.disabled=false; btn.textContent = nuevo?'Bloquear acceso':'Reactivar acceso';
+      toast(mensajeError(e.code), true);
+    }
+  }
+
+  // ===========================================================
+  //  MÓDULO RUTAS (admin)
+  // ===========================================================
+  function renderRutas(){
+    const cuerpo = S.rutas.length === 0
+      ? `<div class="rx-vacio"><div class="ico">🗺️</div><h3>Aún no hay rutas</h3>
+           <p>Las rutas agrupan a los clientes por zona y se le asignan a un cobrador.</p>
+           <button class="rx-btn-prim" style="max-width:260px;margin:0 auto" id="vacioNuevaRuta">+ Crear ruta</button></div>`
+      : `<div class="rx-lista">${S.rutas.map(r=>{
+          const cob = r.cobradorId ? (nombreCobrador(r.cobradorId)||'—') : null;
+          const est = cob
+            ? `<span class="estado rx-estado-ok">${escapar(primerNombre(cob))}</span>`
+            : '<span class="estado rx-estado-libre">Sin cobrador</span>';
+          return `<div class="rx-card" data-ruta="${r.id}">
+            <div class="rx-avatar ruta">🗺️</div>
+            <div class="cuerpo">
+              <div class="nom">${escapar(r.nombre||'Sin nombre')}</div>
+              <div class="meta">${escapar(r.zona || 'Sin zona definida')}</div>
+            </div>
+            ${est}
+          </div>`;
+        }).join('')}</div>`;
+    $('tabRutas').innerHTML = `
+      <div class="rx-sec-head">
+        <h2>Rutas</h2>
+        <button class="rx-mini" id="btnNuevaRuta">+ Nueva</button>
+      </div>
+      ${cuerpo}`;
+    $('btnNuevaRuta').onclick = ()=> formRuta();
+    const v = $('vacioNuevaRuta'); if(v) v.onclick = ()=> formRuta();
+    $('tabRutas').querySelectorAll('[data-ruta]').forEach(card=>{
+      card.onclick = ()=> fichaRuta(card.dataset.ruta);
+    });
+  }
+
+  function opcionesCobradores(seleccionado){
+    const libre = `<option value="">— Sin asignar —</option>`;
+    const items = S.cobradores.filter(c=>!c.bloqueado)
+      .map(c=>`<option value="${c.id}" ${c.id===seleccionado?'selected':''}>${escapar(c.nombre)}</option>`).join('');
+    return libre + items;
+  }
+
+  // ---- formulario crear / editar ruta ----
+  function formRuta(ruta){
+    const editar = !!ruta;
+    abrirHoja(`
+      <h2>${editar?'Editar ruta':'Nueva ruta'}</h2>
+      <div class="sub">${editar?'Actualiza el nombre, la zona o el cobrador.':'Define una zona de cobro y, si quieres, asígnale un cobrador.'}</div>
+      <div class="rx-form-err" id="rutErr"></div>
+      <div class="rx-form-campo">
+        <label for="rutNombre">Nombre de la ruta</label>
+        <input class="rx-fin" id="rutNombre" type="text" placeholder="Ej. Centro, Lunes y Jueves" value="${editar?escapar(ruta.nombre||''):''}" />
+      </div>
+      <div class="rx-form-campo">
+        <label for="rutZona">Zona / descripción <span style="color:var(--niebla);font-weight:400">(opcional)</span></label>
+        <input class="rx-fin" id="rutZona" type="text" placeholder="Ej. Barrio Centro y alrededores" value="${editar?escapar(ruta.zona||''):''}" />
+      </div>
+      <div class="rx-form-campo">
+        <label for="rutCob">Cobrador asignado</label>
+        <select class="rx-fin" id="rutCob">${opcionesCobradores(editar?ruta.cobradorId:'')}</select>
+        ${S.cobradores.filter(c=>!c.bloqueado).length===0 ? '<div class="hint">No tienes cobradores activos. Puedes asignarlo luego.</div>' : ''}
+      </div>
+      <div class="rx-acciones">
+        <button class="rx-btn-prim" id="rutGuardar">${editar?'Guardar cambios':'Crear ruta'}</button>
+        <button class="rx-btn-fant" id="rutCancelar">Cancelar</button>
+      </div>`);
+    $('rutCancelar').onclick = cerrarHoja;
+    $('rutGuardar').onclick = ()=> editar ? guardarEdicionRuta(ruta) : crearRuta();
+  }
+
+  // ---- CREAR ruta ----
+  async function crearRuta(){
+    const nombre = $('rutNombre').value.trim();
+    const zona   = $('rutZona').value.trim();
+    const cobId  = $('rutCob').value;
+    $('rutErr').classList.remove('visible');
+    if(!nombre) return valErr('rutErr','Escribe el nombre de la ruta.');
+
+    const btn = $('rutGuardar'); btn.disabled=true; btn.textContent='Creando…';
+    try {
+      const ref = doc(collection(db, 'empresas', S.empresaId, 'rutas'));
+      const lote = writeBatch(db);
+      lote.set(ref, { nombre, zona, cobradorId: cobId||'', activa:true, creadoEn: serverTimestamp() });
+      if(cobId) lote.update(doc(db,'empresas',S.empresaId,'usuarios',cobId), { rutaId: ref.id });
+      await lote.commit();
+      cerrarHoja(); toast('Ruta creada ✓');
+    } catch(e){
+      btn.disabled=false; btn.textContent='Crear ruta';
+      valErr('rutErr', mensajeError(e.code) + (e.code?'':' ('+(e.message||e)+')'));
+    }
+  }
+
+  // ---- GUARDAR edición de ruta ----
+  async function guardarEdicionRuta(ruta){
+    const nombre = $('rutNombre').value.trim();
+    const zona   = $('rutZona').value.trim();
+    const cobId  = $('rutCob').value;
+    $('rutErr').classList.remove('visible');
+    if(!nombre) return valErr('rutErr','El nombre no puede quedar vacío.');
+
+    const btn = $('rutGuardar'); btn.disabled=true; btn.textContent='Guardando…';
+    try {
+      const lote = writeBatch(db);
+      lote.update(doc(db,'empresas',S.empresaId,'rutas',ruta.id), { nombre, zona, cobradorId: cobId||'' });
+      if((ruta.cobradorId||'') !== (cobId||'')){
+        if(ruta.cobradorId) lote.update(doc(db,'empresas',S.empresaId,'usuarios',ruta.cobradorId), { rutaId:'' });
+        if(cobId)           lote.update(doc(db,'empresas',S.empresaId,'usuarios',cobId),           { rutaId: ruta.id });
+      }
+      await lote.commit();
+      cerrarHoja(); toast('Cambios guardados ✓');
+    } catch(e){
+      btn.disabled=false; btn.textContent='Guardar cambios';
+      valErr('rutErr', mensajeError(e.code) + (e.code?'':' ('+(e.message||e)+')'));
+    }
+  }
+
+  // ---- ficha de ruta ----
+  function fichaRuta(rutaId){
+    const r = S.rutas.find(x=>x.id===rutaId); if(!r) return;
+    const cob = r.cobradorId ? (nombreCobrador(r.cobradorId)||'—') : 'Sin asignar';
+    abrirHoja(`
+      <div style="display:flex;align-items:center;gap:14px;margin:4px 0 18px">
+        <div class="rx-avatar ruta" style="width:54px;height:54px;font-size:1.6rem">🗺️</div>
+        <div style="flex:1;min-width:0"><h2 style="margin:0">${escapar(r.nombre||'Sin nombre')}</h2></div>
+      </div>
+      <div class="rx-detalle-fila"><span class="et">Zona</span><span class="va">${escapar(r.zona||'—')}</span></div>
+      <div class="rx-detalle-fila"><span class="et">Cobrador</span><span class="va">${escapar(cob)}</span></div>
+      <div class="rx-detalle-fila"><span class="et">Clientes</span><span class="va">Etapa 3</span></div>
+      <div class="rx-acciones" style="margin-top:20px">
+        <button class="rx-btn-prim" id="frEditar">Editar ruta</button>
+        <button class="rx-btn-fant" id="frCerrar">Cerrar</button>
+      </div>`);
+    $('frCerrar').onclick = cerrarHoja;
+    $('frEditar').onclick = ()=> formRuta(r);
+  }
+
+  // ===========================================================
+  //  MÓDULO CLIENTES Y PRÉSTAMOS (Etapa 3A)
+  // ===========================================================
+  function modalidadTxt(v){ return (RX_MODALIDADES.find(m=>m.v===v)||{}).t || v || '—'; }
+  function tipoMovTxt(t){ return { cobro:'Cobro', multa:'Multa', reembolso:'Reembolso', renovacion:'Renovación', desembolso:'Desembolso' }[t] || t; }
+
+  function renderClientes(){
+    const esAdmin = S.rol==='admin';
+    const titulo = esAdmin ? 'Clientes' : 'Mis clientes';
+    const cuerpo = S.clientes.length === 0
+      ? `<div class="rx-vacio"><div class="ico">🧾</div><h3>Aún no hay clientes</h3>
+           <p>Registra el primer cliente para poder entregarle un préstamo.</p>
+           <button class="rx-btn-prim" style="max-width:260px;margin:0 auto" id="vacioNuevoCli">+ Nuevo cliente</button></div>`
+      : `<div class="rx-lista">${S.clientes.map(c=>{
+          const np = prestamosDe(c.id).filter(p=>p.estado!=='pagado').length;
+          const deuda = deudaCliente(c.id);
+          const sub = esAdmin
+            ? `${escapar(primerNombre(nombreCobrador(c.cobradorId)||'Sin cobrador'))} · ${np} préstamo${np===1?'':'s'}`
+            : `${escapar(c.telefono||'Sin teléfono')} · ${np} préstamo${np===1?'':'s'}`;
+          const badge = deuda>0
+            ? `<span class="rx-est rx-est-ok">${pesos(deuda)}</span>`
+            : `<span class="rx-est rx-est-pago">Sin deuda</span>`;
+          return `<div class="rx-card" data-cli="${c.id}">
+            <div class="rx-avatar cli">${iniciales(c.nombre)}</div>
+            <div class="cuerpo">
+              <div class="nom">${escapar(c.nombre||'Sin nombre')}</div>
+              <div class="meta">${sub}</div>
+            </div>
+            ${badge}
+          </div>`;
+        }).join('')}</div>`;
+    $('tabClientes').innerHTML = `
+      <div class="rx-sec-head">
+        <h2>${titulo}</h2>
+        <button class="rx-mini" id="btnNuevoCli">+ Nuevo</button>
+      </div>
+      ${cuerpo}`;
+    $('btnNuevoCli').onclick = ()=> formCliente();
+    const v = $('vacioNuevoCli'); if(v) v.onclick = ()=> formCliente();
+    $('tabClientes').querySelectorAll('[data-cli]').forEach(card=>{
+      card.onclick = ()=> fichaCliente(card.dataset.cli);
+    });
+  }
+
+  // ---- formulario crear / editar cliente ----
+  function formCliente(cli){
+    const editar = !!cli;
+    const esAdmin = S.rol==='admin';
+    abrirHoja(`
+      <h2>${editar?'Editar cliente':'Nuevo cliente'}</h2>
+      <div class="sub">${editar?'Actualiza los datos del cliente.':'Registra los datos de la persona a la que le vas a prestar.'}</div>
+      <div class="rx-form-err" id="cliErr"></div>
+      <div class="rx-form-campo">
+        <label for="cliNombre">Nombre completo</label>
+        <input class="rx-fin" id="cliNombre" type="text" placeholder="Ej. María Pérez" value="${editar?escapar(cli.nombre||''):''}" />
+      </div>
+      <div class="rx-form-campo">
+        <label for="cliCedula">Cédula <span style="color:var(--niebla);font-weight:400">(opcional)</span></label>
+        <input class="rx-fin" id="cliCedula" type="text" inputmode="numeric" placeholder="Número de documento" value="${editar?escapar(cli.cedula||''):''}" />
+      </div>
+      <div class="rx-form-campo">
+        <label for="cliTel">Teléfono <span style="color:var(--niebla);font-weight:400">(opcional)</span></label>
+        <input class="rx-fin" id="cliTel" type="tel" inputmode="tel" placeholder="Celular" value="${editar?escapar(cli.telefono||''):''}" />
+      </div>
+      <div class="rx-form-campo">
+        <label for="cliDir">Dirección <span style="color:var(--niebla);font-weight:400">(opcional)</span></label>
+        <input class="rx-fin" id="cliDir" type="text" placeholder="Casa / negocio" value="${editar?escapar(cli.direccion||''):''}" />
+      </div>
+      ${esAdmin ? `
+      <div class="rx-form-campo">
+        <label for="cliCob">Cobrador asignado</label>
+        <select class="rx-fin" id="cliCob">${opcionesCobradores(editar?cli.cobradorId:'')}</select>
+        <div class="hint">Define quién cobra a este cliente. Solo ese cobrador lo verá.</div>
+      </div>` : ''}
+      <div class="rx-acciones">
+        <button class="rx-btn-prim" id="cliGuardar">${editar?'Guardar cambios':'Crear cliente'}</button>
+        <button class="rx-btn-fant" id="cliCancelar">Cancelar</button>
+      </div>`);
+    $('cliCancelar').onclick = cerrarHoja;
+    $('cliGuardar').onclick = ()=> editar ? guardarEdicionCliente(cli) : crearCliente();
+  }
+
+  async function crearCliente(){
+    const nombre = $('cliNombre').value.trim();
+    const cedula = $('cliCedula').value.trim();
+    const telefono = $('cliTel').value.trim();
+    const direccion = $('cliDir').value.trim();
+    $('cliErr').classList.remove('visible');
+    if(!nombre) return valErr('cliErr','Escribe el nombre del cliente.');
+
+    let cobradorId, rutaId='';
+    if(S.rol==='admin'){
+      cobradorId = $('cliCob').value;
+      if(!cobradorId) return valErr('cliErr','Asigna un cobrador para este cliente.');
+      const cob = S.cobradores.find(c=>c.id===cobradorId);
+      rutaId = cob?.rutaId || '';
+    } else {
+      cobradorId = S.uid;
+      rutaId = S.perfil.rutaId || '';
+    }
+
+    const btn = $('cliGuardar'); btn.disabled=true; btn.textContent='Creando…';
+    try {
+      await addDoc(collection(db,'empresas',S.empresaId,'clientes'), {
+        nombre, cedula, telefono, direccion, cobradorId, rutaId,
+        activo:true, creadoEn: serverTimestamp()
+      });
+      cerrarHoja(); toast('Cliente creado ✓');
+    } catch(e){
+      btn.disabled=false; btn.textContent='Crear cliente';
+      valErr('cliErr', mensajeError(e.code) + (e.code?'':' ('+(e.message||e)+')'));
+    }
+  }
+
+  async function guardarEdicionCliente(cli){
+    const nombre = $('cliNombre').value.trim();
+    const cedula = $('cliCedula').value.trim();
+    const telefono = $('cliTel').value.trim();
+    const direccion = $('cliDir').value.trim();
+    $('cliErr').classList.remove('visible');
+    if(!nombre) return valErr('cliErr','El nombre no puede quedar vacío.');
+    const datos = { nombre, cedula, telefono, direccion };
+    if(S.rol==='admin'){
+      const cobradorId = $('cliCob').value;
+      if(!cobradorId) return valErr('cliErr','Asigna un cobrador.');
+      datos.cobradorId = cobradorId;
+      const cob = S.cobradores.find(c=>c.id===cobradorId);
+      datos.rutaId = cob?.rutaId || '';
+    }
+    const btn = $('cliGuardar'); btn.disabled=true; btn.textContent='Guardando…';
+    try {
+      await updateDoc(doc(db,'empresas',S.empresaId,'clientes',cli.id), datos);
+      cerrarHoja(); toast('Cambios guardados ✓');
+    } catch(e){
+      btn.disabled=false; btn.textContent='Guardar cambios';
+      valErr('cliErr', mensajeError(e.code) + (e.code?'':' ('+(e.message||e)+')'));
+    }
+  }
+
+  // ---- ficha de cliente con sus préstamos ----
+  function fichaCliente(id){
+    const c = S.clientes.find(x=>x.id===id); if(!c) return;
+    const esAdmin = S.rol==='admin';
+    const pres = prestamosDe(id).slice().sort((a,b)=> (a.estado==='pagado'?1:0)-(b.estado==='pagado'?1:0));
+    const listaPres = pres.length===0
+      ? `<div style="text-align:center;color:var(--niebla);font-size:.9rem;padding:14px 0">Sin préstamos todavía.</div>`
+      : pres.map(p=>{
+          const r = rxResumen(p, []);  // 3A: saldo inicial (los cobros llegan en 3B)
+          const est = RX_ESTADO[r.estado];
+          const pct = Math.min(100, Math.round((r.cuotasPagadas / (p.numeroCuotas||1))*100));
+          return `<div class="rx-pres" data-pres="${p.id}">
+            <div class="top">
+              <span class="monto">${pesos(p.monto)} <span style="font-weight:400;color:var(--niebla);font-size:.82rem">· ${modalidadTxt(p.modalidad)}</span></span>
+              <span class="rx-est ${est.c}">${est.t}</span>
+            </div>
+            <div class="barra"><i style="width:${pct}%"></i></div>
+            <div class="pie"><span>Saldo: <b>${pesos(r.saldo)}</b></span><span>Cuota <b>${pesos(r.cuota)}</b></span></div>
+          </div>`;
+        }).join('');
+    abrirHoja(`
+      <div style="display:flex;align-items:center;gap:14px;margin:4px 0 16px">
+        <div class="rx-avatar cli" style="width:54px;height:54px;font-size:1.35rem">${iniciales(c.nombre)}</div>
+        <div style="flex:1;min-width:0">
+          <h2 style="margin:0">${escapar(c.nombre||'Sin nombre')}</h2>
+          <div style="margin-top:3px;color:var(--niebla);font-size:.85rem">${escapar(c.telefono||'Sin teléfono')}</div>
+        </div>
+      </div>
+      <div class="rx-detalle-fila"><span class="et">Cédula</span><span class="va">${escapar(c.cedula||'—')}</span></div>
+      <div class="rx-detalle-fila"><span class="et">Dirección</span><span class="va">${escapar(c.direccion||'—')}</span></div>
+      ${esAdmin?`<div class="rx-detalle-fila"><span class="et">Cobrador</span><span class="va">${escapar(nombreCobrador(c.cobradorId)||'—')}</span></div>`:''}
+      <div class="rx-detalle-fila"><span class="et">Ruta</span><span class="va">${escapar(nombreRuta(c.rutaId)||'—')}</span></div>
+      <div class="rx-ficha-sub"><span>Préstamos</span><button class="rx-mini" id="fcliPrestar">+ Prestar</button></div>
+      ${listaPres}
+      <div class="rx-acciones" style="margin-top:18px">
+        <button class="rx-btn-fant" id="fcliEditar">Editar datos</button>
+        <button class="rx-btn-fant" id="fcliCerrar">Cerrar</button>
+      </div>`);
+    $('fcliCerrar').onclick = cerrarHoja;
+    $('fcliEditar').onclick = ()=> formCliente(c);
+    $('fcliPrestar').onclick = ()=> formPrestamo(c);
+    $('rxHojaContenido').querySelectorAll('[data-pres]').forEach(el=>{
+      el.onclick = ()=> fichaPrestamo(el.dataset.pres);
+    });
+  }
+
+  // ---- formulario nuevo préstamo (con calculadora en vivo) ----
+  function formPrestamo(cli){
+    const hoy = new Date().toISOString().slice(0,10);
+    abrirHoja(`
+      <h2>Nuevo préstamo</h2>
+      <div class="sub">Para ${escapar(cli.nombre)} · interés fijo del 20%.</div>
+      <div class="rx-form-err" id="preErr"></div>
+      <div class="rx-form-campo">
+        <label for="preMonto">Monto a prestar</label>
+        <input class="rx-fin" id="preMonto" type="number" inputmode="numeric" min="0" placeholder="Ej. 100000" />
+      </div>
+      <div class="rx-form-campo">
+        <label for="preMod">Modalidad de pago</label>
+        <select class="rx-fin" id="preMod">${RX_MODALIDADES.map(m=>`<option value="${m.v}" ${m.v==='diario'?'selected':''}>${m.t}</option>`).join('')}</select>
+      </div>
+      <div class="rx-form-campo">
+        <label for="preCuotas">Número de cuotas</label>
+        <input class="rx-fin" id="preCuotas" type="number" inputmode="numeric" min="1" placeholder="Ej. 20" value="20" />
+      </div>
+      <div class="rx-form-campo">
+        <label for="prePap">Papelería <span style="color:var(--niebla);font-weight:400">(opcional)</span></label>
+        <input class="rx-fin" id="prePap" type="number" inputmode="numeric" min="0" placeholder="0" />
+        <div class="hint">Se descuenta del efectivo entregado, no del saldo.</div>
+      </div>
+      <div class="rx-form-campo">
+        <label for="preFecha">Fecha de inicio</label>
+        <input class="rx-fin" id="preFecha" type="date" value="${hoy}" />
+      </div>
+      <div class="rx-calc">
+        <div class="fila"><span>Saldo a pagar (monto + 20%)</span><b id="calcSaldo">$ 0</b></div>
+        <div class="fila"><span>Valor de cada cuota</span><b id="calcCuota">$ 0</b></div>
+        <div class="fila tot"><span>Entregas en efectivo</span><b id="calcEntrega">$ 0</b></div>
+      </div>
+      <div class="rx-acciones">
+        <button class="rx-btn-prim" id="preGuardar">Entregar préstamo</button>
+        <button class="rx-btn-fant" id="preCancelar">Cancelar</button>
+      </div>`);
+    const recalc = ()=>{
+      const monto = Number($('preMonto').value)||0;
+      const cuotas = Number($('preCuotas').value)||0;
+      const pap = Number($('prePap').value)||0;
+      $('calcSaldo').textContent = pesos(rxSaldoInicial(monto));
+      $('calcCuota').textContent = pesos(rxValorCuota(monto, cuotas));
+      $('calcEntrega').textContent = pesos(Math.max(0, monto - pap));
+    };
+    ['preMonto','preCuotas','prePap'].forEach(id=> $(id).addEventListener('input', recalc));
+    $('preCancelar').onclick = cerrarHoja;
+    $('preGuardar').onclick = ()=> crearPrestamo(cli);
+    recalc();
+  }
+
+  async function crearPrestamo(cli){
+    const monto = Number($('preMonto').value)||0;
+    const modalidad = $('preMod').value;
+    const numeroCuotas = Number($('preCuotas').value)||0;
+    const papeleria = Number($('prePap').value)||0;
+    const fechaInicio = $('preFecha').value;
+    $('preErr').classList.remove('visible');
+    if(monto<=0) return valErr('preErr','Escribe el monto a prestar.');
+    if(numeroCuotas<1) return valErr('preErr','El número de cuotas debe ser al menos 1.');
+    if(!fechaInicio) return valErr('preErr','Elige la fecha de inicio.');
+
+    const cobradorId = cli.cobradorId || (S.rol!=='admin' ? S.uid : '');
+    if(!cobradorId) return valErr('preErr','Este cliente no tiene cobrador asignado. Asígnale uno primero.');
+    const rutaId = cli.rutaId || '';
+    const valorCuota = rxValorCuota(monto, numeroCuotas);
+
+    const btn = $('preGuardar'); btn.disabled=true; btn.textContent='Entregando…';
+    try {
+      const presRef = doc(collection(db,'empresas',S.empresaId,'prestamos'));
+      const movRef  = doc(collection(db,'empresas',S.empresaId,'movimientos'));
+      const lote = writeBatch(db);
+      lote.set(presRef, {
+        clienteId: cli.id, clienteNombre: cli.nombre,
+        monto, factor: RX_FACTOR, modalidad, numeroCuotas, valorCuota, papeleria,
+        cobradorId, rutaId, fechaInicio, estado:'activo', creadoEn: serverTimestamp()
+      });
+      lote.set(movRef, {
+        prestamoId: presRef.id, clienteId: cli.id, tipo:'desembolso',
+        monto, fecha: fechaInicio, cobradorId, creadoEn: serverTimestamp()
+      });
+      await lote.commit();
+      cerrarHoja(); toast('Préstamo entregado ✓');
+    } catch(e){
+      btn.disabled=false; btn.textContent='Entregar préstamo';
+      valErr('preErr', mensajeError(e.code) + (e.code?'':' ('+(e.message||e)+')'));
+    }
+  }
+
+  // ---- ficha de un préstamo (carga sus movimientos) ----
+  async function fichaPrestamo(prestamoId){
+    const p = S.prestamos.find(x=>x.id===prestamoId); if(!p) return;
+    abrirHoja(`<div style="text-align:center;padding:34px 0;color:var(--niebla)">Cargando préstamo…</div>`);
+    let movs = [];
+    try {
+      const snap = await getDocs(query(
+        collection(db,'empresas',S.empresaId,'movimientos'),
+        where('prestamoId','==',prestamoId)
+      ));
+      movs = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+    } catch(_){}
+    const r = rxResumen(p, movs);
+    const est = RX_ESTADO[r.estado];
+    const histo = movs.filter(m=> m.tipo!=='desembolso')
+      .sort((a,b)=> String(b.fecha).localeCompare(String(a.fecha)));
+    const movsHtml = histo.length===0
+      ? `<div style="text-align:center;color:var(--niebla);font-size:.88rem;padding:12px 0">Aún no hay cobros registrados.</div>`
+      : histo.map(m=>`<div class="rx-detalle-fila"><span class="et">${tipoMovTxt(m.tipo)} · ${escapar(m.fecha||'')}</span><span class="va">${pesos(m.monto)}</span></div>`).join('');
+    abrirHoja(`
+      <h2 style="margin:6px 0 2px">${pesos(p.monto)} <span style="font-weight:400;color:var(--niebla);font-size:.9rem">· ${modalidadTxt(p.modalidad)}</span></h2>
+      <div class="sub">${escapar(p.clienteNombre||'')} · inicio ${escapar(p.fechaInicio||'')}</div>
+      <div style="margin:4px 0 2px"><span class="rx-est ${est.c}">${est.t}</span></div>
+      <div class="rx-res">
+        <div class="c"><div class="k">Saldo</div><div class="v">${pesos(r.saldo)}</div></div>
+        <div class="c ${r.montoAtraso>0?'mora':''}"><div class="k">En atraso</div><div class="v">${pesos(r.montoAtraso)}</div></div>
+      </div>
+      <div class="rx-detalle-fila"><span class="et">Valor de la cuota</span><span class="va">${pesos(r.cuota)}</span></div>
+      <div class="rx-detalle-fila"><span class="et">Cuotas pagadas</span><span class="va">${r.cuotasPagadas} de ${p.numeroCuotas}</span></div>
+      <div class="rx-detalle-fila"><span class="et">Papelería</span><span class="va">${pesos(p.papeleria)}</span></div>
+      <div class="rx-ficha-sub"><span>Movimientos</span></div>
+      ${movsHtml}
+      <div class="rx-acciones" style="margin-top:16px">
+        <button class="rx-btn-prim" id="fpCobrar" disabled style="opacity:.5;cursor:default">Registrar cobro · Etapa 3B</button>
+        <button class="rx-btn-fant" id="fpCerrar">Cerrar</button>
+      </div>`);
+    $('fpCerrar').onclick = cerrarHoja;
+  }
+
+  // ---- registrar service worker (PWA instalable / offline) ----
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./service-worker.js').catch(()=>{});
+    });
+  }
+</script>
+</body>
+</html>

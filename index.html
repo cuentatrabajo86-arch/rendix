@@ -895,6 +895,7 @@
       if(S.tab==='clientes') renderClientes();
       if(S.tab==='inicio') (S.rol==='admin'?renderInicioAdmin:renderInicioCobrador)();
       if(S.tab==='cobrar') renderCobrarDia();
+      if($('cierreBody')) pintarCierre();
     }, (err)=> console.warn('prestamos:', err.message));
   }
   function escucharMovimientos(){
@@ -909,6 +910,7 @@
       if(S.tab==='clientes') renderClientes();
       if(S.tab==='inicio') (S.rol==='admin'?renderInicioAdmin:renderInicioCobrador)();
       if(S.tab==='cobrar') renderCobrarDia();
+      if($('cierreBody')) pintarCierre();
     }, (err)=> console.warn('movimientos:', err.message));
   }
   // saldo REAL de un préstamo: reconstruido desde sus movimientos (principio sagrado)
@@ -1796,7 +1798,9 @@
   //  CIERRE DE CAJA · Etapa 4 — cuadre del día e histórico,
   //  calculado desde los movimientos (nada se acumula).
   // ===========================================================
-  function abrirCierreCaja(){
+  function abrirCierreCaja(){ abrirHoja('<div id="cierreBody"></div>'); pintarCierre(); }
+  function pintarCierre(){
+    const cont = $('cierreBody'); if(!cont) return;
     const hoy = hoyISO();
     const base = Number(S.perfil?.baseAsignada) || 0;
     const movs = S.movimientos;
@@ -1828,7 +1832,7 @@
     let ruta='Tu ruta';
     if(S.perfil?.rutaId){ const rr=S.rutas.find(x=>x.id===S.perfil.rutaId); if(rr) ruta=escapar(rr.nombre); }
 
-    abrirHoja(`
+    cont.innerHTML = `
       <h2 style="margin:6px 0 2px">Cierre de caja</h2>
       <div class="sub">${hoy} · ${ruta}</div>
       <div class="rx-cuadre">
@@ -1843,8 +1847,8 @@
       ${histHTML}
       <div class="rx-acciones" style="margin-top:18px">
         <button class="rx-btn-fant" id="cierreCerrar">Cerrar</button>
-      </div>`);
-    $('cierreCerrar').onclick = cerrarHoja;
+      </div>`;
+    const _cc = $('cierreCerrar'); if(_cc) _cc.onclick = cerrarHoja;
   }
 
   // ===========================================================
@@ -1874,7 +1878,7 @@
         <div class="c"><div class="k">Saldo actual</div><div class="v">${pesos(saldo)}</div></div>
         <div class="c ${r.montoAtraso>0?'mora':''}"><div class="k">${r.montoAtraso>0?'En atraso':'Cuota'}</div><div class="v">${pesos(r.montoAtraso>0?r.montoAtraso:cuota)}</div></div>
       </div>
-      ${yaHoy>0?`<div class="rx-aviso-hoy"><span>⚠️</span><span>Hoy ya recibiste <b>${pesos(yaHoy)}</b> de este cliente. Si registras este cobro, será un <b>abono adicional</b> del mismo día.</span></div>`:''}
+      ${yaHoy>0?`<div class="rx-aviso-hoy"><span>⚠️</span><span>Hoy ya le cobraste <b>${pesos(yaHoy)}</b> a ${escapar(cli.nombre||p.clienteNombre||'este cliente')}. Si registras este cobro, será un <b>abono adicional</b> del mismo día.</span></div>`:''}
       <div class="rx-form-err" id="cobroErr"></div>
       <div class="rx-form-campo">
         <label for="cobroMonto">Monto recibido</label>

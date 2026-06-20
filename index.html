@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<meta name="theme-color" content="#11302A" />
+<meta name="theme-color" content="#0D1B3A" />
 <meta name="description" content="Rendix — Control de préstamos y cobros por rutas." />
 <title>Rendix · Control de Cobros</title>
 <link rel="manifest" href="./manifest.json" />
@@ -16,22 +16,22 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
-  /* ===== RENDIX · Sistema de diseño (Etapa 2) ===================== */
+  /* ===== RENDIX · Sistema de diseño · Identidad "Azul noche + dorado" ===== */
   :root{
-    --verde-profundo:#11302A;
-    --verde:#1C5C4A;
-    --verde-claro:#2E7D5B;
+    --azul-profundo:#0D1B3A;
+    --azul:#1E3D6B;
+    --azul-claro:#3461A8;
     --dorado:#C9A227;
     --dorado-claro:#E4C766;
     --marfil:#F6F4EE;
     --marfil-2:#EFEBE0;
-    --tinta:#14211D;
-    --niebla:#7E8A84;
-    --linea:rgba(20,33,29,.12);
-    --ok:#2E7D5B;
+    --tinta:#0F1A30;
+    --niebla:#7A8699;
+    --linea:rgba(13,27,58,.12);
+    --ok:#2E9E63;
     --alerta:#C0532B;
     --peligro:#B23A33;
-    --sombra:0 10px 30px rgba(8,24,20,.18);
+    --sombra:0 10px 30px rgba(7,15,38,.18);
     --r:16px;
     --display:"Bricolage Grotesque",-apple-system,system-ui,sans-serif;
     --texto:"Hanken Grotesk",-apple-system,system-ui,sans-serif;
@@ -55,7 +55,7 @@
   /* ===== LOGIN ===== */
   #vistaLogin{
     display:none;min-height:100dvh;
-    background:radial-gradient(120% 90% at 50% -10%, #205141 0%, var(--verde-profundo) 55%, #0C241F 100%);
+    background:radial-gradient(120% 90% at 50% -10%, #1A3566 0%, var(--azul-profundo) 55%, #08122B 100%);
     color:var(--marfil);
     padding:max(28px,env(safe-area-inset-top)) 22px max(28px,env(safe-area-inset-bottom));
     flex-direction:column;justify-content:space-between;align-items:center;
@@ -65,14 +65,14 @@
   .rx-marca{font-family:var(--display);font-weight:800;font-size:2.9rem;letter-spacing:-.02em;color:var(--marfil)}
   .rx-marca b{color:var(--dorado-claro)}
   .rx-regla{height:3px;width:64px;margin:14px auto 0;border-radius:3px;background:linear-gradient(90deg,var(--dorado),var(--dorado-claro))}
-  .rx-tagline{margin-top:14px;color:#CFE0D8;font-size:.96rem;max-width:300px;margin-left:auto;margin-right:auto}
+  .rx-tagline{margin-top:14px;color:#C8D6EE;font-size:.96rem;max-width:300px;margin-left:auto;margin-right:auto}
   .rx-login-card{
     width:100%;max-width:420px;background:rgba(255,255,255,.06);
     border:1px solid rgba(255,255,255,.12);border-radius:var(--r);
     padding:22px 20px;backdrop-filter:blur(6px);
   }
   .rx-campo{margin-bottom:14px;text-align:left}
-  .rx-campo label{display:block;font-size:.82rem;font-weight:600;color:#CFE0D8;margin-bottom:6px}
+  .rx-campo label{display:block;font-size:.82rem;font-weight:600;color:#C8D6EE;margin-bottom:6px}
   .rx-input{
     width:100%;font-family:var(--texto);font-size:1.02rem;padding:13px 14px;border-radius:12px;
     border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.95);color:var(--tinta);
@@ -95,13 +95,13 @@
   /* ===== APP shell ===== */
   .rx-app-bg{background:var(--marfil);min-height:100dvh;padding-bottom:84px}
   .rx-topbar{
-    position:sticky;top:0;z-index:5;background:var(--verde-profundo);color:var(--marfil);
+    position:sticky;top:0;z-index:5;background:var(--azul-profundo);color:var(--marfil);
     padding:max(14px,env(safe-area-inset-top)) 18px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;
-    box-shadow:0 2px 12px rgba(8,24,20,.25);
+    box-shadow:0 2px 12px rgba(7,15,38,.25);
   }
   .rx-topbar .marca{font-family:var(--display);font-weight:800;font-size:1.35rem;letter-spacing:-.01em}
   .rx-topbar .marca b{color:var(--dorado-claro)}
-  .rx-empresa{font-size:.74rem;color:#BFD3CB;letter-spacing:.04em}
+  .rx-empresa{font-size:.74rem;color:#BBCBE6;letter-spacing:.04em}
   .rx-salir{
     font-family:var(--texto);font-weight:600;font-size:.82rem;background:rgba(255,255,255,.1);color:var(--marfil);
     border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:8px 14px;cursor:pointer;white-space:nowrap;
@@ -123,7 +123,7 @@
   .rx-pill.offline{background:rgba(192,83,43,.14);color:#8a3a1c}
   .rx-pill.offline .punto{background:var(--alerta)}
 
-  .rx-rol-tag{display:inline-block;font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--verde-profundo);background:var(--dorado-claro);padding:4px 10px;border-radius:6px}
+  .rx-rol-tag{display:inline-block;font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--azul-profundo);background:var(--dorado-claro);padding:4px 10px;border-radius:6px}
   .rx-saludo{margin:14px 0 4px;font-size:1.75rem}
   .rx-sub{color:var(--niebla);font-size:.95rem;margin-bottom:6px}
 
@@ -151,13 +151,13 @@
   .rx-modulo.bloq{opacity:.66;cursor:default}
   .rx-modulo .ico{font-size:1.5rem;line-height:1}
   .rx-modulo .nom{font-family:var(--display);font-weight:700;font-size:1rem;margin-top:8px;color:var(--tinta)}
-  .rx-modulo .etapa{position:absolute;top:10px;right:10px;font-size:.62rem;font-weight:700;letter-spacing:.06em;color:var(--verde);background:rgba(28,92,74,.1);padding:3px 7px;border-radius:6px}
-  .rx-modulo .conteo{position:absolute;top:9px;right:10px;font-size:.72rem;font-weight:700;color:#fff;background:var(--verde);min-width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;border-radius:11px;padding:0 6px}
+  .rx-modulo .etapa{position:absolute;top:10px;right:10px;font-size:.62rem;font-weight:700;letter-spacing:.06em;color:var(--azul);background:rgba(30,61,107,.1);padding:3px 7px;border-radius:6px}
+  .rx-modulo .conteo{position:absolute;top:9px;right:10px;font-size:.72rem;font-weight:700;color:#fff;background:var(--azul);min-width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;border-radius:11px;padding:0 6px}
 
   /* encabezado de sección con acción */
   .rx-sec-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0 16px}
   .rx-sec-head h2{font-size:1.5rem}
-  .rx-sec-head .rx-mini{font-family:var(--texto);font-weight:700;font-size:.86rem;color:#fff;background:var(--verde);border:none;border-radius:999px;padding:9px 15px;cursor:pointer;white-space:nowrap}
+  .rx-sec-head .rx-mini{font-family:var(--texto);font-weight:700;font-size:.86rem;color:#fff;background:var(--azul);border:none;border-radius:999px;padding:9px 15px;cursor:pointer;white-space:nowrap}
   .rx-sec-head .rx-mini:active{transform:translateY(1px)}
 
   /* lista de tarjetas (cobradores / rutas) */
@@ -166,15 +166,15 @@
     background:#fff;border:1px solid var(--linea);border-radius:14px;padding:14px 15px;display:flex;align-items:center;gap:13px;cursor:pointer;transition:transform .06s,box-shadow .2s;
   }
   .rx-card:active{transform:scale(.99)}
-  .rx-avatar{width:44px;height:44px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:800;font-size:1.15rem;color:var(--verde-profundo);background:linear-gradient(160deg,var(--dorado-claro),#d9b94a)}
-  .rx-avatar.ruta{background:linear-gradient(160deg,#bfe0d3,#9ecbb9);color:var(--verde-profundo);font-size:1.3rem}
+  .rx-avatar{width:44px;height:44px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:800;font-size:1.15rem;color:var(--azul-profundo);background:linear-gradient(160deg,var(--dorado-claro),#d9b94a)}
+  .rx-avatar.ruta{background:linear-gradient(160deg,#C7D8F0,#A6C2E8);color:var(--azul-profundo);font-size:1.3rem}
   .rx-card .cuerpo{flex:1;min-width:0}
   .rx-card .nom{font-family:var(--display);font-weight:700;font-size:1.04rem;color:var(--tinta);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .rx-card .meta{font-size:.82rem;color:var(--niebla);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .rx-card .estado{font-size:.7rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border-radius:7px;white-space:nowrap}
   .rx-estado-ok{color:#1d5c43;background:rgba(46,125,91,.13)}
   .rx-estado-bloq{color:#8a3a1c;background:rgba(192,83,43,.14)}
-  .rx-estado-libre{color:#7E8A84;background:rgba(126,138,132,.14)}
+  .rx-estado-libre{color:#7A8699;background:rgba(122,134,153,.14)}
 
   /* estado vacío */
   .rx-vacio{text-align:center;padding:46px 24px;color:var(--niebla)}
@@ -187,7 +187,7 @@
     position:fixed;left:0;right:0;bottom:0;z-index:20;display:none;
     background:#fff;border-top:1px solid var(--linea);
     padding:6px 6px max(6px,env(safe-area-inset-bottom));
-    box-shadow:0 -6px 24px rgba(8,24,20,.08);
+    box-shadow:0 -6px 24px rgba(7,15,38,.08);
   }
   .rx-nav.activa{display:flex}
   .rx-nav button{
@@ -195,12 +195,12 @@
     padding:8px 4px 6px;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.68rem;font-weight:600;transition:color .15s;
   }
   .rx-nav button .ng{font-size:1.32rem;line-height:1}
-  .rx-nav button.activa{color:var(--verde-profundo)}
+  .rx-nav button.activa{color:var(--azul-profundo)}
 
   /* ===== Hoja modal (bottom sheet) ===== */
   .rx-modal{position:fixed;inset:0;z-index:40;display:none}
   .rx-modal.activa{display:block}
-  .rx-modal-bg{position:absolute;inset:0;background:rgba(10,24,20,.55);backdrop-filter:blur(2px);animation:rx-fadebg .2s ease}
+  .rx-modal-bg{position:absolute;inset:0;background:rgba(7,15,38,.55);backdrop-filter:blur(2px);animation:rx-fadebg .2s ease}
   @keyframes rx-fadebg{from{opacity:0}to{opacity:1}}
   .rx-hoja{
     position:absolute;left:0;right:0;bottom:0;max-height:92dvh;overflow-y:auto;
@@ -223,7 +223,7 @@
   .rx-form-err{display:none;font-size:.88rem;font-weight:500;color:#8a3a1c;background:rgba(192,83,43,.1);border:1px solid rgba(192,83,43,.3);border-radius:10px;padding:10px 12px;margin-bottom:14px}
   .rx-form-err.visible{display:block}
   .rx-acciones{display:flex;flex-direction:column;gap:10px;margin-top:6px}
-  .rx-btn-prim{width:100%;font-family:var(--texto);font-weight:700;font-size:1.04rem;padding:14px;border:none;border-radius:12px;cursor:pointer;background:linear-gradient(180deg,var(--verde-claro),var(--verde));color:#fff}
+  .rx-btn-prim{width:100%;font-family:var(--texto);font-weight:700;font-size:1.04rem;padding:14px;border:none;border-radius:12px;cursor:pointer;background:linear-gradient(180deg,var(--azul-claro),var(--azul));color:#fff}
   .rx-btn-prim:active{transform:translateY(1px)}
   .rx-btn-prim[disabled]{opacity:.6;cursor:progress}
   .rx-btn-fant{width:100%;font-family:var(--texto);font-weight:600;font-size:.98rem;padding:13px;border:1px solid var(--linea);border-radius:12px;cursor:pointer;background:#fff;color:var(--tinta)}
@@ -245,28 +245,28 @@
   .rx-pie .firma b{color:var(--dorado)}
 
   /* estado / error pantalla completa */
-  #vistaEstado{display:none;min-height:100dvh;background:radial-gradient(120% 90% at 50% -10%, #205141 0%, var(--verde-profundo) 60%, #0C241F 100%);color:var(--marfil);padding:32px 24px;flex-direction:column;justify-content:center;align-items:center;text-align:center}
+  #vistaEstado{display:none;min-height:100dvh;background:radial-gradient(120% 90% at 50% -10%, #1A3566 0%, var(--azul-profundo) 60%, #08122B 100%);color:var(--marfil);padding:32px 24px;flex-direction:column;justify-content:center;align-items:center;text-align:center}
   #vistaEstado.activa{display:flex}
   #vistaEstado .ico{font-size:2.6rem;margin-bottom:14px}
   #vistaEstado h2{font-size:1.5rem;margin-bottom:10px}
-  #vistaEstado p{color:#CFE0D8;max-width:380px;font-size:.96rem;margin-bottom:8px}
-  #vistaEstado .det{font-family:ui-monospace,monospace;font-size:.78rem;color:#9FB8AE;background:rgba(0,0,0,.2);border-radius:8px;padding:8px 12px;margin-top:10px;word-break:break-word;max-width:380px}
+  #vistaEstado p{color:#C8D6EE;max-width:380px;font-size:.96rem;margin-bottom:8px}
+  #vistaEstado .det{font-family:ui-monospace,monospace;font-size:.78rem;color:#A0B2CE;background:rgba(0,0,0,.2);border-radius:8px;padding:8px 12px;margin-top:10px;word-break:break-word;max-width:380px}
   #vistaEstado .rx-btn{max-width:280px;margin-top:22px}
 
   /* ===== Etapa 3: clientes y préstamos ===== */
   .rx-est{font-size:.68rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border-radius:7px;white-space:nowrap}
   .rx-est-ok{color:#1d5c43;background:rgba(46,125,91,.14)}
   .rx-est-mora{color:#8a3a1c;background:rgba(192,83,43,.16)}
-  .rx-est-pago{color:#5a6b64;background:rgba(126,138,132,.16)}
-  .rx-avatar.cli{background:linear-gradient(160deg,#cfe6dc,#a9d0c0);color:var(--verde-profundo);font-size:1.15rem}
+  .rx-est-pago{color:#5A6678;background:rgba(122,134,153,.16)}
+  .rx-avatar.cli{background:linear-gradient(160deg,#D8E4F5,#B2CAEC);color:var(--azul-profundo);font-size:1.15rem}
   .rx-avatar img,.rx-mini-cli .av img{width:100%;height:100%;object-fit:cover;display:block}
   .rx-foto-campo{display:flex;flex-direction:column;align-items:center;gap:9px;margin-bottom:2px}
-  .rx-foto-prev{width:104px;height:104px;border-radius:20px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--marfil-2);border:2px dashed #c4baa6;color:var(--niebla);font-size:.78rem;text-align:center;padding:6px}
+  .rx-foto-prev{width:104px;height:104px;border-radius:20px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--marfil-2);border:2px dashed #C2CADD;color:var(--niebla);font-size:.78rem;text-align:center;padding:6px}
   .rx-foto-prev img{width:100%;height:100%;object-fit:cover}
 
   /* sub-encabezado dentro de una ficha */
   .rx-ficha-sub{font-size:.74rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--niebla);margin:22px 0 10px;display:flex;justify-content:space-between;align-items:center}
-  .rx-ficha-sub .rx-mini{font-family:var(--texto);font-weight:700;font-size:.8rem;color:#fff;background:var(--verde);border:none;border-radius:999px;padding:7px 13px;cursor:pointer}
+  .rx-ficha-sub .rx-mini{font-family:var(--texto);font-weight:700;font-size:.8rem;color:#fff;background:var(--azul);border:none;border-radius:999px;padding:7px 13px;cursor:pointer}
 
   /* tarjeta de préstamo (en ficha de cliente) */
   .rx-pres{background:#fff;border:1px solid var(--linea);border-radius:13px;padding:13px 14px;margin-bottom:10px;cursor:pointer;transition:transform .06s}
@@ -274,14 +274,14 @@
   .rx-pres .top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
   .rx-pres .monto{font-family:var(--display);font-weight:700;font-size:1.06rem;color:var(--tinta)}
   .rx-pres .barra{height:7px;border-radius:5px;background:var(--marfil-2);overflow:hidden;margin:9px 0 7px}
-  .rx-pres .barra i{display:block;height:100%;background:linear-gradient(90deg,var(--verde-claro),var(--verde));border-radius:5px}
+  .rx-pres .barra i{display:block;height:100%;background:linear-gradient(90deg,var(--azul-claro),var(--azul));border-radius:5px}
   .rx-pres .pie{display:flex;justify-content:space-between;font-size:.8rem;color:var(--niebla)}
   .rx-pres .pie b{color:var(--tinta);font-weight:700}
 
   /* mini-card de cliente dentro de ficha de cobrador (drill-down) */
   .rx-mini-cli{display:flex;align-items:center;gap:11px;background:#fff;border:1px solid var(--linea);border-radius:12px;padding:11px 13px;margin-bottom:8px;cursor:pointer}
   .rx-mini-cli:active{transform:scale(.99)}
-  .rx-mini-cli .av{width:38px;height:38px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:800;font-size:.95rem;color:var(--verde-profundo);background:linear-gradient(160deg,#cfe6dc,#a9d0c0)}
+  .rx-mini-cli .av{width:38px;height:38px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:800;font-size:.95rem;color:var(--azul-profundo);background:linear-gradient(160deg,#D8E4F5,#B2CAEC)}
   .rx-mini-cli .cu{flex:1;min-width:0}
   .rx-mini-cli .nm{font-weight:700;font-size:.94rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .rx-mini-cli .mt{font-size:.78rem;color:var(--niebla)}
@@ -294,13 +294,13 @@
   .rx-res .c.mora .v{color:var(--alerta)}
 
   /* calculadora en vivo del formulario de préstamo */
-  .rx-calc{background:var(--verde-profundo);color:var(--marfil);border-radius:13px;padding:14px 16px;margin:6px 0 16px}
-  .rx-calc .fila{display:flex;justify-content:space-between;padding:5px 0;font-size:.92rem;color:#CFE0D8}
+  .rx-calc{background:var(--azul-profundo);color:var(--marfil);border-radius:13px;padding:14px 16px;margin:6px 0 16px}
+  .rx-calc .fila{display:flex;justify-content:space-between;padding:5px 0;font-size:.92rem;color:#C8D6EE}
   .rx-calc .fila.tot{border-top:1px solid rgba(255,255,255,.15);margin-top:6px;padding-top:10px;font-size:1.04rem;color:#fff}
   .rx-calc .fila b{font-family:var(--display);font-weight:700;color:var(--dorado-claro)}
 
   /* carga inicial */
-  #cargando{position:fixed;inset:0;background:var(--verde-profundo);color:var(--dorado-claro);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:50}
+  #cargando{position:fixed;inset:0;background:var(--azul-profundo);color:var(--dorado-claro);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:50}
   #cargando.oculto{display:none}
   .rx-spin{width:30px;height:30px;border:3px solid rgba(228,199,102,.25);border-top-color:var(--dorado-claro);border-radius:50%;animation:rx-girar .8s linear infinite}
   .rx-cargando-marca{font-family:var(--display);font-weight:800;font-size:1.4rem;letter-spacing:.02em}

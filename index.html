@@ -320,6 +320,7 @@
   .rx-cobro-fb{font-size:.92rem;color:var(--niebla);margin:10px 2px 0;min-height:20px}
   .rx-cobro-fb b{color:var(--tinta)}
   .rx-cobro-fb .err{color:var(--alerta);font-weight:600}
+  .rx-aviso-hoy{display:flex;gap:8px;align-items:flex-start;font-size:.86rem;font-weight:500;color:#8a3a1c;background:rgba(192,83,43,.1);border:1px solid rgba(192,83,43,.32);border-radius:10px;padding:10px 12px;margin-bottom:12px;line-height:1.4}
   .rx-ok-wrap{text-align:center;padding:8px 0 2px}
   .rx-ok-ico{width:78px;height:78px;border-radius:50%;margin:6px auto 12px;display:flex;align-items:center;justify-content:center;
     font-size:2.3rem;background:rgba(46,158,99,.14);color:var(--ok)}
@@ -340,7 +341,7 @@
   .rx-cobrar-resumen .v{font-family:var(--display);font-weight:800;font-size:1.4rem;color:var(--tinta);margin-top:2px}
   .rx-cobro-row{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--linea);border-radius:14px;padding:10px 12px;margin-bottom:10px;cursor:pointer;transition:transform .06s}
   .rx-cobro-row:active{transform:scale(.99)}
-  .rx-cobro-row.pago{opacity:.6;background:var(--marfil-2)}
+  .rx-cobro-row.pago{background:rgba(46,158,99,.07);border-color:rgba(46,158,99,.38)}
   .rx-cobro-row .info{flex:1;min-width:0}
   .rx-cobro-row .nom{font-weight:700;color:var(--tinta);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .rx-cobro-row .ok-hoy{color:var(--ok);font-size:.76rem;font-weight:700;margin-left:4px}
@@ -1857,6 +1858,7 @@
 
   function formCobro(p, r, cli){
     const saldo = r.saldo, cuota = r.cuota;
+    const yaHoy = movsDe(p.id).filter(m=> m.tipo==='cobro' && m.fecha===hoyISO()).reduce((t,m)=> t+(Number(m.monto)||0), 0);
     // Chips rápidos: 1, 2, 3 cuotas (si caben y no igualan el saldo) + saldo total.
     const chips = [];
     for(const k of [1,2,3]){
@@ -1872,6 +1874,7 @@
         <div class="c"><div class="k">Saldo actual</div><div class="v">${pesos(saldo)}</div></div>
         <div class="c ${r.montoAtraso>0?'mora':''}"><div class="k">${r.montoAtraso>0?'En atraso':'Cuota'}</div><div class="v">${pesos(r.montoAtraso>0?r.montoAtraso:cuota)}</div></div>
       </div>
+      ${yaHoy>0?`<div class="rx-aviso-hoy"><span>⚠️</span><span>Hoy ya recibiste <b>${pesos(yaHoy)}</b> de este cliente. Si registras este cobro, será un <b>abono adicional</b> del mismo día.</span></div>`:''}
       <div class="rx-form-err" id="cobroErr"></div>
       <div class="rx-form-campo">
         <label for="cobroMonto">Monto recibido</label>

@@ -306,6 +306,48 @@
   .rx-cargando-marca{font-family:var(--display);font-weight:800;font-size:1.4rem;letter-spacing:.02em}
   @keyframes rx-girar{to{transform:rotate(360deg)}}
   @media(prefers-reduced-motion:reduce){.rx-spin{animation:none}}
+  /* ===== Cobro · Bloque 3B ===== */
+  .rx-cobro-chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 2px}
+  .rx-cobro-chips button{flex:1;min-width:92px;font-family:var(--texto);font-weight:700;font-size:.9rem;
+    padding:11px 8px;border-radius:12px;border:1px solid var(--linea);background:#fff;color:var(--azul-claro);cursor:pointer;
+    display:flex;flex-direction:column;gap:2px;line-height:1.12;transition:transform .06s,border-color .15s,box-shadow .15s}
+  .rx-cobro-chips button .sub2{font-weight:600;font-size:.72rem;color:var(--niebla)}
+  .rx-cobro-chips button:active{transform:scale(.97)}
+  .rx-cobro-chips button.sel{border-color:var(--azul-claro);background:rgba(52,97,168,.08);box-shadow:0 0 0 2px rgba(52,97,168,.20)}
+  .rx-cobro-chips button.liq{color:var(--dorado)}
+  .rx-cobro-chips button.liq .sub2{color:var(--dorado-claro)}
+  .rx-cobro-chips button.liq.sel{border-color:var(--dorado);background:rgba(201,162,39,.10);box-shadow:0 0 0 2px rgba(201,162,39,.24)}
+  .rx-cobro-fb{font-size:.92rem;color:var(--niebla);margin:10px 2px 0;min-height:20px}
+  .rx-cobro-fb b{color:var(--tinta)}
+  .rx-cobro-fb .err{color:var(--alerta);font-weight:600}
+  .rx-ok-wrap{text-align:center;padding:8px 0 2px}
+  .rx-ok-ico{width:78px;height:78px;border-radius:50%;margin:6px auto 12px;display:flex;align-items:center;justify-content:center;
+    font-size:2.3rem;background:rgba(46,158,99,.14);color:var(--ok)}
+  .rx-ok-ico.liq{background:rgba(201,162,39,.16);color:var(--dorado)}
+  .rx-ok-monto{font-family:var(--display);font-weight:800;font-size:2rem;color:var(--tinta);margin:2px 0}
+  .rx-btn-wa{width:100%;font-family:var(--texto);font-weight:700;font-size:1.02rem;padding:14px;border:none;border-radius:12px;cursor:pointer;
+    background:#25D366;color:#06351C;display:flex;align-items:center;justify-content:center;gap:8px;transition:filter .15s}
+  .rx-btn-wa:active{filter:brightness(.94)}
+
+  /* ===== Planilla "Cobrar el día" ===== */
+  .rx-cobrar-head{margin:2px 0 14px}
+  .rx-cobrar-head h2{font-family:var(--display);font-weight:800;font-size:1.5rem;color:var(--tinta);margin:0}
+  .rx-cobrar-head .sub{color:var(--niebla);font-size:.9rem;margin-top:2px}
+  .rx-cobrar-resumen{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+  .rx-cobrar-resumen .c{background:#fff;border:1px solid var(--linea);border-radius:14px;padding:12px 14px}
+  .rx-cobrar-resumen .c.oro{background:rgba(201,162,39,.08);border-color:rgba(201,162,39,.32)}
+  .rx-cobrar-resumen .k{font-size:.76rem;color:var(--niebla)}
+  .rx-cobrar-resumen .v{font-family:var(--display);font-weight:800;font-size:1.4rem;color:var(--tinta);margin-top:2px}
+  .rx-cobro-row{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--linea);border-radius:14px;padding:10px 12px;margin-bottom:10px;cursor:pointer;transition:transform .06s}
+  .rx-cobro-row:active{transform:scale(.99)}
+  .rx-cobro-row.pago{opacity:.6;background:var(--marfil-2)}
+  .rx-cobro-row .info{flex:1;min-width:0}
+  .rx-cobro-row .nom{font-weight:700;color:var(--tinta);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rx-cobro-row .ok-hoy{color:var(--ok);font-size:.76rem;font-weight:700;margin-left:4px}
+  .rx-cobro-row .sub{font-size:.84rem;color:var(--niebla);margin-top:1px}
+  .rx-cobro-row .acc{display:flex;flex-direction:column;align-items:flex-end;gap:7px;flex-shrink:0}
+  .rx-cobrar-btn{width:38px;height:38px;border-radius:50%;border:none;background:var(--dorado);color:#3A2D05;font-family:var(--display);font-weight:800;font-size:1.15rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .rx-cobro-vacio{text-align:center;color:var(--niebla);font-size:.92rem;padding:34px 12px;background:#fff;border:1px dashed var(--linea);border-radius:14px}
 </style>
 </head>
 <body>
@@ -351,6 +393,7 @@
 
       <main class="rx-cont">
         <div class="rx-tab" id="tabInicio"></div>
+        <div class="rx-tab" id="tabCobrar"></div>
         <div class="rx-tab" id="tabCobradores"></div>
         <div class="rx-tab" id="tabClientes"></div>
         <div class="rx-tab" id="tabRutas"></div>
@@ -363,6 +406,7 @@
 
     <nav class="rx-nav" id="navInferior">
       <button data-tab="inicio" class="activa"><span class="ng">🏠</span>Inicio</button>
+      <button data-tab="cobrar"><span class="ng">💵</span>Cobrar</button>
       <button data-tab="cobradores"><span class="ng">👥</span>Cobradores</button>
       <button data-tab="clientes"><span class="ng">🧾</span>Clientes</button>
       <button data-tab="rutas"><span class="ng">🗺️</span>Rutas</button>
@@ -466,8 +510,8 @@
 
   // ---- estado global de la sesión ----
   const S = { uid:null, empresaId:null, rol:null, nombre:null, empresaNombre:null, perfil:null, licenciaActiva:true,
-              cobradores:[], rutas:[], clientes:[], prestamos:[],
-              unsubCob:null, unsubRut:null, unsubCli:null, unsubPres:null, tab:'inicio' };
+              cobradores:[], rutas:[], clientes:[], prestamos:[], movimientos:[], movIdx:new Map(),
+              unsubCob:null, unsubRut:null, unsubCli:null, unsubPres:null, unsubMov:null, tab:'inicio' };
 
   // ---- helpers de texto / formato ----
   function escapar(s){ return String(s ?? '').replace(/[&<>"']/g, c => (
@@ -582,6 +626,12 @@
     if(typeof f?.toDate === 'function') return f.toDate(); // Timestamp Firestore
     return new Date(f);
   }
+  // Fecha de HOY en hora LOCAL (no UTC): define a qué día pertenece cada
+  // cobro. Clave para que el cierre de caja de la noche cuadre exacto.
+  function hoyISO(){
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
   const RX_ESTADO = {
     al_dia:   { t:'Al día',    c:'rx-est-ok'   },
     atrasado: { t:'Atrasado',  c:'rx-est-mora' },
@@ -656,6 +706,7 @@
     if(S.unsubRut){ S.unsubRut(); S.unsubRut=null; }
     if(S.unsubCli){ S.unsubCli(); S.unsubCli=null; }
     if(S.unsubPres){ S.unsubPres(); S.unsubPres=null; }
+    if(S.unsubMov){ S.unsubMov(); S.unsubMov=null; }
   }
 
   // ===========================================================
@@ -733,21 +784,23 @@
     const esAdmin = S.rol === 'admin';
 
     if(esAdmin){
-      document.querySelectorAll('#navInferior button').forEach(b=> b.style.display='');
+      document.querySelectorAll('#navInferior button').forEach(b=> b.style.display = (b.dataset.tab==='cobrar') ? 'none' : '');
       escucharCobradores();
       escucharRutas();
       escucharClientes();   // admin: toda la empresa
       escucharPrestamos();  // admin: toda la empresa
+      escucharMovimientos();// admin: toda la empresa
       cablearNav();
       $('navInferior').classList.add('activa');
       irATab('inicio');
     } else {
-      // Cobrador: navegación reducida (Inicio + Clientes), solo ve lo suyo
+      // Cobrador: navegación reducida (Inicio + Cobrar + Clientes), solo ve lo suyo
       document.querySelectorAll('#navInferior button').forEach(b=>{
-        b.style.display = (b.dataset.tab==='inicio' || b.dataset.tab==='clientes') ? '' : 'none';
+        b.style.display = (b.dataset.tab==='inicio' || b.dataset.tab==='cobrar' || b.dataset.tab==='clientes') ? '' : 'none';
       });
       escucharClientes();   // cobrador: filtrado por su uid
       escucharPrestamos();  // cobrador: filtrado por su uid
+      escucharMovimientos();// cobrador: filtrado por su uid
       cablearNav();
       $('navInferior').classList.add('activa');
       activarTab('inicio');
@@ -765,7 +818,7 @@
   }
   function activarTab(nombre){
     S.tab = nombre;
-    ['Inicio','Cobradores','Clientes','Rutas'].forEach(n=>{
+    ['Inicio','Cobrar','Cobradores','Clientes','Rutas'].forEach(n=>{
       const el = $('tab'+n); if(el) el.classList.toggle('activa', n.toLowerCase()===nombre);
     });
     document.querySelectorAll('#navInferior button').forEach(b=> b.classList.toggle('activa', b.dataset.tab===nombre));
@@ -775,6 +828,7 @@
     activarTab(nombre);
     const esAdmin = S.rol === 'admin';
     if(nombre==='inicio')      esAdmin ? renderInicioAdmin() : renderInicioCobrador();
+    if(nombre==='cobrar')      renderCobrarDia();
     if(nombre==='cobradores')  renderCobradores();
     if(nombre==='clientes')    renderClientes();
     if(nombre==='rutas')       renderRutas();
@@ -813,6 +867,7 @@
         .sort((a,b)=> (a.nombre||'').localeCompare(b.nombre||''));
       if(S.tab==='clientes') renderClientes();
       if(S.tab==='inicio') (S.rol==='admin'?renderInicioAdmin:renderInicioCobrador)();
+      if(S.tab==='cobrar') renderCobrarDia();
     }, (err)=> console.warn('clientes:', err.message));
   }
   function escucharPrestamos(){
@@ -822,17 +877,35 @@
       S.prestamos = snap.docs.map(d=>({ id:d.id, ...d.data() }));
       if(S.tab==='clientes') renderClientes();
       if(S.tab==='inicio') (S.rol==='admin'?renderInicioAdmin:renderInicioCobrador)();
+      if(S.tab==='cobrar') renderCobrarDia();
     }, (err)=> console.warn('prestamos:', err.message));
   }
-  // préstamos activos de un cliente (sin cargar movimientos: saldo inicial)
+  function escucharMovimientos(){
+    const base = collection(db, 'empresas', S.empresaId, 'movimientos');
+    const ref = (S.rol==='admin') ? base : query(base, where('cobradorId','==',S.uid));
+    S.unsubMov = onSnapshot(ref, (snap)=>{
+      S.movimientos = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+      // índice por préstamo: el cálculo de saldo en las listas no recorre todo el historial
+      const idx = new Map();
+      for(const m of S.movimientos){ const a=idx.get(m.prestamoId); a ? a.push(m) : idx.set(m.prestamoId,[m]); }
+      S.movIdx = idx;
+      if(S.tab==='clientes') renderClientes();
+      if(S.tab==='inicio') (S.rol==='admin'?renderInicioAdmin:renderInicioCobrador)();
+      if(S.tab==='cobrar') renderCobrarDia();
+    }, (err)=> console.warn('movimientos:', err.message));
+  }
+  // saldo REAL de un préstamo: reconstruido desde sus movimientos (principio sagrado)
+  function movsDe(prestamoId){ return S.movIdx.get(prestamoId) || []; }
+  function saldoPrestamo(p){ return rxResumen(p, movsDe(p.id)).saldo; }
+  // préstamos de un cliente
   function prestamosDe(clienteId){
     return S.prestamos.filter(p=> p.clienteId===clienteId);
   }
   function deudaCliente(clienteId){
-    // En 3A (aún sin cobros) la deuda = suma de saldos iniciales de préstamos activos.
+    // Deuda = suma de los saldos REALES de los préstamos no liquidados.
     return prestamosDe(clienteId)
       .filter(p=> p.estado!=='pagado')
-      .reduce((t,p)=> t + rxSaldoInicial(p.monto), 0);
+      .reduce((t,p)=> t + saldoPrestamo(p), 0);
   }
 
   function nombreRuta(rutaId){
@@ -852,7 +925,7 @@
   function renderInicioAdmin(){
     const activos = S.cobradores.filter(c=>!c.bloqueado).length;
     const carteraCalle = S.prestamos.filter(p=>p.estado!=='pagado')
-      .reduce((t,p)=> t + rxSaldoInicial(p.monto), 0);
+      .reduce((t,p)=> t + saldoPrestamo(p), 0);
     const banner = S.licenciaActiva ? ''
       : `<div class="rx-banner">⚠️ La licencia de esta empresa figura como inactiva. La gestión de licencias llega en la Etapa 5.</div>`;
     $('tabInicio').innerHTML = `
@@ -911,7 +984,7 @@
     const base = (S.perfil.baseAsignada ?? null) !== null && S.perfil.baseAsignada !== ''
       ? pesos(S.perfil.baseAsignada) : 'Sin asignar';
     const miCartera = S.prestamos.filter(p=>p.estado!=='pagado')
-      .reduce((t,p)=> t + rxSaldoInicial(p.monto), 0);
+      .reduce((t,p)=> t + saldoPrestamo(p), 0);
     $('tabInicio').innerHTML = `
       <span class="rx-pill online"><span class="punto"></span><span class="txt">En línea</span></span>
       <div><span class="rx-rol-tag">Cobrador</span></div>
@@ -928,11 +1001,11 @@
       <div class="rx-seccion-titulo"><span>Tus módulos</span></div>
       <div class="rx-modulos">
         <button class="rx-modulo" data-ir="clientes"><div class="ico">🧾</div><div class="nom">Mis clientes</div><span class="conteo">${S.clientes.length}</span></button>
-        <div class="rx-modulo bloq"><div class="ico">💵</div><div class="nom">Cobrar el día</div><span class="etapa">Etapa 3B</span></div>
+        <button class="rx-modulo" data-ir="cobrar"><div class="ico">💵</div><div class="nom">Cobrar el día</div></button>
         <div class="rx-modulo bloq"><div class="ico">🧮</div><div class="nom">Cierre de caja</div><span class="etapa">Etapa 4</span></div>
         <div class="rx-modulo bloq"><div class="ico">📝</div><div class="nom">Notas de visita</div><span class="etapa">pronto</span></div>
       </div>
-      <div class="rx-banner ok" style="margin-top:22px">✓ Etapa 3: ya puedes registrar tus clientes y entregarles préstamos. Pronto, el cobro del día.</div>`;
+      <div class="rx-banner ok" style="margin-top:22px">✓ Ya puedes <b>cobrar el día</b>, registrar clientes y entregar préstamos. Toca <b>Cobrar</b> para empezar tu jornada.</div>`;
     $('tabInicio').querySelectorAll('[data-ir]').forEach(b=> b.onclick=()=>irATab(b.dataset.ir));
     pintarConexion();
   }
@@ -1457,7 +1530,7 @@
     const listaPres = pres.length===0
       ? `<div style="text-align:center;color:var(--niebla);font-size:.9rem;padding:14px 0">Sin préstamos todavía.</div>`
       : pres.map(p=>{
-          const r = rxResumen(p, []);  // 3A: saldo inicial (los cobros llegan en 3B)
+          const r = rxResumen(p, movsDe(p.id));
           const est = RX_ESTADO[r.estado];
           const pct = Math.min(100, Math.round((r.cuotasPagadas / (p.numeroCuotas||1))*100));
           return `<div class="rx-pres" data-pres="${p.id}">
@@ -1506,7 +1579,7 @@
 
   // ---- formulario nuevo préstamo (con calculadora en vivo) ----
   function formPrestamo(cli){
-    const hoy = new Date().toISOString().slice(0,10);
+    const hoy = hoyISO();
     abrirHoja(`
       <h2>Nuevo préstamo</h2>
       <div class="sub">Para ${escapar(cli.nombre)} · interés fijo del 20%.</div>
@@ -1607,6 +1680,7 @@
     } catch(_){}
     const r = rxResumen(p, movs);
     const est = RX_ESTADO[r.estado];
+    const cli = S.clientes.find(c=>c.id===p.clienteId) || { id:p.clienteId, nombre:p.clienteNombre, telefono:'' };
     const histo = movs.filter(m=> m.tipo!=='desembolso')
       .sort((a,b)=> String(b.fecha).localeCompare(String(a.fecha)));
     const movsHtml = histo.length===0
@@ -1626,10 +1700,211 @@
       <div class="rx-ficha-sub"><span>Movimientos</span></div>
       ${movsHtml}
       <div class="rx-acciones" style="margin-top:16px">
-        <button class="rx-btn-prim" id="fpCobrar" disabled style="opacity:.5;cursor:default">Registrar cobro · Etapa 3B</button>
+        <button class="rx-btn-prim" id="fpCobrar"${r.saldo<=0?' disabled style="opacity:.55;cursor:default"':''}>${r.saldo<=0?'Préstamo liquidado ✓':'＋  Registrar cobro'}</button>
         <button class="rx-btn-fant" id="fpCerrar">Cerrar</button>
       </div>`);
     $('fpCerrar').onclick = cerrarHoja;
+    if(r.saldo>0) $('fpCobrar').onclick = ()=> { _volverCobro = ()=> fichaPrestamo(p.id); formCobro(p, r, cli); };
+  }
+
+  // ===========================================================
+  //  PLANILLA "Cobrar el día" — la pantalla de trabajo del cobrador.
+  //  Lista los préstamos activos (atrasados y pendientes primero)
+  //  con saldo/cuota/estado y permite cobrar de un toque.
+  // ===========================================================
+  function renderCobrarDia(){
+    const hoy = hoyISO();
+    const activos = S.prestamos.filter(p=> p.estado!=='pagado');
+    const cobradoHoy = S.movimientos
+      .filter(m=> m.tipo==='cobro' && m.fecha===hoy)
+      .reduce((t,m)=> t + (Number(m.monto)||0), 0);
+
+    const filas = activos.map(p=>{
+      const movs = movsDe(p.id);
+      const r = rxResumen(p, movs);
+      const cli = S.clientes.find(c=>c.id===p.clienteId) || { nombre:p.clienteNombre };
+      const pagoHoy = movs.some(m=> m.tipo==='cobro' && m.fecha===hoy);
+      return { p, cli, r, est:RX_ESTADO[r.estado], pagoHoy };
+    }).sort((a,b)=>{
+      if(a.pagoHoy!==b.pagoHoy) return a.pagoHoy ? 1 : -1;        // pendientes arriba
+      const oa = a.r.estado==='atrasado'?0:1, ob = b.r.estado==='atrasado'?0:1;
+      if(oa!==ob) return oa-ob;                                    // atrasados primero
+      return (a.cli.nombre||'').localeCompare(b.cli.nombre||'');
+    });
+
+    const pendientes = filas.filter(f=> !f.pagoHoy).length;
+    let ruta = 'Tu ruta';
+    if(S.perfil && S.perfil.rutaId){ const rr=S.rutas.find(x=>x.id===S.perfil.rutaId); if(rr) ruta = escapar(rr.nombre); }
+
+    const lista = filas.length===0
+      ? `<div class="rx-cobro-vacio">Aún no tienes préstamos activos para cobrar.<br>Entrégale un préstamo a un cliente para empezar tu jornada.</div>`
+      : filas.map(f=>`
+          <div class="rx-cobro-row ${f.pagoHoy?'pago':''}" data-cobrar="${f.p.id}">
+            ${avatarHTML(f.cli,'cli',44)}
+            <div class="info">
+              <div class="nom">${escapar(f.cli.nombre||'Sin nombre')}${f.pagoHoy?'<span class="ok-hoy">✓ hoy</span>':''}</div>
+              <div class="sub">Saldo ${pesos(f.r.saldo)} · Cuota ${pesos(f.r.cuota)}</div>
+            </div>
+            <div class="acc">
+              <span class="rx-est ${f.est.c}">${f.est.t}</span>
+              <button class="rx-cobrar-btn" tabindex="-1">$</button>
+            </div>
+          </div>`).join('');
+
+    $('tabCobrar').innerHTML = `
+      <div class="rx-cobrar-head">
+        <h2>Cobrar el día</h2>
+        <div class="sub">${hoy} · ${ruta}</div>
+      </div>
+      <div class="rx-cobrar-resumen">
+        <div class="c oro"><div class="k">Cobrado hoy</div><div class="v">${pesos(cobradoHoy)}</div></div>
+        <div class="c"><div class="k">Por visitar</div><div class="v">${pendientes}</div></div>
+      </div>
+      ${lista}`;
+
+    $('tabCobrar').querySelectorAll('[data-cobrar]').forEach(row=>{
+      row.onclick = ()=>{
+        const p = S.prestamos.find(x=>x.id===row.dataset.cobrar); if(!p) return;
+        const r = rxResumen(p, movsDe(p.id));
+        const cli = S.clientes.find(c=>c.id===p.clienteId) || { nombre:p.clienteNombre, telefono:'' };
+        if(r.saldo<=0){ toast('Este préstamo ya está liquidado.'); return; }
+        _volverCobro = cerrarHoja;   // tras cobrar/cancelar volvemos a la planilla (se refresca sola)
+        formCobro(p, r, cli);
+      };
+    });
+  }
+
+  // ===========================================================
+  //  COBRO · Bloque 3B
+  //  Regla de negocio: cada abono debe ser múltiplo exacto de la
+  //  cuota, o el saldo total (liquidación). El movimiento es
+  //  inmutable; el saldo se reconstruye desde los movimientos.
+  // ===========================================================
+  const soloDigitos = s => String(s||'').replace(/\D+/g,'');
+  let _volverCobro = cerrarHoja;   // a dónde volver tras cobrar/cancelar (planilla o ficha del préstamo)
+
+  function formCobro(p, r, cli){
+    const saldo = r.saldo, cuota = r.cuota;
+    // Chips rápidos: 1, 2, 3 cuotas (si caben y no igualan el saldo) + saldo total.
+    const chips = [];
+    for(const k of [1,2,3]){
+      const v = cuota*k;
+      if(cuota>0 && v>0 && v < saldo) chips.push({ n:`${k} cuota${k>1?'s':''}`, v });
+    }
+    chips.push({ n:'Saldo total', v:saldo, liq:true });
+
+    abrirHoja(`
+      <h2 style="margin:6px 0 2px">Registrar cobro</h2>
+      <div class="sub">${escapar(cli.nombre||p.clienteNombre||'')} · ${modalidadTxt(p.modalidad)}</div>
+      <div class="rx-res">
+        <div class="c"><div class="k">Saldo actual</div><div class="v">${pesos(saldo)}</div></div>
+        <div class="c ${r.montoAtraso>0?'mora':''}"><div class="k">${r.montoAtraso>0?'En atraso':'Cuota'}</div><div class="v">${pesos(r.montoAtraso>0?r.montoAtraso:cuota)}</div></div>
+      </div>
+      <div class="rx-form-err" id="cobroErr"></div>
+      <div class="rx-form-campo">
+        <label for="cobroMonto">Monto recibido</label>
+        <input class="rx-fin" id="cobroMonto" type="number" inputmode="numeric" min="0" placeholder="Ej. ${cuota}" />
+        <div class="hint">Múltiplos de la cuota (${pesos(cuota)}) o el saldo total para liquidar.</div>
+      </div>
+      <div class="rx-cobro-chips" id="cobroChips">
+        ${chips.map(c=>`<button type="button" data-v="${c.v}" class="${c.liq?'liq':''}">${c.n}<span class="sub2">${pesos(c.v)}</span></button>`).join('')}
+      </div>
+      <div class="rx-cobro-fb" id="cobroFb"></div>
+      <div class="rx-acciones" style="margin-top:14px">
+        <button class="rx-btn-prim" id="cobroGuardar">Registrar cobro</button>
+        <button class="rx-btn-fant" id="cobroCancelar">Cancelar</button>
+      </div>`);
+
+    const inp = $('cobroMonto'), fb = $('cobroFb');
+    const evaluar = ()=>{
+      const m = Number(inp.value)||0;
+      document.querySelectorAll('#cobroChips button').forEach(b=> b.classList.toggle('sel', Number(b.dataset.v)===m && m>0));
+      if(m<=0){ fb.innerHTML=''; return; }
+      if(m>saldo){ fb.innerHTML=`<span class="err">Supera el saldo de ${pesos(saldo)}.</span>`; return; }
+      const esLiq = m===saldo, esMult = cuota>0 && m%cuota===0;
+      if(!esLiq && !esMult){ fb.innerHTML=`<span class="err">No es múltiplo de la cuota ni el saldo total.</span>`; return; }
+      const nuevo = rxRedondea(saldo - m);
+      if(nuevo<=0){ fb.innerHTML = `<b>Liquida el préstamo.</b> El saldo quedaría en $ 0. ✓`; return; }
+      const nc = cuota>0 ? Math.round((m/cuota)*100)/100 : 0;
+      fb.innerHTML = `Equivale a <b>${nc} cuota${nc===1?'':'s'}</b>. Saldo restante: <b>${pesos(nuevo)}</b>.`;
+    };
+    inp.addEventListener('input', evaluar);
+    document.querySelectorAll('#cobroChips button').forEach(b=>{
+      b.onclick = ()=>{ inp.value = b.dataset.v; evaluar(); };
+    });
+    $('cobroCancelar').onclick = ()=> _volverCobro();
+    $('cobroGuardar').onclick = ()=> registrarCobro(p, cli, Number(inp.value)||0, saldo, cuota);
+  }
+
+  async function registrarCobro(p, cli, monto, saldo, cuota){
+    $('cobroErr')?.classList.remove('visible');
+    if(monto<=0)     return valErr('cobroErr','Escribe el monto recibido.');
+    if(monto>saldo)  return valErr('cobroErr',`El abono no puede superar el saldo de ${pesos(saldo)}.`);
+    const esLiq = monto===saldo, esMult = cuota>0 && monto%cuota===0;
+    if(!esLiq && !esMult) return valErr('cobroErr',`El abono debe ser múltiplo de la cuota (${pesos(cuota)}) o el saldo total (${pesos(saldo)}).`);
+
+    const cobradorId = p.cobradorId || (S.rol!=='admin' ? S.uid : '');
+    if(!cobradorId) return valErr('cobroErr','El préstamo no tiene cobrador asignado.');
+    const fecha = hoyISO();
+    const nuevoSaldo = rxRedondea(saldo - monto);
+
+    const btn = $('cobroGuardar'); btn.disabled=true; btn.textContent='Registrando…';
+    try{
+      const movRef = doc(collection(db,'empresas',S.empresaId,'movimientos'));
+      const lote = writeBatch(db);
+      lote.set(movRef, {
+        prestamoId: p.id, clienteId: p.clienteId, tipo:'cobro',
+        monto, fecha, cobradorId, creadoEn: serverTimestamp()
+      });
+      if(nuevoSaldo<=0){
+        lote.update(doc(db,'empresas',S.empresaId,'prestamos',p.id), { estado:'pagado', liquidadoEn: serverTimestamp() });
+      }
+      await lote.commit();
+      confirmacionCobro(p, cli, monto, nuevoSaldo, fecha);
+    }catch(e){
+      btn.disabled=false; btn.textContent='Registrar cobro';
+      valErr('cobroErr', mensajeError(e.code) + (e.code?'':' ('+(e.message||e)+')'));
+    }
+  }
+
+  function confirmacionCobro(p, cli, monto, nuevoSaldo, fecha){
+    const liq = nuevoSaldo<=0;
+    abrirHoja(`
+      <div class="rx-ok-wrap">
+        <div class="rx-ok-ico ${liq?'liq':''}">${liq?'🏆':'✓'}</div>
+        <div class="sub" style="margin-bottom:2px">${liq?'¡Préstamo liquidado!':'Cobro registrado'}</div>
+        <div class="rx-ok-monto">${pesos(monto)}</div>
+        <div class="sub">${escapar(cli.nombre||p.clienteNombre||'')} · ${escapar(fecha)}</div>
+        <div class="rx-detalle-fila" style="margin-top:14px"><span class="et">Saldo restante</span><span class="va">${pesos(nuevoSaldo)}</span></div>
+      </div>
+      <div class="rx-acciones" style="margin-top:16px">
+        <button class="rx-btn-wa" id="cobroWa">Enviar recibo por WhatsApp</button>
+        <button class="rx-btn-fant" id="cobroListo">Listo</button>
+      </div>`);
+    $('cobroWa').onclick   = ()=> enviarReciboWA(p, cli, monto, nuevoSaldo, fecha);
+    $('cobroListo').onclick = ()=> _volverCobro();
+  }
+
+  function enviarReciboWA(p, cli, monto, nuevoSaldo, fecha){
+    const empresa = S.empresaNombre || 'Rendix';
+    const lineas = [
+      `*${empresa}* — Comprobante de pago`,
+      ``,
+      `Cliente: ${cli.nombre||p.clienteNombre||''}`,
+      `Fecha: ${fecha}`,
+      `Abono recibido: ${pesos(monto)}`,
+      `Saldo restante: ${pesos(nuevoSaldo)}`,
+      nuevoSaldo<=0 ? `\n✅ Préstamo cancelado en su totalidad. ¡Gracias!` : `\n¡Gracias por su pago!`
+    ];
+    const texto = encodeURIComponent(lineas.join('\n'));
+    const tel = soloDigitos(cli.telefono||'');
+    if(tel){
+      const num = tel.length<=10 ? '57'+tel : tel;   // Colombia por defecto
+      window.open(`https://wa.me/${num}?text=${texto}`, '_blank');
+    } else {
+      window.open(`https://wa.me/?text=${texto}`, '_blank');
+      toast('Este cliente no tiene teléfono guardado.', true);
+    }
   }
 
   // ---- registrar service worker (PWA instalable / offline) ----

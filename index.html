@@ -348,6 +348,22 @@
   .rx-cobro-row .acc{display:flex;flex-direction:column;align-items:flex-end;gap:7px;flex-shrink:0}
   .rx-cobrar-btn{width:38px;height:38px;border-radius:50%;border:none;background:var(--dorado);color:#3A2D05;font-family:var(--display);font-weight:800;font-size:1.15rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
   .rx-cobro-vacio{text-align:center;color:var(--niebla);font-size:.92rem;padding:34px 12px;background:#fff;border:1px dashed var(--linea);border-radius:14px}
+
+  /* ===== Cierre de caja · Etapa 4 ===== */
+  .rx-cuadre{background:#fff;border:1px solid var(--linea);border-radius:14px;padding:4px 15px;margin-top:14px}
+  .rx-cuadre .fila{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;font-size:.96rem;color:var(--tinta);border-bottom:1px solid var(--linea)}
+  .rx-cuadre .fila:last-child{border-bottom:none}
+  .rx-cuadre .fila.pos span:last-child{color:var(--ok);font-weight:700}
+  .rx-cuadre .fila.neg span:last-child{color:var(--alerta);font-weight:700}
+  .rx-cuadre .fila.nota{font-size:.82rem;color:var(--niebla);padding:7px 0}
+  .rx-cuadre .fila.nota span:last-child{color:var(--niebla);font-weight:600}
+  .rx-cuadre .fila.total{font-family:var(--display);font-weight:800;font-size:1.22rem;border-top:2px solid var(--linea);border-bottom:none}
+  .rx-cuadre .fila.total span:last-child{color:var(--azul-claro)}
+  .rx-cierre-dia{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#fff;border:1px solid var(--linea);border-radius:12px;padding:11px 14px;margin-bottom:8px}
+  .rx-cierre-dia .f{font-weight:700;color:var(--tinta);font-variant-numeric:tabular-nums}
+  .rx-cierre-dia .n{font-size:.86rem;color:var(--niebla);text-align:right}
+  .rx-cierre-dia .n b{color:var(--tinta)}
+  .rx-cierre-vacio{text-align:center;color:var(--niebla);font-size:.9rem;padding:20px;background:#fff;border:1px dashed var(--linea);border-radius:12px}
 </style>
 </head>
 <body>
@@ -1002,11 +1018,12 @@
       <div class="rx-modulos">
         <button class="rx-modulo" data-ir="clientes"><div class="ico">🧾</div><div class="nom">Mis clientes</div><span class="conteo">${S.clientes.length}</span></button>
         <button class="rx-modulo" data-ir="cobrar"><div class="ico">💵</div><div class="nom">Cobrar el día</div></button>
-        <div class="rx-modulo bloq"><div class="ico">🧮</div><div class="nom">Cierre de caja</div><span class="etapa">Etapa 4</span></div>
+        <button class="rx-modulo" id="modCierre"><div class="ico">🧮</div><div class="nom">Cierre de caja</div></button>
         <div class="rx-modulo bloq"><div class="ico">📝</div><div class="nom">Notas de visita</div><span class="etapa">pronto</span></div>
       </div>
-      <div class="rx-banner ok" style="margin-top:22px">✓ Ya puedes <b>cobrar el día</b>, registrar clientes y entregar préstamos. Toca <b>Cobrar</b> para empezar tu jornada.</div>`;
+      <div class="rx-banner ok" style="margin-top:22px"><span>✓ Ya puedes <b>cobrar el día</b>, registrar clientes y entregar préstamos. Toca <b>Cobrar</b> para empezar tu jornada.</span></div>`;
     $('tabInicio').querySelectorAll('[data-ir]').forEach(b=> b.onclick=()=>irATab(b.dataset.ir));
+    const _mc=$('modCierre'); if(_mc) _mc.onclick = abrirCierreCaja;
     pintarConexion();
   }
 
@@ -1772,6 +1789,61 @@
         formCobro(p, r, cli);
       };
     });
+  }
+
+  // ===========================================================
+  //  CIERRE DE CAJA · Etapa 4 — cuadre del día e histórico,
+  //  calculado desde los movimientos (nada se acumula).
+  // ===========================================================
+  function abrirCierreCaja(){
+    const hoy = hoyISO();
+    const base = Number(S.perfil?.baseAsignada) || 0;
+    const movs = S.movimientos;
+    const cobrosHoy = movs.filter(m=> m.tipo==='cobro' && m.fecha===hoy);
+    const desembHoy = movs.filter(m=> m.tipo==='desembolso' && m.fecha===hoy);
+    const cobradoHoy  = cobrosHoy.reduce((t,m)=> t+(Number(m.monto)||0), 0);
+    const prestadoHoy = desembHoy.reduce((t,m)=> t+(Number(m.monto)||0), 0);
+    const papeleriaHoy = S.prestamos.filter(p=> p.fechaInicio===hoy).reduce((t,p)=> t+(Number(p.papeleria)||0), 0);
+    const entregadoHoy = prestadoHoy - papeleriaHoy;          // efectivo que salió (papelería se retiene)
+    const efectivoCaja = base + cobradoHoy - entregadoHoy;
+
+    // histórico por fecha (sin hoy)
+    const porDia = {};
+    movs.forEach(m=>{
+      if(m.fecha===hoy || (m.tipo!=='cobro' && m.tipo!=='desembolso')) return;
+      const d = porDia[m.fecha] || (porDia[m.fecha] = {cobrado:0, prestado:0});
+      if(m.tipo==='cobro') d.cobrado += (Number(m.monto)||0);
+      else d.prestado += (Number(m.monto)||0);
+    });
+    const dias = Object.keys(porDia).sort().reverse();
+    const histHTML = dias.length===0
+      ? `<div class="rx-cierre-vacio">Aún no hay días anteriores. Aquí verás cuánto cobraste cada día.</div>`
+      : dias.map(f=>`
+          <div class="rx-cierre-dia">
+            <div class="f">${f}</div>
+            <div class="n">Cobró <b>${pesos(porDia[f].cobrado)}</b>${porDia[f].prestado?`<br>Prestó ${pesos(porDia[f].prestado)}`:''}</div>
+          </div>`).join('');
+
+    let ruta='Tu ruta';
+    if(S.perfil?.rutaId){ const rr=S.rutas.find(x=>x.id===S.perfil.rutaId); if(rr) ruta=escapar(rr.nombre); }
+
+    abrirHoja(`
+      <h2 style="margin:6px 0 2px">Cierre de caja</h2>
+      <div class="sub">${hoy} · ${ruta}</div>
+      <div class="rx-cuadre">
+        <div class="fila"><span>Base del día</span><span>${pesos(base)}</span></div>
+        <div class="fila pos"><span>+ Cobrado hoy (${cobrosHoy.length})</span><span>${pesos(cobradoHoy)}</span></div>
+        <div class="fila neg"><span>− Entregado en préstamos (${desembHoy.length})</span><span>${pesos(entregadoHoy)}</span></div>
+        ${papeleriaHoy>0?`<div class="fila nota"><span>Papelería retenida (ganancia)</span><span>${pesos(papeleriaHoy)}</span></div>`:''}
+        <div class="fila total"><span>Efectivo en caja</span><span>${pesos(efectivoCaja)}</span></div>
+      </div>
+      <div class="hint" style="margin-top:4px">Este es el efectivo que deberías tener ahora para cuadrar el día con el administrador.</div>
+      <div class="rx-seccion-titulo" style="margin-top:22px"><span>Días anteriores</span></div>
+      ${histHTML}
+      <div class="rx-acciones" style="margin-top:18px">
+        <button class="rx-btn-fant" id="cierreCerrar">Cerrar</button>
+      </div>`);
+    $('cierreCerrar').onclick = cerrarHoja;
   }
 
   // ===========================================================

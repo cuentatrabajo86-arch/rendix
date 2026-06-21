@@ -399,6 +399,26 @@
   .rx-cierre-item .nom{font-weight:700;color:var(--tinta);font-size:1rem}
   .rx-cierre-item .sub{font-size:.8rem;color:var(--niebla);margin-top:2px}
   .rx-cierre-item .der{font-family:var(--display);font-weight:800;font-size:1.1rem;color:var(--azul-claro);white-space:nowrap}
+  .rx-carton{background:#fff;border:1px solid var(--linea);border-radius:16px;overflow:hidden;margin-top:8px;box-shadow:0 8px 26px rgba(13,27,58,.12)}
+  .rx-carton .cab{background:linear-gradient(135deg,var(--azul),var(--azul-profundo));color:#fff;padding:16px 18px;position:relative}
+  .rx-carton .cab .marca{position:absolute;top:14px;right:16px;font-size:.6rem;font-weight:800;letter-spacing:.12em;opacity:.5;text-transform:uppercase}
+  .rx-carton .cab .tit{font-size:.64rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.82}
+  .rx-carton .cab .monto{font-family:var(--display);font-weight:800;font-size:1.8rem;margin-top:3px;color:var(--dorado-claro)}
+  .rx-carton .cab .meta{font-size:.77rem;opacity:.85;margin-top:2px}
+  .rx-carton .datos{padding:13px 18px;display:grid;grid-template-columns:1fr 1fr;gap:11px 14px;border-bottom:1px solid var(--linea)}
+  .rx-carton .dato.ancho{grid-column:1 / -1}
+  .rx-carton .dato .et{font-size:.63rem;font-weight:700;color:var(--niebla);text-transform:uppercase;letter-spacing:.05em}
+  .rx-carton .dato .va{color:var(--tinta);font-weight:600;font-size:.92rem;margin-top:1px}
+  .rx-carton .thead,.rx-carton .trow{display:grid;grid-template-columns:28px 1fr 82px 92px;gap:8px;padding:9px 18px;font-size:.85rem;align-items:center}
+  .rx-carton .thead{font-size:.61rem;font-weight:700;color:var(--niebla);text-transform:uppercase;letter-spacing:.04em;background:var(--marfil-2);border-bottom:1px solid var(--linea)}
+  .rx-carton .trow{border-bottom:1px solid rgba(13,27,58,.06)}
+  .rx-carton .trow .n{color:var(--niebla);font-weight:700}
+  .rx-carton .trow .ab{color:var(--ok);font-weight:700;text-align:right}
+  .rx-carton .trow .sa{text-align:right;color:var(--tinta);font-weight:600}
+  .rx-carton .vacia{padding:20px;text-align:center;color:var(--niebla);font-size:.86rem;line-height:1.4}
+  .rx-carton .pie{padding:14px 18px;background:linear-gradient(135deg,rgba(201,162,39,.13),rgba(201,162,39,.05));display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--linea)}
+  .rx-carton .pie .et{font-size:.82rem;color:var(--tinta);font-weight:700}
+  .rx-carton .pie .va{font-family:var(--display);font-weight:800;font-size:1.35rem;color:var(--azul-claro)}
   .rx-cierre-dia{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#fff;border:1px solid var(--linea);border-radius:12px;padding:11px 14px;margin-bottom:8px}
   .rx-cierre-dia .f{font-weight:700;color:var(--tinta);font-variant-numeric:tabular-nums}
   .rx-cierre-dia .n{font-size:.86rem;color:var(--niebla);text-align:right}
@@ -1741,6 +1761,49 @@
     }
   }
 
+  // ---- Cartón del cliente: tarjeta de cobro con el historial de abonos ----
+  function abrirCarton(p, cli, movs, r){
+    cli = cli || { nombre:p.clienteNombre };
+    const totalInicial = (Number(r.saldo)||0) + (Number(r.cobrado)||0) - (Number(r.multas)||0);
+    const eventos = (movs||[]).filter(m=> m.tipo==='cobro' || m.tipo==='multa')
+      .sort((a,b)=> String(a.fecha).localeCompare(String(b.fecha)) || ((a.ts||0)-(b.ts||0)));
+    let saldo = totalInicial, n = 0;
+    const filas = [];
+    for(const m of eventos){
+      if(m.tipo==='cobro'){
+        saldo -= (Number(m.monto)||0); n++;
+        filas.push(`<div class="trow"><span class="n">${n}</span><span class="fe">${escapar(m.fecha||'')}${m.metodo==='transferencia'?' 📲':''}</span><span class="ab">${pesos(m.monto)}</span><span class="sa">${pesos(Math.max(0,saldo))}</span></div>`);
+      } else { saldo += (Number(m.monto)||0); }
+    }
+    const tabla = filas.length===0
+      ? `<div class="vacia">Aún no hay abonos registrados.<br>Cada cuota que cobres aparecerá aquí.</div>`
+      : filas.join('');
+    abrirHoja(`
+      <div class="rx-carton">
+        <div class="cab">
+          <div class="marca">Rendix</div>
+          <div class="tit">Cartón de cobro</div>
+          <div class="monto">${pesos(p.monto)}</div>
+          <div class="meta">${modalidadTxt(p.modalidad)} · ${p.numeroCuotas} cuotas · desde ${escapar(p.fechaInicio||'')}</div>
+        </div>
+        <div class="datos">
+          <div class="dato ancho"><div class="et">Señor(a)</div><div class="va">${escapar(cli.nombre||p.clienteNombre||'—')}</div></div>
+          <div class="dato ancho"><div class="et">Dirección</div><div class="va">${escapar(cli.direccion||'—')}</div></div>
+          <div class="dato"><div class="et">Teléfono</div><div class="va">${escapar(cli.telefono||'—')}</div></div>
+          <div class="dato"><div class="et">Cédula</div><div class="va">${escapar(cli.cedula||'—')}</div></div>
+          <div class="dato"><div class="et">Cuota diaria</div><div class="va">${pesos(r.cuota)}</div></div>
+          <div class="dato"><div class="et">Cuotas pagadas</div><div class="va">${r.cuotasPagadas} de ${p.numeroCuotas}</div></div>
+        </div>
+        <div class="thead"><span>#</span><span>Fecha</span><span style="text-align:right">Abono</span><span style="text-align:right">Saldo</span></div>
+        ${tabla}
+        <div class="pie"><span class="et">Saldo pendiente</span><span class="va">${pesos(r.saldo)}</span></div>
+      </div>
+      <div class="rx-acciones" style="margin-top:18px">
+        <button class="rx-btn-fant" id="cartonCerrar">Cerrar</button>
+      </div>`);
+    $('cartonCerrar').onclick = ()=> fichaPrestamo(p.id);
+  }
+
   // ---- ficha de un préstamo (carga sus movimientos) ----
   async function fichaPrestamo(prestamoId){
     const p = S.prestamos.find(x=>x.id===prestamoId); if(!p) return;
@@ -1776,9 +1839,11 @@
       ${movsHtml}
       <div class="rx-acciones" style="margin-top:16px">
         <button class="rx-btn-prim" id="fpCobrar"${r.saldo<=0?' disabled style="opacity:.55;cursor:default"':''}>${r.saldo<=0?'Préstamo liquidado ✓':'＋  Registrar cobro'}</button>
+        <button class="rx-btn-fant" id="fpCarton">🎴  Ver cartón</button>
         <button class="rx-btn-fant" id="fpCerrar">Cerrar</button>
       </div>`);
     $('fpCerrar').onclick = cerrarHoja;
+    $('fpCarton').onclick = ()=> abrirCarton(p, cli, movs, r);
     if(r.saldo>0) $('fpCobrar').onclick = ()=> { _volverCobro = ()=> fichaPrestamo(p.id); formCobro(p, r, cli); };
   }
 

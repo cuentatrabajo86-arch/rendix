@@ -382,6 +382,15 @@
   .rx-transf-resumen .r1 span:last-child{color:var(--azul-claro)}
   .rx-transf-resumen .r2{font-size:.8rem;color:var(--niebla);margin-top:6px;line-height:1.4}
   .rx-transf-resumen .r2 b{color:var(--tinta)}
+  .rx-dia-cerrado{display:flex;gap:11px;align-items:flex-start;background:rgba(46,158,99,.1);border:1px solid rgba(46,158,99,.34);border-radius:13px;padding:13px 15px;margin:16px 0 4px}
+  .rx-dia-cerrado .ic{font-size:1.45rem;line-height:1}
+  .rx-dia-cerrado .tx{font-size:.9rem;color:#1d5c43;line-height:1.4}
+  .rx-dia-cerrado .tx b{color:#143d2c}
+  .rx-btn-sellar{width:100%;font-family:var(--texto);font-weight:800;font-size:1.04rem;padding:15px;border:none;border-radius:12px;cursor:pointer;
+    background:linear-gradient(135deg,var(--dorado),#B8911F);color:#2A2206;display:flex;align-items:center;justify-content:center;gap:8px;transition:filter .15s;box-shadow:0 4px 14px rgba(201,162,39,.3)}
+  .rx-btn-sellar:active{filter:brightness(.95)}
+  .rx-aviso-cerrado{display:flex;gap:9px;align-items:center;background:rgba(46,158,99,.12);border:1px solid rgba(46,158,99,.34);border-radius:12px;padding:12px 14px;margin:12px 0;font-size:.9rem;color:#1d5c43;font-weight:600;line-height:1.35}
+  .rx-cobro-row.bloq{opacity:.55;pointer-events:none}
   .rx-cierre-dia{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#fff;border:1px solid var(--linea);border-radius:12px;padding:11px 14px;margin-bottom:8px}
   .rx-cierre-dia .f{font-weight:700;color:var(--tinta);font-variant-numeric:tabular-nums}
   .rx-cierre-dia .n{font-size:.86rem;color:var(--niebla);text-align:right}
@@ -1773,6 +1782,7 @@
     const cobradoHoy = S.movimientos
       .filter(m=> m.tipo==='cobro' && m.fecha===hoy)
       .reduce((t,m)=> t + (Number(m.monto)||0), 0);
+    const cerrado = diaEstaCerrado(S.uid, hoy);
 
     const filas = activos.map(p=>{
       const movs = movsDe(p.id);
@@ -1794,7 +1804,7 @@
     const lista = filas.length===0
       ? `<div class="rx-cobro-vacio">Aún no tienes préstamos activos para cobrar.<br>Entrégale un préstamo a un cliente para empezar tu jornada.</div>`
       : filas.map(f=>`
-          <div class="rx-cobro-row ${f.pagoHoy?'pago':''}" data-cobrar="${f.p.id}">
+          <div class="rx-cobro-row ${f.pagoHoy?'pago':''} ${cerrado?'bloq':''}" data-cobrar="${f.p.id}">
             ${avatarHTML(f.cli,'cli',44)}
             <div class="info">
               <div class="nom">${escapar(f.cli.nombre||'Sin nombre')}${f.pagoHoy?'<span class="ok-hoy">✓ hoy</span>':''}</div>
@@ -1815,10 +1825,12 @@
         <div class="c oro"><div class="k">Cobrado hoy</div><div class="v">${pesos(cobradoHoy)}</div></div>
         <div class="c"><div class="k">Por visitar</div><div class="v">${pendientes}</div></div>
       </div>
+      ${cerrado?`<div class="rx-aviso-cerrado">🔒 Día cerrado. Para cobrar de nuevo, reábrelo desde el Cierre de caja.</div>`:''}
       ${lista}`;
 
     $('tabCobrar').querySelectorAll('[data-cobrar]').forEach(row=>{
       row.onclick = ()=>{
+        if(cerrado){ toast('El día está cerrado. Reábrelo desde el Cierre de caja.'); return; }
         const p = S.prestamos.find(x=>x.id===row.dataset.cobrar); if(!p) return;
         const r = rxResumen(p, movsDe(p.id));
         const cli = S.clientes.find(c=>c.id===p.clienteId) || { nombre:p.clienteNombre, telefono:'' };
@@ -1833,23 +1845,88 @@
   //  CIERRE DE CAJA · Etapa 4 — cuadre del día e histórico,
   //  calculado desde los movimientos (nada se acumula).
   // ===========================================================
-  function abrirCierreCaja(){ abrirHoja('<div id="cierreBody"></div>'); pintarCierre(); }
-  function pintarCierre(){
-    const cont = $('cierreBody'); if(!cont) return;
-    const hoy = hoyISO();
+  // Cálculo central del cierre (lo usan la vista y el sellado).
+  function calcularCierre(hoy){
     const base = Number(S.perfil?.baseAsignada) || 0;
     const movs = S.movimientos;
     const cobrosHoy = movs.filter(m=> m.tipo==='cobro' && m.fecha===hoy);
     const desembHoy = movs.filter(m=> m.tipo==='desembolso' && m.fecha===hoy);
-    const cobrosTransf = cobrosHoy.filter(m=> m.metodo==='transferencia');   // pagos a la cuenta del admin
+    const cobrosTransf = cobrosHoy.filter(m=> m.metodo==='transferencia');
     const cobradoTransf   = cobrosTransf.reduce((t,m)=> t+(Number(m.monto)||0), 0);
-    const cobradoHoy      = cobrosHoy.reduce((t,m)=> t+(Number(m.monto)||0), 0);
-    const cobradoEfectivo = cobradoHoy - cobradoTransf;        // lo que el cobrador tiene en la mano
-    const nEfectivo = cobrosHoy.length - cobrosTransf.length;
+    const totalCobrado    = cobrosHoy.reduce((t,m)=> t+(Number(m.monto)||0), 0);
+    const cobradoEfectivo = totalCobrado - cobradoTransf;
     const prestadoHoy = desembHoy.reduce((t,m)=> t+(Number(m.monto)||0), 0);
     const papeleriaHoy = S.prestamos.filter(p=> p.fechaInicio===hoy).reduce((t,p)=> t+(Number(p.papeleria)||0), 0);
-    const entregadoHoy = prestadoHoy - papeleriaHoy;          // efectivo que salió (papelería se retiene)
-    const efectivoCaja = base + cobradoEfectivo - entregadoHoy;   // SOLO efectivo físico; las transferencias ya están en la cuenta
+    const entregado = prestadoHoy - papeleriaHoy;
+    const efectivoFinal = base + cobradoEfectivo - entregado;
+    const pendientes = [];
+    for(const p of S.prestamos){
+      if(p.estado==='pagado') continue;
+      const mp = movsDe(p.id);
+      if(mp.some(m=> m.tipo==='cobro' && m.fecha===hoy)) continue;
+      const r = rxResumen(p, mp);
+      if(r.saldo>0){
+        const cli = S.clientes.find(c=>c.id===p.clienteId) || { nombre:p.clienteNombre };
+        pendientes.push({ nombre: cli.nombre||'Sin nombre', saldo: r.saldo });
+      }
+    }
+    return { base, cobrosHoy, cobrosTransf, desembHoy, cobradoTransf, totalCobrado, cobradoEfectivo, entregado, papeleriaHoy, efectivoFinal, pendientes };
+  }
+
+  // Estado del día (DERIVADO): cerrado si el último evento del día es 'cierre'.
+  function diaEstaCerrado(cobradorId, fecha){
+    const ev = S.movimientos
+      .filter(m=> (m.tipo==='cierre'||m.tipo==='reapertura') && m.cobradorId===cobradorId && m.fecha===fecha)
+      .sort((a,b)=> (a.ts||0) - (b.ts||0));
+    const u = ev[ev.length-1];
+    return !!(u && u.tipo==='cierre');
+  }
+
+  async function cerrarElDia(){
+    const hoy = hoyISO();
+    const c = calcularCierre(hoy);
+    let msg = `Vas a ENTREGAR ${pesos(c.efectivoFinal)} en efectivo al administrador.`;
+    if(c.cobradoTransf>0) msg += `\nPor transferencia ya cayeron ${pesos(c.cobradoTransf)} (con sus pruebas).`;
+    if(c.pendientes.length>0) msg += `\n\nQuedan ${c.pendientes.length} cliente(s) sin pagar hoy.`;
+    msg += `\n\nDespués NO podrás cobrar más hoy (podrás reabrir si hace falta).\n\n¿Cerrar el día?`;
+    if(!confirm(msg)) return;
+    try{
+      await addDoc(collection(db,'empresas',S.empresaId,'movimientos'), {
+        tipo:'cierre', fecha:hoy, cobradorId:S.uid, ts:Date.now(),
+        rutaId: S.perfil?.rutaId || '',
+        base: c.base, cobradoEfectivo: c.cobradoEfectivo, cobradoTransf: c.cobradoTransf,
+        totalCobrado: c.totalCobrado, entregado: c.entregado, efectivoFinal: c.efectivoFinal,
+        nPendientes: c.pendientes.length, pendientes: c.pendientes,
+        creadoEn: serverTimestamp()
+      });
+      toast('Día cerrado. ¡Buen trabajo!');
+      pintarCierre();
+    }catch(e){ toast('No se pudo cerrar: '+(e.message||e), true); }
+  }
+
+  async function reabrirElDia(){
+    const hoy = hoyISO();
+    if(!confirm('Vas a REABRIR el día para registrar un pago tardío.\n\nCuando termines, cierra de nuevo y entrega la diferencia.\n\n¿Reabrir el día?')) return;
+    try{
+      await addDoc(collection(db,'empresas',S.empresaId,'movimientos'), {
+        tipo:'reapertura', fecha:hoy, cobradorId:S.uid, ts:Date.now(), creadoEn: serverTimestamp()
+      });
+      toast('Día reabierto. Puedes cobrar de nuevo.');
+      pintarCierre();
+    }catch(e){ toast('No se pudo reabrir: '+(e.message||e), true); }
+  }
+
+  function abrirCierreCaja(){ abrirHoja('<div id="cierreBody"></div>'); pintarCierre(); }
+  function pintarCierre(){
+    const cont = $('cierreBody'); if(!cont) return;
+    const hoy = hoyISO();
+    const c = calcularCierre(hoy);
+    const movs = S.movimientos;
+    const { base, cobrosTransf, desembHoy, cobradoTransf, totalCobrado, cobradoEfectivo, entregado, papeleriaHoy, efectivoFinal, pendientes } = c;
+    const nEfectivo = c.cobrosHoy.length - cobrosTransf.length;
+    const entregadoHoy = entregado, efectivoCaja = efectivoFinal, cobradoHoy = totalCobrado;
+    const cerrado = diaEstaCerrado(S.uid, hoy);
+    const esCobrador = S.rol !== 'admin';
 
     // histórico por fecha (sin hoy)
     const porDia = {};
@@ -1887,12 +1964,24 @@
         <div class="r1"><span>📲 Por transferencia (${cobrosTransf.length})</span><span>${pesos(cobradoTransf)}</span></div>
         <div class="r2">Ya cayó en la cuenta del administrador. <b>No lo entregas</b> — solo muestras las pruebas. Total cobrado hoy: <b>${pesos(cobradoHoy)}</b>.</div>
       </div>`:''}
+      ${esCobrador ? (cerrado ? `
+      <div class="rx-dia-cerrado">
+        <div class="ic">🔒</div>
+        <div class="tx"><b>Día cerrado.</b> Ya entregaste tu cuadre; no puedes cobrar más hoy.${pendientes.length>0?` Quedaron <b>${pendientes.length}</b> sin pagar.`:''}</div>
+      </div>
+      <div class="rx-acciones" style="margin-top:12px">
+        <button class="rx-btn-fant" id="cierreReabrir">Reabrir el día</button>
+      </div>` : `
+      <button class="rx-btn-sellar" id="cierreSellar" style="margin-top:20px">🔒 Cerrar el día</button>
+      <div class="hint" style="margin-top:6px;text-align:center">Sella tu jornada y entrega el cuadre al administrador.</div>`) : ''}
       <div class="rx-seccion-titulo" style="margin-top:22px"><span>Días anteriores</span></div>
       ${histHTML}
       <div class="rx-acciones" style="margin-top:18px">
-        <button class="rx-btn-fant" id="cierreCerrar">Cerrar</button>
+        <button class="rx-btn-fant" id="cierreCerrar">Cerrar ventana</button>
       </div>`;
     const _cc = $('cierreCerrar'); if(_cc) _cc.onclick = cerrarHoja;
+    const _cs = $('cierreSellar'); if(_cs) _cs.onclick = cerrarElDia;
+    const _cr = $('cierreReabrir'); if(_cr) _cr.onclick = reabrirElDia;
   }
 
   // ===========================================================
@@ -2002,6 +2091,7 @@
     if(monto>saldo)  return valErr('cobroErr',`El abono no puede superar el saldo de ${pesos(saldo)}.`);
     const esLiq = monto===saldo, esMult = cuota>0 && monto%cuota===0;
     if(!esLiq && !esMult) return valErr('cobroErr',`El abono debe ser múltiplo de la cuota (${pesos(cuota)}) o el saldo total (${pesos(saldo)}).`);
+    if(S.rol!=='admin' && diaEstaCerrado(S.uid, hoyISO())) return valErr('cobroErr','El día está cerrado. Reábrelo desde el Cierre de caja para registrar este pago.');
 
     const cobradorId = p.cobradorId || (S.rol!=='admin' ? S.uid : '');
     if(!cobradorId) return valErr('cobroErr','El préstamo no tiene cobrador asignado.');

@@ -320,6 +320,23 @@
   .rx-cobro-fb{font-size:.92rem;color:var(--niebla);margin:10px 2px 0;min-height:20px}
   .rx-cobro-fb b{color:var(--tinta)}
   .rx-cobro-fb .err{color:var(--alerta);font-weight:600}
+  .rx-metodo{display:flex;gap:8px;margin:6px 0 2px}
+  .rx-metodo button{flex:1;font-family:var(--texto);font-weight:700;font-size:.92rem;padding:11px 8px;border-radius:11px;cursor:pointer;
+    border:1.5px solid var(--linea);background:var(--marfil-2);color:var(--niebla);display:flex;align-items:center;justify-content:center;gap:7px;transition:.15s}
+  .rx-metodo button:active{transform:scale(.98)}
+  .rx-metodo button.sel{color:var(--tinta);background:#fff;border-color:var(--azul-claro);box-shadow:0 0 0 2px rgba(52,97,168,.20)}
+  .rx-transf-box{margin-top:10px;padding:12px;border-radius:13px;background:rgba(52,97,168,.05);border:1px solid rgba(52,97,168,.16)}
+  .rx-transf-box .tt{font-size:.8rem;font-weight:700;color:var(--azul-claro);margin-bottom:9px;display:flex;gap:6px;align-items:center}
+  .rx-destino{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
+  .rx-destino button{flex:1;min-width:70px;font-family:var(--texto);font-weight:600;font-size:.84rem;padding:9px 6px;border-radius:9px;cursor:pointer;
+    border:1.5px solid var(--linea);background:#fff;color:var(--niebla);transition:.15s}
+  .rx-destino button:active{transform:scale(.98)}
+  .rx-destino button.sel{border-color:var(--azul-claro);background:rgba(52,97,168,.10);color:var(--tinta)}
+  .rx-comp-row{display:flex;align-items:center;gap:10px}
+  .rx-comp-prev{width:56px;height:56px;border-radius:11px;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--marfil-2);border:2px dashed #C2CADD;color:var(--niebla);font-size:.6rem;text-align:center;padding:3px}
+  .rx-comp-prev img{width:100%;height:100%;object-fit:cover}
+  .rx-comp-btn{flex:1;font-family:var(--texto);font-weight:600;font-size:.86rem;padding:11px;border-radius:10px;cursor:pointer;border:1.5px solid var(--linea);background:#fff;color:var(--azul-claro)}
+  .rx-comp-btn:active{transform:scale(.99)}
   .rx-aviso-hoy{display:flex;gap:8px;align-items:flex-start;font-size:.86rem;font-weight:500;color:#8a3a1c;background:rgba(192,83,43,.1);border:1px solid rgba(192,83,43,.32);border-radius:10px;padding:10px 12px;margin-bottom:12px;line-height:1.4}
   .rx-ok-wrap{text-align:center;padding:8px 0 2px}
   .rx-ok-ico{width:78px;height:78px;border-radius:50%;margin:6px auto 12px;display:flex;align-items:center;justify-content:center;
@@ -360,6 +377,11 @@
   .rx-cuadre .fila.nota span:last-child{color:var(--niebla);font-weight:600}
   .rx-cuadre .fila.total{font-family:var(--display);font-weight:800;font-size:1.22rem;border-top:2px solid var(--linea);border-bottom:none}
   .rx-cuadre .fila.total span:last-child{color:var(--azul-claro)}
+  .rx-transf-resumen{margin-top:12px;padding:12px 15px;border-radius:13px;background:rgba(52,97,168,.06);border:1px solid rgba(52,97,168,.18)}
+  .rx-transf-resumen .r1{display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:700;color:var(--tinta);font-size:.96rem}
+  .rx-transf-resumen .r1 span:last-child{color:var(--azul-claro)}
+  .rx-transf-resumen .r2{font-size:.8rem;color:var(--niebla);margin-top:6px;line-height:1.4}
+  .rx-transf-resumen .r2 b{color:var(--tinta)}
   .rx-cierre-dia{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#fff;border:1px solid var(--linea);border-radius:12px;padding:11px 14px;margin-bottom:8px}
   .rx-cierre-dia .f{font-weight:700;color:var(--tinta);font-variant-numeric:tabular-nums}
   .rx-cierre-dia .n{font-size:.86rem;color:var(--niebla);text-align:right}
@@ -579,6 +601,19 @@
     inp.onchange=async ()=>{ const f=inp.files&&inp.files[0]; if(!f) return;
       btn.disabled=true; btn.textContent='Procesando…';
       try{ _fotoTmp=await comprimirFoto(f); pintar(); }catch(e){ alert('No se pudo procesar la foto. Intenta con otra.'); btn.textContent='📷 Tomar / elegir foto'; }
+      btn.disabled=false; };
+  }
+  let _compTmp=null;
+  function wireComprobante(){
+    _compTmp=null;
+    const prev=$('compPrev'), inp=$('compInput'), btn=$('compBtn');
+    if(!prev||!inp||!btn) return;
+    const pintar=()=>{ prev.innerHTML = _compTmp ? `<img src="${_compTmp}" alt="">` : 'Sin<br>imagen'; btn.textContent = _compTmp ? '📎 Cambiar comprobante' : '📎 Adjuntar comprobante'; };
+    pintar();
+    btn.onclick=()=> inp.click();
+    inp.onchange=async ()=>{ const f=inp.files&&inp.files[0]; if(!f) return;
+      btn.disabled=true; btn.textContent='Procesando…';
+      try{ _compTmp=await comprimirFoto(f, 720, 0.6); pintar(); }catch(e){ alert('No se pudo procesar la imagen. Intenta con otra.'); pintar(); }
       btn.disabled=false; };
   }
   function pesos(n){ const v = Number(n)||0; return '$ ' + v.toLocaleString('es-CO'); }
@@ -1806,11 +1841,15 @@
     const movs = S.movimientos;
     const cobrosHoy = movs.filter(m=> m.tipo==='cobro' && m.fecha===hoy);
     const desembHoy = movs.filter(m=> m.tipo==='desembolso' && m.fecha===hoy);
-    const cobradoHoy  = cobrosHoy.reduce((t,m)=> t+(Number(m.monto)||0), 0);
+    const cobrosTransf = cobrosHoy.filter(m=> m.metodo==='transferencia');   // pagos a la cuenta del admin
+    const cobradoTransf   = cobrosTransf.reduce((t,m)=> t+(Number(m.monto)||0), 0);
+    const cobradoHoy      = cobrosHoy.reduce((t,m)=> t+(Number(m.monto)||0), 0);
+    const cobradoEfectivo = cobradoHoy - cobradoTransf;        // lo que el cobrador tiene en la mano
+    const nEfectivo = cobrosHoy.length - cobrosTransf.length;
     const prestadoHoy = desembHoy.reduce((t,m)=> t+(Number(m.monto)||0), 0);
     const papeleriaHoy = S.prestamos.filter(p=> p.fechaInicio===hoy).reduce((t,p)=> t+(Number(p.papeleria)||0), 0);
     const entregadoHoy = prestadoHoy - papeleriaHoy;          // efectivo que salió (papelería se retiene)
-    const efectivoCaja = base + cobradoHoy - entregadoHoy;
+    const efectivoCaja = base + cobradoEfectivo - entregadoHoy;   // SOLO efectivo físico; las transferencias ya están en la cuenta
 
     // histórico por fecha (sin hoy)
     const porDia = {};
@@ -1837,12 +1876,17 @@
       <div class="sub">${hoy} · ${ruta}</div>
       <div class="rx-cuadre">
         <div class="fila"><span>Base del día</span><span>${pesos(base)}</span></div>
-        <div class="fila pos"><span>+ Cobrado hoy (${cobrosHoy.length})</span><span>${pesos(cobradoHoy)}</span></div>
+        <div class="fila pos"><span>+ Cobrado en efectivo (${nEfectivo})</span><span>${pesos(cobradoEfectivo)}</span></div>
         <div class="fila neg"><span>− Entregado en préstamos (${desembHoy.length})</span><span>${pesos(entregadoHoy)}</span></div>
         ${papeleriaHoy>0?`<div class="fila nota"><span>Papelería retenida (ganancia)</span><span>${pesos(papeleriaHoy)}</span></div>`:''}
-        <div class="fila total"><span>Efectivo en caja</span><span>${pesos(efectivoCaja)}</span></div>
+        <div class="fila total"><span>Efectivo a entregar</span><span>${pesos(efectivoCaja)}</span></div>
       </div>
-      <div class="hint" style="margin-top:4px">Este es el efectivo que deberías tener ahora para cuadrar el día con el administrador.</div>
+      <div class="hint" style="margin-top:4px">Este es el efectivo <b>físico</b> que le entregas al administrador.</div>
+      ${cobradoTransf>0?`
+      <div class="rx-transf-resumen">
+        <div class="r1"><span>📲 Por transferencia (${cobrosTransf.length})</span><span>${pesos(cobradoTransf)}</span></div>
+        <div class="r2">Ya cayó en la cuenta del administrador. <b>No lo entregas</b> — solo muestras las pruebas. Total cobrado hoy: <b>${pesos(cobradoHoy)}</b>.</div>
+      </div>`:''}
       <div class="rx-seccion-titulo" style="margin-top:22px"><span>Días anteriores</span></div>
       ${histHTML}
       <div class="rx-acciones" style="margin-top:18px">
@@ -1889,6 +1933,29 @@
         ${chips.map(c=>`<button type="button" data-v="${c.v}" class="${c.liq?'liq':''}">${c.n}<span class="sub2">${pesos(c.v)}</span></button>`).join('')}
       </div>
       <div class="rx-cobro-fb" id="cobroFb"></div>
+
+      <label style="display:block;font-size:.82rem;font-weight:700;color:var(--tinta);margin:15px 2px 0">Forma de pago</label>
+      <div class="rx-metodo" id="cobroMetodo">
+        <button type="button" data-m="efectivo" class="sel">💵 Efectivo</button>
+        <button type="button" data-m="transferencia">📲 Transferencia</button>
+      </div>
+      <div id="cobroTransf" style="display:none">
+        <div class="rx-transf-box">
+          <div class="tt">📲 Cayó en tu cuenta · queda con prueba</div>
+          <div class="rx-destino" id="cobroDestino">
+            <button type="button" data-d="Nequi" class="sel">Nequi</button>
+            <button type="button" data-d="Daviplata">Daviplata</button>
+            <button type="button" data-d="Bancolombia">Bancolombia</button>
+            <button type="button" data-d="Otra">Otra</button>
+          </div>
+          <div class="rx-comp-row">
+            <div class="rx-comp-prev" id="compPrev">Sin<br>imagen</div>
+            <input type="file" id="compInput" accept="image/*" style="display:none">
+            <button type="button" class="rx-comp-btn" id="compBtn">📎 Adjuntar comprobante</button>
+          </div>
+        </div>
+      </div>
+
       <div class="rx-acciones" style="margin-top:14px">
         <button class="rx-btn-prim" id="cobroGuardar">Registrar cobro</button>
         <button class="rx-btn-fant" id="cobroCancelar">Cancelar</button>
@@ -1911,11 +1978,25 @@
     document.querySelectorAll('#cobroChips button').forEach(b=>{
       b.onclick = ()=>{ inp.value = b.dataset.v; evaluar(); };
     });
+    // --- Forma de pago: efectivo (def.) o transferencia a la cuenta del admin ---
+    let _metodo='efectivo', _destino='Nequi';
+    const transfBox=$('cobroTransf');
+    document.querySelectorAll('#cobroMetodo button').forEach(b=>{
+      b.onclick=()=>{ _metodo=b.dataset.m;
+        document.querySelectorAll('#cobroMetodo button').forEach(x=> x.classList.toggle('sel', x===b));
+        transfBox.style.display = _metodo==='transferencia' ? 'block' : 'none'; };
+    });
+    document.querySelectorAll('#cobroDestino button').forEach(b=>{
+      b.onclick=()=>{ _destino=b.dataset.d;
+        document.querySelectorAll('#cobroDestino button').forEach(x=> x.classList.toggle('sel', x===b)); };
+    });
+    wireComprobante();
+
     $('cobroCancelar').onclick = ()=> _volverCobro();
-    $('cobroGuardar').onclick = ()=> registrarCobro(p, cli, Number(inp.value)||0, saldo, cuota);
+    $('cobroGuardar').onclick = ()=> registrarCobro(p, cli, Number(inp.value)||0, saldo, cuota, { metodo:_metodo, destino:_destino, comprobante:_compTmp });
   }
 
-  async function registrarCobro(p, cli, monto, saldo, cuota){
+  async function registrarCobro(p, cli, monto, saldo, cuota, opts){
     $('cobroErr')?.classList.remove('visible');
     if(monto<=0)     return valErr('cobroErr','Escribe el monto recibido.');
     if(monto>saldo)  return valErr('cobroErr',`El abono no puede superar el saldo de ${pesos(saldo)}.`);
@@ -1929,25 +2010,32 @@
 
     const btn = $('cobroGuardar'); btn.disabled=true; btn.textContent='Registrando…';
     try{
+      const metodo = (opts && opts.metodo==='transferencia') ? 'transferencia' : 'efectivo';
+      const movData = {
+        prestamoId: p.id, clienteId: p.clienteId, tipo:'cobro',
+        monto, fecha, cobradorId, metodo, creadoEn: serverTimestamp()
+      };
+      if(metodo==='transferencia'){
+        movData.destino = (opts && opts.destino) || 'Otra';
+        if(opts && opts.comprobante) movData.comprobante = opts.comprobante;
+      }
       const movRef = doc(collection(db,'empresas',S.empresaId,'movimientos'));
       const lote = writeBatch(db);
-      lote.set(movRef, {
-        prestamoId: p.id, clienteId: p.clienteId, tipo:'cobro',
-        monto, fecha, cobradorId, creadoEn: serverTimestamp()
-      });
+      lote.set(movRef, movData);
       if(nuevoSaldo<=0){
         lote.update(doc(db,'empresas',S.empresaId,'prestamos',p.id), { estado:'pagado', liquidadoEn: serverTimestamp() });
       }
       await lote.commit();
-      confirmacionCobro(p, cli, monto, nuevoSaldo, fecha);
+      confirmacionCobro(p, cli, monto, nuevoSaldo, fecha, metodo, movData.destino);
     }catch(e){
       btn.disabled=false; btn.textContent='Registrar cobro';
       valErr('cobroErr', mensajeError(e.code) + (e.code?'':' ('+(e.message||e)+')'));
     }
   }
 
-  function confirmacionCobro(p, cli, monto, nuevoSaldo, fecha){
+  function confirmacionCobro(p, cli, monto, nuevoSaldo, fecha, metodo, destino){
     const liq = nuevoSaldo<=0;
+    const formaPago = metodo==='transferencia' ? '📲 '+escapar(destino||'Transferencia') : '💵 Efectivo';
     abrirHoja(`
       <div class="rx-ok-wrap">
         <div class="rx-ok-ico ${liq?'liq':''}">${liq?'🏆':'✓'}</div>
@@ -1955,6 +2043,7 @@
         <div class="rx-ok-monto">${pesos(monto)}</div>
         <div class="sub">${escapar(cli.nombre||p.clienteNombre||'')} · ${escapar(fecha)}</div>
         <div class="rx-detalle-fila" style="margin-top:14px"><span class="et">Saldo restante</span><span class="va">${pesos(nuevoSaldo)}</span></div>
+        <div class="rx-detalle-fila"><span class="et">Forma de pago</span><span class="va">${formaPago}</span></div>
       </div>
       <div class="rx-acciones" style="margin-top:16px">
         <button class="rx-btn-wa" id="cobroWa">Enviar recibo por WhatsApp</button>

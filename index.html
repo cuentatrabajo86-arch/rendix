@@ -419,6 +419,8 @@
   .rx-carton .pie{padding:14px 18px;background:linear-gradient(135deg,rgba(201,162,39,.13),rgba(201,162,39,.05));display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--linea)}
   .rx-carton .pie .et{font-size:.82rem;color:var(--tinta);font-weight:700}
   .rx-carton .pie .va{font-family:var(--display);font-weight:800;font-size:1.35rem;color:var(--azul-claro)}
+  .rx-renov-aviso{background:rgba(201,162,39,.12);border:1px solid rgba(201,162,39,.35);border-radius:11px;padding:11px 14px;margin:4px 0 14px;font-size:.86rem;color:var(--tinta);line-height:1.4}
+  .rx-renov-aviso b{color:#8a6d16}
   .rx-cierre-dia{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#fff;border:1px solid var(--linea);border-radius:12px;padding:11px 14px;margin-bottom:8px}
   .rx-cierre-dia .f{font-weight:700;color:var(--tinta);font-variant-numeric:tabular-nums}
   .rx-cierre-dia .n{font-size:.86rem;color:var(--niebla);text-align:right}
@@ -1673,11 +1675,13 @@
   }
 
   // ---- formulario nuevo préstamo (con calculadora en vivo) ----
-  function formPrestamo(cli){
+  function formPrestamo(cli, renov){
     const hoy = hoyISO();
+    const saldoViejo = renov ? (Number(renov.saldoViejo)||0) : 0;
     abrirHoja(`
-      <h2>Nuevo préstamo</h2>
-      <div class="sub">Para ${escapar(cli.nombre)} · interés fijo del 20%.</div>
+      <h2>${renov ? 'Renovar préstamo' : 'Nuevo préstamo'}</h2>
+      <div class="sub">${renov ? `Para ${escapar(cli.nombre)} · se descuenta el saldo anterior` : `Para ${escapar(cli.nombre)} · interés fijo del 20%`}.</div>
+      ${renov ? `<div class="rx-renov-aviso">🔄 El préstamo actual se <b>liquida</b> y arranca el nuevo. Saldo anterior a descontar: <b>${pesos(saldoViejo)}</b>.</div>` : ''}
       <div class="rx-form-err" id="preErr"></div>
       <div class="rx-form-campo">
         <label for="preMonto">Monto a prestar</label>
@@ -1703,10 +1707,11 @@
       <div class="rx-calc">
         <div class="fila"><span>Saldo a pagar (monto + 20%)</span><b id="calcSaldo">$ 0</b></div>
         <div class="fila"><span>Valor de cada cuota</span><b id="calcCuota">$ 0</b></div>
+        ${renov ? `<div class="fila"><span>− Saldo anterior</span><b>${pesos(saldoViejo)}</b></div>` : ''}
         <div class="fila tot"><span>Entregas en efectivo</span><b id="calcEntrega">$ 0</b></div>
       </div>
       <div class="rx-acciones">
-        <button class="rx-btn-prim" id="preGuardar">Entregar préstamo</button>
+        <button class="rx-btn-prim" id="preGuardar">${renov ? 'Renovar y entregar' : 'Entregar préstamo'}</button>
         <button class="rx-btn-fant" id="preCancelar">Cancelar</button>
       </div>`);
     const recalc = ()=>{
@@ -1715,15 +1720,15 @@
       const pap = Number($('prePap').value)||0;
       $('calcSaldo').textContent = pesos(rxSaldoInicial(monto));
       $('calcCuota').textContent = pesos(rxValorCuota(monto, cuotas));
-      $('calcEntrega').textContent = pesos(Math.max(0, monto - pap));
+      $('calcEntrega').textContent = pesos(Math.max(0, monto - pap - saldoViejo));
     };
     ['preMonto','preCuotas','prePap'].forEach(id=> $(id).addEventListener('input', recalc));
     $('preCancelar').onclick = cerrarHoja;
-    $('preGuardar').onclick = ()=> crearPrestamo(cli);
+    $('preGuardar').onclick = ()=> crearPrestamo(cli, renov);
     recalc();
   }
 
-  async function crearPrestamo(cli){
+  async function crearPrestamo(cli, renov){
     const monto = Number($('preMonto').value)||0;
     const modalidad = $('preMod').value;
     const numeroCuotas = Number($('preCuotas').value)||0;
@@ -1733,30 +1738,48 @@
     if(monto<=0) return valErr('preErr','Escribe el monto a prestar.');
     if(numeroCuotas<1) return valErr('preErr','El número de cuotas debe ser al menos 1.');
     if(!fechaInicio) return valErr('preErr','Elige la fecha de inicio.');
+    const saldoViejo = renov ? (Number(renov.saldoViejo)||0) : 0;
+    if(renov && monto <= saldoViejo) return valErr('preErr',`El nuevo monto debe ser mayor al saldo anterior (${pesos(saldoViejo)}).`);
 
     const cobradorId = cli.cobradorId || (S.rol!=='admin' ? S.uid : '');
     if(!cobradorId) return valErr('preErr','Este cliente no tiene cobrador asignado. Asígnale uno primero.');
     const rutaId = cli.rutaId || '';
     const valorCuota = rxValorCuota(monto, numeroCuotas);
 
-    const btn = $('preGuardar'); btn.disabled=true; btn.textContent='Entregando…';
+    const btn = $('preGuardar'); btn.disabled=true; btn.textContent=renov?'Renovando…':'Entregando…';
     try {
       const presRef = doc(collection(db,'empresas',S.empresaId,'prestamos'));
-      const movRef  = doc(collection(db,'empresas',S.empresaId,'movimientos'));
       const lote = writeBatch(db);
+      // Renovación: el préstamo anterior se liquida con un cobro por su saldo.
+      // Ese cobro lleva renovacion:true para NO inflar la cobranza real; el cuadre
+      // de caja descuenta ese saldo del nuevo desembolso (efectivo neto).
+      if(renov){
+        const liqRef = doc(collection(db,'empresas',S.empresaId,'movimientos'));
+        lote.set(liqRef, {
+          prestamoId: renov.prestamoViejo.id, clienteId: cli.id, tipo:'cobro',
+          monto: saldoViejo, fecha: fechaInicio, cobradorId, metodo:'efectivo',
+          renovacion: true, ts: Date.now(), creadoEn: serverTimestamp()
+        });
+        lote.update(doc(db,'empresas',S.empresaId,'prestamos',renov.prestamoViejo.id), {
+          estado:'pagado', renovadoEn: serverTimestamp(), renovadoPor: presRef.id
+        });
+      }
       lote.set(presRef, {
         clienteId: cli.id, clienteNombre: cli.nombre,
         monto, factor: RX_FACTOR, modalidad, numeroCuotas, valorCuota, papeleria,
-        cobradorId, rutaId, fechaInicio, estado:'activo', creadoEn: serverTimestamp()
+        cobradorId, rutaId, fechaInicio, estado:'activo',
+        ...(renov ? { renovacionDe: renov.prestamoViejo.id, saldoDescontado: saldoViejo } : {}),
+        creadoEn: serverTimestamp()
       });
+      const movRef = doc(collection(db,'empresas',S.empresaId,'movimientos'));
       lote.set(movRef, {
         prestamoId: presRef.id, clienteId: cli.id, tipo:'desembolso',
         monto, fecha: fechaInicio, cobradorId, creadoEn: serverTimestamp()
       });
       await lote.commit();
-      cerrarHoja(); toast('Préstamo entregado ✓');
+      cerrarHoja(); toast(renov?'Préstamo renovado ✓':'Préstamo entregado ✓');
     } catch(e){
-      btn.disabled=false; btn.textContent='Entregar préstamo';
+      btn.disabled=false; btn.textContent=renov?'Renovar y entregar':'Entregar préstamo';
       valErr('preErr', mensajeError(e.code) + (e.code?'':' ('+(e.message||e)+')'));
     }
   }
@@ -1799,9 +1822,14 @@
         <div class="pie"><span class="et">Saldo pendiente</span><span class="va">${pesos(r.saldo)}</span></div>
       </div>
       <div class="rx-acciones" style="margin-top:18px">
+        ${r.saldo>0 ? `<button class="rx-btn-prim" id="cartonRenovar">🔄  Renovar préstamo</button>` : ''}
         <button class="rx-btn-fant" id="cartonCerrar">Cerrar</button>
       </div>`);
     $('cartonCerrar').onclick = ()=> fichaPrestamo(p.id);
+    const _crv=$('cartonRenovar'); if(_crv) _crv.onclick = ()=>{
+      const cliR = S.clientes.find(c=>c.id===p.clienteId) || cli;
+      formPrestamo(cliR, { prestamoViejo:p, saldoViejo:r.saldo });
+    };
   }
 
   // ---- ficha de un préstamo (carga sus movimientos) ----
@@ -1925,13 +1953,20 @@
   function calcularCierre(hoy){
     const base = Number(S.perfil?.baseAsignada) || 0;
     const movs = S.movimientos;
-    const cobrosHoy = movs.filter(m=> m.tipo==='cobro' && m.fecha===hoy);
+    // Los cobros de liquidación por renovación (renovacion:true) NO son cobranza real;
+    // se compensan descontando el saldo viejo del desembolso nuevo, así que se excluyen.
+    const cobrosHoy = movs.filter(m=> m.tipo==='cobro' && m.fecha===hoy && !m.renovacion);
     const desembHoy = movs.filter(m=> m.tipo==='desembolso' && m.fecha===hoy);
     const cobrosTransf = cobrosHoy.filter(m=> m.metodo==='transferencia');
     const cobradoTransf   = cobrosTransf.reduce((t,m)=> t+(Number(m.monto)||0), 0);
     const totalCobrado    = cobrosHoy.reduce((t,m)=> t+(Number(m.monto)||0), 0);
     const cobradoEfectivo = totalCobrado - cobradoTransf;
-    const prestadoHoy = desembHoy.reduce((t,m)=> t+(Number(m.monto)||0), 0);
+    // En una renovación solo salió en efectivo (monto − saldo anterior); por eso se descuenta.
+    const prestadoHoy = desembHoy.reduce((t,m)=>{
+      const pr = S.prestamos.find(x=> x.id===m.prestamoId);
+      const desc = pr ? (Number(pr.saldoDescontado)||0) : 0;
+      return t + (Number(m.monto)||0) - desc;
+    }, 0);
     const papeleriaHoy = S.prestamos.filter(p=> p.fechaInicio===hoy).reduce((t,p)=> t+(Number(p.papeleria)||0), 0);
     const entregado = prestadoHoy - papeleriaHoy;
     const efectivoFinal = base + cobradoEfectivo - entregado;

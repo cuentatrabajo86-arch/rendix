@@ -391,6 +391,14 @@
   .rx-btn-sellar:active{filter:brightness(.95)}
   .rx-aviso-cerrado{display:flex;gap:9px;align-items:center;background:rgba(46,158,99,.12);border:1px solid rgba(46,158,99,.34);border-radius:12px;padding:12px 14px;margin:12px 0;font-size:.9rem;color:#1d5c43;font-weight:600;line-height:1.35}
   .rx-cobro-row.bloq{opacity:.55;pointer-events:none}
+  .rx-cierre-fechagrupo{margin-top:16px}
+  .rx-cierre-fecha{display:flex;justify-content:space-between;align-items:center;font-size:.78rem;font-weight:700;color:var(--niebla);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;padding:0 2px}
+  .rx-cierre-fecha .tot{color:var(--azul-claro);font-size:.92rem;letter-spacing:0}
+  .rx-cierre-item{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;text-align:left;background:#fff;border:1px solid var(--linea);border-radius:13px;padding:13px 15px;margin-bottom:8px;cursor:pointer;font-family:var(--texto);transition:transform .15s}
+  .rx-cierre-item:active{transform:scale(.99)}
+  .rx-cierre-item .nom{font-weight:700;color:var(--tinta);font-size:1rem}
+  .rx-cierre-item .sub{font-size:.8rem;color:var(--niebla);margin-top:2px}
+  .rx-cierre-item .der{font-family:var(--display);font-weight:800;font-size:1.1rem;color:var(--azul-claro);white-space:nowrap}
   .rx-cierre-dia{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#fff;border:1px solid var(--linea);border-radius:12px;padding:11px 14px;margin-bottom:8px}
   .rx-cierre-dia .f{font-weight:700;color:var(--tinta);font-variant-numeric:tabular-nums}
   .rx-cierre-dia .n{font-size:.86rem;color:var(--niebla);text-align:right}
@@ -989,6 +997,8 @@
     const activos = S.cobradores.filter(c=>!c.bloqueado).length;
     const carteraCalle = S.prestamos.filter(p=>p.estado!=='pagado')
       .reduce((t,p)=> t + saldoPrestamo(p), 0);
+    const hoy = hoyISO();
+    const cerraronHoy = S.cobradores.filter(c=> diaEstaCerrado(c.id, hoy)).length;
     const banner = S.licenciaActiva ? ''
       : `<div class="rx-banner">⚠️ La licencia de esta empresa figura como inactiva. La gestión de licencias llega en la Etapa 5.</div>`;
     $('tabInicio').innerHTML = `
@@ -1019,10 +1029,11 @@
           <div class="ico">🗺️</div><div class="nom">Rutas</div>
           <span class="conteo">${S.rutas.length}</span>
         </button>
-        <div class="rx-modulo bloq"><div class="ico">📊</div><div class="nom">Cierres y jornadas</div><span class="etapa">Etapa 4</span></div>
+        <button class="rx-modulo" id="modCierresAdmin"><div class="ico">📊</div><div class="nom">Cierres y jornadas</div>${cerraronHoy>0?`<span class="conteo">${cerraronHoy}</span>`:''}</button>
       </div>
-      <div class="rx-banner ok" style="margin-top:22px">✓ Etapa 3: registra clientes y entrégales préstamos. El cobro diario y el cierre llegan enseguida.</div>`;
+      ${cerraronHoy>0?`<div class="rx-banner ok" style="margin-top:22px">📥 Hoy <b>${cerraronHoy}</b> cobrador(es) cerraron y entregaron. Toca "Cierres y jornadas" para ver el detalle.</div>`:''}`;
     $('tabInicio').querySelectorAll('[data-ir]').forEach(b=> b.onclick=()=>irATab(b.dataset.ir));
+    const _mca=$('modCierresAdmin'); if(_mca) _mca.onclick = abrirCierresAdmin;
     pintarConexion();
   }
 
@@ -1914,6 +1925,70 @@
       toast('Día reabierto. Puedes cobrar de nuevo.');
       pintarCierre();
     }catch(e){ toast('No se pudo reabrir: '+(e.message||e), true); }
+  }
+
+  // ---- Historial de cierres (vista del ADMIN) ----
+  function abrirCierresAdmin(){
+    const cierres = S.movimientos.filter(m=> m.tipo==='cierre');
+    const porFecha = {};
+    for(const c of cierres){ (porFecha[c.fecha] || (porFecha[c.fecha]=[])).push(c); }
+    const fechas = Object.keys(porFecha).sort().reverse();
+    const cuerpo = fechas.length===0
+      ? `<div class="rx-cierre-vacio">Aún no hay cierres. Cuando un cobrador cierre su día, aquí verás lo que entregó.</div>`
+      : fechas.map(f=>{
+          const items = porFecha[f].slice().sort((a,b)=> (b.ts||0)-(a.ts||0)).map(c=>`
+            <button class="rx-cierre-item" data-cierre="${c.id}">
+              <div class="izq">
+                <div class="nom">${escapar(nombreCobrador(c.cobradorId))}</div>
+                <div class="sub">Efectivo${c.cobradoTransf>0?` · +${pesos(c.cobradoTransf)} transf.`:''}${c.nPendientes>0?` · ${c.nPendientes} sin pagar`:''}</div>
+              </div>
+              <div class="der">${pesos(c.efectivoFinal)}</div>
+            </button>`).join('');
+          const totalDia = porFecha[f].reduce((t,c)=> t+(Number(c.efectivoFinal)||0), 0);
+          return `<div class="rx-cierre-fechagrupo">
+            <div class="rx-cierre-fecha"><span>${f}</span><span class="tot">${pesos(totalDia)}</span></div>
+            ${items}
+          </div>`;
+        }).join('');
+    abrirHoja(`
+      <h2>Cierres y jornadas</h2>
+      <div class="sub">Lo que cada cobrador cerró y entregó, por día.</div>
+      ${cuerpo}
+      <div class="rx-acciones" style="margin-top:20px">
+        <button class="rx-btn-fant" id="cierresCerrar">Cerrar</button>
+      </div>`);
+    $('cierresCerrar').onclick = cerrarHoja;
+    document.querySelectorAll('[data-cierre]').forEach(b=> b.onclick = ()=> detalleCierre(b.dataset.cierre));
+  }
+
+  function detalleCierre(cierreId){
+    const c = S.movimientos.find(m=> m.id===cierreId && m.tipo==='cierre');
+    if(!c){ toast('No se encontró el cierre.'); return; }
+    const totalCobrado = (Number(c.cobradoEfectivo)||0) + (Number(c.cobradoTransf)||0);
+    const pend = Array.isArray(c.pendientes) ? c.pendientes : [];
+    const pendHTML = pend.length===0
+      ? `<div class="hint" style="margin-top:6px">Todos los clientes activos pagaron ese día. 🎉</div>`
+      : pend.map(p=>`<div class="rx-detalle-fila"><span class="et">${escapar(p.nombre||'Sin nombre')}</span><span class="va">debe ${pesos(p.saldo)}</span></div>`).join('');
+    abrirHoja(`
+      <h2>${escapar(nombreCobrador(c.cobradorId))}</h2>
+      <div class="sub">Cierre del ${c.fecha}</div>
+      <div class="rx-cuadre">
+        <div class="fila"><span>Base del día</span><span>${pesos(c.base)}</span></div>
+        <div class="fila pos"><span>+ Cobrado en efectivo</span><span>${pesos(c.cobradoEfectivo)}</span></div>
+        <div class="fila neg"><span>− Entregado en préstamos</span><span>${pesos(c.entregado)}</span></div>
+        <div class="fila total"><span>Efectivo entregado</span><span>${pesos(c.efectivoFinal)}</span></div>
+      </div>
+      ${c.cobradoTransf>0?`
+      <div class="rx-transf-resumen">
+        <div class="r1"><span>📲 Por transferencia</span><span>${pesos(c.cobradoTransf)}</span></div>
+        <div class="r2">Ya cayó en tu cuenta. Total cobrado ese día: <b>${pesos(totalCobrado)}</b>.</div>
+      </div>`:''}
+      <div class="rx-seccion-titulo" style="margin-top:20px"><span>${pend.length>0?`Quedaron sin pagar (${pend.length})`:'Cobranza del día'}</span></div>
+      ${pendHTML}
+      <div class="rx-acciones" style="margin-top:20px">
+        <button class="rx-btn-fant" id="detCerrar">Volver</button>
+      </div>`);
+    $('detCerrar').onclick = abrirCierresAdmin;
   }
 
   function abrirCierreCaja(){ abrirHoja('<div id="cierreBody"></div>'); pintarCierre(); }

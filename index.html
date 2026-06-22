@@ -390,6 +390,14 @@
     background:linear-gradient(135deg,var(--dorado),#B8911F);color:#2A2206;display:flex;align-items:center;justify-content:center;gap:8px;transition:filter .15s;box-shadow:0 4px 14px rgba(201,162,39,.3)}
   .rx-btn-sellar:active{filter:brightness(.95)}
   .rx-aviso-cerrado{display:flex;gap:9px;align-items:center;background:rgba(46,158,99,.12);border:1px solid rgba(46,158,99,.34);border-radius:12px;padding:12px 14px;margin:12px 0;font-size:.9rem;color:#1d5c43;font-weight:600;line-height:1.35}
+  .rx-conteo{background:#fff;border:1px solid var(--linea);border-radius:14px;padding:16px;margin-top:6px}
+  .rx-conteo .esperado{display:flex;justify-content:space-between;align-items:center;font-size:.92rem;color:var(--tinta);padding-bottom:12px;margin-bottom:13px;border-bottom:1px solid var(--linea)}
+  .rx-conteo .esperado b{font-family:var(--display);font-size:1.2rem;color:var(--azul-claro)}
+  .rx-conteo label{display:block;font-size:.85rem;font-weight:700;color:var(--tinta);margin-bottom:7px}
+  .rx-conteo-dif{margin-top:11px;font-weight:700;font-size:.98rem;text-align:center;padding:10px;border-radius:10px}
+  .rx-conteo-dif.ok{color:#1d5c43;background:rgba(46,158,99,.13)}
+  .rx-conteo-dif.falta{color:var(--peligro);background:rgba(178,58,51,.1)}
+  .rx-conteo-dif.sobra{color:var(--alerta);background:rgba(192,83,43,.1)}
   .rx-cobro-row.bloq{opacity:.55;pointer-events:none}
   .rx-cierre-fechagrupo{margin-top:16px}
   .rx-cierre-fecha{display:flex;justify-content:space-between;align-items:center;font-size:.78rem;font-weight:700;color:var(--niebla);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;padding:0 2px}
@@ -457,7 +465,7 @@
       <button class="rx-btn" type="submit" id="btnEntrar">Entrar</button>
       <div class="rx-error" id="errLogin" role="alert"></div>
     </form>
-    <div class="rx-firma">Rendix v1.0 · Powered by <b>Iván Jiménez</b></div>
+    <div class="rx-firma">Rendix v1.4 · Powered by <b>Iván Jiménez</b></div>
   </section>
 
   <!-- ===== APP ===== -->
@@ -480,7 +488,7 @@
       </main>
 
       <footer class="rx-pie">
-        <div class="firma">Rendix v1.0 · Powered by <b>Iván Jiménez</b></div>
+        <div class="firma">Rendix v1.4 · Powered by <b>Iván Jiménez</b></div>
       </footer>
     </div>
 
@@ -576,9 +584,9 @@
     throw new Error('Config de Firebase sin reemplazar.');
   }
 
-  let auth, db;
+  let auth, db, app;
   try {
-    const app = initializeApp(firebaseConfig);
+    app = initializeApp(firebaseConfig);
     auth = getAuth(app);
     db = initializeFirestore(app, {
       localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
@@ -591,6 +599,7 @@
   // ---- estado global de la sesión ----
   const S = { uid:null, empresaId:null, rol:null, nombre:null, empresaNombre:null, perfil:null, licenciaActiva:true,
               cobradores:[], rutas:[], clientes:[], prestamos:[], movimientos:[], movIdx:new Map(),
+              offsetReloj:0, relojCalibrado:false,
               unsubCob:null, unsubRut:null, unsubCli:null, unsubPres:null, unsubMov:null, tab:'inicio' };
 
   // ---- helpers de texto / formato ----
@@ -721,9 +730,12 @@
   }
   // Fecha de HOY en hora LOCAL (no UTC): define a qué día pertenece cada
   // cobro. Clave para que el cierre de caja de la noche cuadre exacto.
+  // Fecha "hoy" en hora Colombia (UTC-5), corregida con el reloj del servidor.
+  // Inmune a que el dispositivo tenga la hora o la zona horaria manipuladas.
   function hoyISO(){
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const ms = Date.now() + (S.offsetReloj||0) - 5*60*60*1000;
+    const d = new Date(ms);
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
   }
   const RX_ESTADO = {
     al_dia:   { t:'Al día',    c:'rx-est-ok'   },
@@ -871,7 +883,26 @@
   // ===========================================================
   //  ARRANQUE
   // ===========================================================
+  // Calibra el reloj contra el servidor (Realtime Database .info/serverTimeOffset).
+  // Si RTDB no está habilitado o no hay conexión, sigue con la hora del dispositivo:
+  // todo funciona igual, la corrección es aditiva y nunca rompe el arranque.
+  async function calibrarReloj(){
+    try{
+      const { getDatabase, ref, onValue } = await import('https://www.gstatic.com/firebasejs/12.14.0/firebase-database.js');
+      const rtdb = getDatabase(app);
+      onValue(ref(rtdb, '.info/serverTimeOffset'), (snap)=>{
+        const off = snap.val();
+        if(typeof off === 'number' && isFinite(off)){
+          S.offsetReloj = off;
+          S.relojCalibrado = true;
+          if(Math.abs(off) > 5*60*1000) console.warn('Reloj del dispositivo desfasado del servidor ~'+Math.round(off/1000)+'s — corregido para las fechas.');
+        }
+      }, ()=>{ /* sin RTDB: hora del dispositivo */ });
+    }catch(e){ /* RTDB no disponible / sin conexión: hora del dispositivo */ }
+  }
+
   function arrancarApp(){
+    calibrarReloj();
     $('appEmpresa').textContent = S.empresaNombre;
     wireSalir();
     const esAdmin = S.rol === 'admin';
@@ -1079,8 +1110,11 @@
       const r = S.rutas.find(x=>x.id===S.perfil.rutaId);
       ruta = escapar(r ? r.nombre : 'Asignada');
     }
-    const base = (S.perfil.baseAsignada ?? null) !== null && S.perfil.baseAsignada !== ''
-      ? pesos(S.perfil.baseAsignada) : 'Sin asignar';
+    const hoy = hoyISO();
+    const abierto = !!aperturaDelDia(S.uid, hoy);
+    const cerrado = diaEstaCerrado(S.uid, hoy);
+    const baseHoy = baseDelDia(S.uid, hoy);
+    const base = abierto ? pesos(baseHoy) : 'Abre tu día';
     const miCartera = S.prestamos.filter(p=>p.estado!=='pagado')
       .reduce((t,p)=> t + saldoPrestamo(p), 0);
     $('tabInicio').innerHTML = `
@@ -1103,9 +1137,15 @@
         <button class="rx-modulo" id="modCierre"><div class="ico">🧮</div><div class="nom">Cierre de caja</div></button>
         <div class="rx-modulo bloq"><div class="ico">📝</div><div class="nom">Notas de visita</div><span class="etapa">pronto</span></div>
       </div>
-      <div class="rx-banner ok" style="margin-top:22px"><span>✓ Ya puedes <b>cobrar el día</b>, registrar clientes y entregar préstamos. Toca <b>Cobrar</b> para empezar tu jornada.</span></div>`;
+      ${cerrado
+        ? `<div class="rx-banner ok" style="margin-top:22px"><span>🔒 Cerraste tu día. Vuelve mañana para una nueva jornada.</span></div>`
+        : (abierto
+          ? `<div class="rx-banner ok" style="margin-top:22px"><span>✓ Día abierto con base <b>${pesos(baseHoy)}</b>. Toca <b>Cobrar</b> para tu jornada.</span></div>`
+          : `<button class="rx-btn-sellar" id="cobAbrirDia" style="margin-top:22px">🌅 Abrir el día</button>
+             <div class="hint" style="margin-top:6px;text-align:center">Confirma tu base para empezar a cobrar.</div>`)}`;
     $('tabInicio').querySelectorAll('[data-ir]').forEach(b=> b.onclick=()=>irATab(b.dataset.ir));
     const _mc=$('modCierre'); if(_mc) _mc.onclick = abrirCierreCaja;
+    const _ad=$('cobAbrirDia'); if(_ad) _ad.onclick = abrirElDia;
     pintarConexion();
   }
 
@@ -1957,7 +1997,7 @@
   // ===========================================================
   // Cálculo central del cierre (lo usan la vista y el sellado).
   function calcularCierre(hoy){
-    const base = Number(S.perfil?.baseAsignada) || 0;
+    const base = baseDelDia(S.uid, hoy);
     const movs = S.movimientos;
     // Los cobros de liquidación por renovación (renovacion:true) NO son cobranza real;
     // se compensan descontando el saldo viejo del desembolso nuevo, así que se excluyen.
@@ -1999,24 +2039,103 @@
     return !!(u && u.tipo==='cierre');
   }
 
-  async function cerrarElDia(){
+  // Apertura del día: fija la base con la que arranca el cobrador (movimiento inmutable).
+  function aperturaDelDia(cobradorId, fecha){
+    const ev = S.movimientos
+      .filter(m=> m.tipo==='apertura' && m.cobradorId===cobradorId && m.fecha===fecha)
+      .sort((a,b)=> (a.ts||0) - (b.ts||0));
+    return ev[ev.length-1] || null;
+  }
+  // Base del día: la de la apertura si existe; si no, la base configurada del cobrador (fallback).
+  function baseDelDia(cobradorId, fecha){
+    const ap = aperturaDelDia(cobradorId, fecha);
+    if(ap) return Number(ap.base)||0;
+    if(cobradorId===S.uid) return Number(S.perfil?.baseAsignada)||0;
+    const cob = S.cobradores.find(c=>c.id===cobradorId);
+    return cob ? (Number(cob.baseAsignada)||0) : 0;
+  }
+
+  function abrirElDia(){
+    const hoy = hoyISO();
+    const sugerida = Number(S.perfil?.baseAsignada)||0;
+    abrirHoja(`
+      <h2>Abrir el día</h2>
+      <div class="sub">Confirma con cuánto efectivo arrancas hoy.</div>
+      <div class="rx-form-campo" style="margin-top:14px">
+        <label for="aperturaBase">Base del día (efectivo inicial)</label>
+        <input class="rx-fin" id="aperturaBase" type="number" inputmode="numeric" min="0" placeholder="0" value="${sugerida||''}" />
+      </div>
+      <div class="hint">Es la plata que te entregó el administrador para arrancar la jornada.</div>
+      <div class="rx-acciones" style="margin-top:18px">
+        <button class="rx-btn-prim" id="aperturaConfirmar">Abrir el día</button>
+        <button class="rx-btn-fant" id="aperturaCancelar">Cancelar</button>
+      </div>`);
+    $('aperturaCancelar').onclick = cerrarHoja;
+    $('aperturaConfirmar').onclick = async ()=>{
+      const base = Number($('aperturaBase').value)||0;
+      const btn=$('aperturaConfirmar'); btn.disabled=true; btn.textContent='Abriendo…';
+      try{
+        await addDoc(collection(db,'empresas',S.empresaId,'movimientos'), {
+          tipo:'apertura', fecha:hoy, cobradorId:S.uid, base, ts:Date.now(),
+          rutaId:S.perfil?.rutaId||'', creadoEn: serverTimestamp()
+        });
+        cerrarHoja(); toast('Día abierto. ¡A cobrar! 💪');
+      }catch(e){ btn.disabled=false; btn.textContent='Abrir el día'; toast('No se pudo abrir: '+(e.message||e), true); }
+    };
+  }
+
+  function cerrarElDia(){
     const hoy = hoyISO();
     const c = calcularCierre(hoy);
-    let msg = `Vas a ENTREGAR ${pesos(c.efectivoFinal)} en efectivo al administrador.`;
-    if(c.cobradoTransf>0) msg += `\nPor transferencia ya cayeron ${pesos(c.cobradoTransf)} (con sus pruebas).`;
-    if(c.pendientes.length>0) msg += `\n\nQuedan ${c.pendientes.length} cliente(s) sin pagar hoy.`;
-    msg += `\n\nDespués NO podrás cobrar más hoy (podrás reabrir si hace falta).\n\n¿Cerrar el día?`;
-    if(!confirm(msg)) return;
+    abrirHoja(`
+      <h2>Cerrar el día</h2>
+      <div class="sub">Cuenta tu efectivo físico y confírmalo.</div>
+      <div class="rx-conteo">
+        <div class="esperado"><span>Efectivo esperado</span><b>${pesos(c.efectivoFinal)}</b></div>
+        ${c.efectivoFinal<0?`<div class="rx-conteo-dif falta" style="display:block;margin:6px 0 10px">⚠️ Esperado en negativo: entregaste en préstamos (${pesos(c.entregado)}) más de lo que tenías en caja (base ${pesos(c.base)} + cobrado ${pesos(c.cobradoEfectivo)}). Si el administrador te recargó base durante el día, dilo al cerrar.</div>`:''}
+        <label for="conteoReal">¿Cuánto efectivo tienes en la mano?</label>
+        <input class="rx-fin" id="conteoReal" type="number" inputmode="numeric" min="0" placeholder="Cuenta los billetes y escribe el total" />
+        <div class="rx-conteo-dif" id="conteoDif" style="display:none"></div>
+      </div>
+      ${c.cobradoTransf>0?`<div class="hint" style="margin-top:8px">Las transferencias (${pesos(c.cobradoTransf)}) NO se cuentan aquí — ya están en la cuenta del administrador.</div>`:''}
+      <div class="rx-acciones" style="margin-top:18px">
+        <button class="rx-btn-sellar" id="conteoConfirmar">🔒 Confirmar y cerrar</button>
+        <button class="rx-btn-fant" id="conteoCancelar">Cancelar</button>
+      </div>`);
+    const inp = $('conteoReal'), dif = $('conteoDif');
+    const evaluar = ()=>{
+      if(inp.value===''){ dif.style.display='none'; return; }
+      const d = (Number(inp.value)||0) - c.efectivoFinal;
+      dif.style.display='block';
+      if(d===0){ dif.className='rx-conteo-dif ok'; dif.textContent='✓ Cuadra perfecto'; }
+      else if(d>0){ dif.className='rx-conteo-dif sobra'; dif.textContent=`Sobran ${pesos(d)}`; }
+      else { dif.className='rx-conteo-dif falta'; dif.textContent=`Faltan ${pesos(Math.abs(d))}`; }
+    };
+    inp.addEventListener('input', evaluar);
+    $('conteoCancelar').onclick = ()=> pintarCierre();
+    $('conteoConfirmar').onclick = ()=> confirmarCierre(c, Number(inp.value)||0, inp.value==='');
+  }
+
+  async function confirmarCierre(c, efectivoReal, sinContar){
+    const hoy = hoyISO();
+    const diferencia = sinContar ? null : (efectivoReal - c.efectivoFinal);
+    if(sinContar){
+      if(!confirm('No escribiste cuánto efectivo tienes.\n\nSe recomienda contarlo para detectar faltantes. ¿Cerrar sin registrar el conteo?')) return;
+    } else if(diferencia!==0){
+      const t = diferencia>0 ? `SOBRAN ${pesos(diferencia)}` : `FALTAN ${pesos(Math.abs(diferencia))}`;
+      if(!confirm(`${t}.\n\nEl descuadre quedará registrado para el administrador. ¿Cerrar el día?`)) return;
+    }
     try{
       await addDoc(collection(db,'empresas',S.empresaId,'movimientos'), {
         tipo:'cierre', fecha:hoy, cobradorId:S.uid, ts:Date.now(),
         rutaId: S.perfil?.rutaId || '',
         base: c.base, cobradoEfectivo: c.cobradoEfectivo, cobradoTransf: c.cobradoTransf,
         totalCobrado: c.totalCobrado, entregado: c.entregado, efectivoFinal: c.efectivoFinal,
+        ...(sinContar ? {} : { efectivoReal, diferencia }),
         nPendientes: c.pendientes.length, pendientes: c.pendientes,
         creadoEn: serverTimestamp()
       });
-      toast('Día cerrado. ¡Buen trabajo!');
+      toast(diferencia===0 ? 'Día cerrado, caja cuadrada ✓' : (sinContar ? 'Día cerrado' : 'Día cerrado · descuadre registrado'));
       pintarCierre();
     }catch(e){ toast('No se pudo cerrar: '+(e.message||e), true); }
   }
@@ -2084,6 +2203,14 @@
         <div class="fila neg"><span>− Entregado en préstamos</span><span>${pesos(c.entregado)}</span></div>
         <div class="fila total"><span>Efectivo entregado</span><span>${pesos(c.efectivoFinal)}</span></div>
       </div>
+      ${(c.efectivoReal!==undefined && c.efectivoReal!==null)?`
+      <div class="rx-detalle-fila" style="margin-top:10px"><span class="et">Efectivo contado</span><span class="va">${pesos(c.efectivoReal)}</span></div>
+      ${c.diferencia===0
+        ? `<div class="rx-conteo-dif ok" style="margin-top:8px">✓ Caja cuadrada</div>`
+        : (c.diferencia>0
+          ? `<div class="rx-conteo-dif sobra" style="margin-top:8px">Sobraron ${pesos(c.diferencia)}</div>`
+          : `<div class="rx-conteo-dif falta" style="margin-top:8px">Faltaron ${pesos(Math.abs(c.diferencia))}</div>`)}`
+      : `<div class="hint" style="margin-top:8px">El cobrador no registró el conteo de efectivo.</div>`}
       ${c.cobradoTransf>0?`
       <div class="rx-transf-resumen">
         <div class="r1"><span>📲 Por transferencia</span><span>${pesos(c.cobradoTransf)}</span></div>

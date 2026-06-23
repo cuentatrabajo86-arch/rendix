@@ -465,7 +465,7 @@
       <button class="rx-btn" type="submit" id="btnEntrar">Entrar</button>
       <div class="rx-error" id="errLogin" role="alert"></div>
     </form>
-    <div class="rx-firma">Rendix v1.4 · Powered by <b>Iván Jiménez</b></div>
+    <div class="rx-firma">Rendix v1.5 · Powered by <b>Iván Jiménez</b></div>
   </section>
 
   <!-- ===== APP ===== -->
@@ -488,7 +488,7 @@
       </main>
 
       <footer class="rx-pie">
-        <div class="firma">Rendix v1.4 · Powered by <b>Iván Jiménez</b></div>
+        <div class="firma">Rendix v1.5 · Powered by <b>Iván Jiménez</b></div>
       </footer>
     </div>
 
@@ -2140,15 +2140,21 @@
     }catch(e){ toast('No se pudo cerrar: '+(e.message||e), true); }
   }
 
-  async function reabrirElDia(){
-    const hoy = hoyISO();
-    if(!confirm('Vas a REABRIR el día para registrar un pago tardío.\n\nCuando termines, cierra de nuevo y entrega la diferencia.\n\n¿Reabrir el día?')) return;
+  // Reapertura SOLO por administrador, sobre el día de un cobrador concreto.
+  // El cobrador ya NO puede reabrir: una vez selló y entregó la plata, tocar los
+  // números queda fuera de su alcance (separación de funciones).
+  async function reabrirElDia(cobradorId, fecha, cierreId){
+    if(S.rol !== 'admin'){ toast('Solo el administrador puede reabrir un día.', true); return; }
+    if(!cobradorId || !fecha){ toast('Falta el cobrador o la fecha del día.', true); return; }
+    const nom = nombreCobrador(cobradorId) || 'el cobrador';
+    if(!confirm(`¿Reabrir el día ${fecha} de ${nom}? El cobrador podrá registrar pagos en ese día y deberá cerrar de nuevo.`)) return;
     try{
       await addDoc(collection(db,'empresas',S.empresaId,'movimientos'), {
-        tipo:'reapertura', fecha:hoy, cobradorId:S.uid, ts:Date.now(), creadoEn: serverTimestamp()
+        tipo:'reapertura', fecha, cobradorId, ts:Date.now(),
+        reabiertoPor: S.uid, creadoEn: serverTimestamp()
       });
-      toast('Día reabierto. Puedes cobrar de nuevo.');
-      pintarCierre();
+      toast(`Día reabierto para ${primerNombre(nom)}. Ya puede registrar pagos.`);
+      if(cierreId) detalleCierre(cierreId); else abrirCierresAdmin();
     }catch(e){ toast('No se pudo reabrir: '+(e.message||e), true); }
   }
 
@@ -2218,10 +2224,17 @@
       </div>`:''}
       <div class="rx-seccion-titulo" style="margin-top:20px"><span>${pend.length>0?`Quedaron sin pagar (${pend.length})`:'Cobranza del día'}</span></div>
       ${pendHTML}
+      <div class="rx-seccion-titulo" style="margin-top:20px"><span>Estado del día</span></div>
+      ${diaEstaCerrado(c.cobradorId, c.fecha)
+        ? `<div class="rx-dia-cerrado"><div class="ic">&#128274;</div><div class="tx"><b>Día sellado.</b> El cobrador no puede registrar más pagos en este día.</div></div>
+           <button class="rx-btn-fant" id="detReabrir" style="margin-top:12px">Reabrir este día</button>
+           <div class="hint" style="margin-top:6px">Reábrelo solo para registrar un pago tardío; el cobrador deberá cerrar de nuevo.</div>`
+        : `<div class="rx-dia-cerrado"><div class="ic">&#128275;</div><div class="tx"><b>Día reabierto.</b> El cobrador puede registrar pagos; queda pendiente que cierre de nuevo.</div></div>`}
       <div class="rx-acciones" style="margin-top:20px">
         <button class="rx-btn-fant" id="detCerrar">Volver</button>
       </div>`);
     $('detCerrar').onclick = abrirCierresAdmin;
+    const _dr = $('detReabrir'); if(_dr) _dr.onclick = ()=> reabrirElDia(c.cobradorId, c.fecha, c.id);
   }
 
   function abrirCierreCaja(){ abrirHoja('<div id="cierreBody"></div>'); pintarCierre(); }
@@ -2277,9 +2290,7 @@
         <div class="ic">🔒</div>
         <div class="tx"><b>Día cerrado.</b> Ya entregaste tu cuadre; no puedes cobrar más hoy.${pendientes.length>0?` Quedaron <b>${pendientes.length}</b> sin pagar.`:''}</div>
       </div>
-      <div class="rx-acciones" style="margin-top:12px">
-        <button class="rx-btn-fant" id="cierreReabrir">Reabrir el día</button>
-      </div>` : `
+      <div class="hint" style="margin-top:10px">¿Un cliente pagó tarde? Pídele al administrador que reabra tu día desde su panel.</div>` : `
       <button class="rx-btn-sellar" id="cierreSellar" style="margin-top:20px">🔒 Cerrar el día</button>
       <div class="hint" style="margin-top:6px;text-align:center">Sella tu jornada y entrega el cuadre al administrador.</div>`) : ''}
       <div class="rx-seccion-titulo" style="margin-top:22px"><span>Días anteriores</span></div>
@@ -2289,7 +2300,6 @@
       </div>`;
     const _cc = $('cierreCerrar'); if(_cc) _cc.onclick = cerrarHoja;
     const _cs = $('cierreSellar'); if(_cs) _cs.onclick = cerrarElDia;
-    const _cr = $('cierreReabrir'); if(_cr) _cr.onclick = reabrirElDia;
   }
 
   // ===========================================================

@@ -409,6 +409,9 @@
   .rx-cierre-item .nom{font-weight:700;color:var(--tinta);font-size:1rem}
   .rx-cierre-item .sub{font-size:.8rem;color:var(--niebla);margin-top:2px}
   .rx-cierre-item .der{font-family:var(--display);font-weight:800;font-size:1.1rem;color:var(--azul-claro);white-space:nowrap}
+  .rx-cierre-item .izq{display:flex;align-items:center;gap:11px;min-width:0}
+  .rx-cob-dot{flex:0 0 auto;width:34px;height:34px;border-radius:50%;color:#fff;font-weight:800;font-size:.95rem;display:flex;align-items:center;justify-content:center;font-family:var(--display)}
+  .rx-cob-pend{display:inline-block;margin-top:4px;font-size:.72rem;font-weight:700;color:#8a3a1c;background:rgba(192,83,43,.16);padding:2px 8px;border-radius:999px}
   .rx-carton{background:#fff;border:1px solid var(--linea);border-radius:16px;overflow:hidden;margin-top:8px;box-shadow:0 8px 26px rgba(13,27,58,.12)}
   .rx-carton .cab{background:linear-gradient(135deg,var(--azul),var(--azul-profundo));color:#fff;padding:16px 18px;position:relative}
   .rx-carton .cab .marca{position:absolute;top:14px;right:16px;font-size:.6rem;font-weight:800;letter-spacing:.12em;opacity:.5;text-transform:uppercase}
@@ -467,7 +470,7 @@
       <button class="rx-btn" type="submit" id="btnEntrar">Entrar</button>
       <div class="rx-error" id="errLogin" role="alert"></div>
     </form>
-    <div class="rx-firma">Rendix v1.6 · Powered by <b>Iván Jiménez</b></div>
+    <div class="rx-firma">Rendix v1.7 · Powered by <b>Iván Jiménez</b></div>
   </section>
 
   <!-- ===== APP ===== -->
@@ -490,7 +493,7 @@
       </main>
 
       <footer class="rx-pie">
-        <div class="firma">Rendix v1.6 · Powered by <b>Iván Jiménez</b></div>
+        <div class="firma">Rendix v1.7 · Powered by <b>Iván Jiménez</b></div>
       </footer>
     </div>
 
@@ -1051,6 +1054,15 @@
     if(!uid) return null;
     const c = S.cobradores.find(x=>x.id===uid);
     return c ? c.nombre : '(sin asignar)';
+  }
+
+  // Color fijo por cobrador (mismo cobrador → mismo color), para distinguir
+  // de un vistazo sus tarjetas en la vista de cierres del administrador.
+  function colorCobrador(id){
+    const pal = ['#1E3D6B','#2E9E63','#C9A227','#8C5544','#5B4B8A','#1F7A8C','#B23A33','#9C6B1E'];
+    let h = 0; const s = String(id||'');
+    for(let i=0;i<s.length;i++){ h = (h*31 + s.charCodeAt(i)) >>> 0; }
+    return pal[h % pal.length];
   }
 
   // ===========================================================
@@ -2230,15 +2242,28 @@
     const cuerpo = fechas.length===0
       ? `<div class="rx-cierre-vacio">Aún no hay cierres. Cuando un cobrador cierre su día, aquí verás lo que entregó.</div>`
       : fechas.map(f=>{
-          const items = porFecha[f].slice().sort((a,b)=> (b.ts||0)-(a.ts||0)).map(c=>`
-            <button class="rx-cierre-item" data-cierre="${c.id}">
+          // Un cierre VIGENTE por cobrador/día: si reabrió y volvió a cerrar,
+          // se queda el último (por ts) y no se suma dos veces.
+          const byCob = {};
+          for(const c of porFecha[f]){ const k=c.cobradorId||c.id; if(!byCob[k] || (Number(c.ts)||0)>(Number(byCob[k].ts)||0)) byCob[k]=c; }
+          const vigentes = Object.values(byCob).sort((a,b)=> (Number(b.ts)||0)-(Number(a.ts)||0));
+          const items = vigentes.map(c=>{
+            const col = colorCobrador(c.cobradorId);
+            const ini = ((nombreCobrador(c.cobradorId)||'?').trim().charAt(0) || '?').toUpperCase();
+            return `
+            <button class="rx-cierre-item" data-cierre="${c.id}" style="border-left:5px solid ${col}">
               <div class="izq">
-                <div class="nom">${escapar(nombreCobrador(c.cobradorId))}</div>
-                <div class="sub">Efectivo${c.cobradoTransf>0?` · +${pesos(c.cobradoTransf)} transf.`:''}${c.nPendientes>0?` · ${c.nPendientes} sin pagar`:''}</div>
+                <span class="rx-cob-dot" style="background:${col}">${escapar(ini)}</span>
+                <div>
+                  <div class="nom">${escapar(nombreCobrador(c.cobradorId))}</div>
+                  <div class="sub">Efectivo${c.cobradoTransf>0?` · +${pesos(c.cobradoTransf)} transf.`:''}</div>
+                  ${c.nPendientes>0?`<span class="rx-cob-pend">${c.nPendientes} sin pagar</span>`:''}
+                </div>
               </div>
               <div class="der">${pesos(c.efectivoFinal)}</div>
-            </button>`).join('');
-          const totalDia = porFecha[f].reduce((t,c)=> t+(Number(c.efectivoFinal)||0), 0);
+            </button>`;
+          }).join('');
+          const totalDia = vigentes.reduce((t,c)=> t+(Number(c.efectivoFinal)||0), 0);
           return `<div class="rx-cierre-fechagrupo">
             <div class="rx-cierre-fecha"><span>${f}</span><span class="tot">${pesos(totalDia)}</span></div>
             ${items}

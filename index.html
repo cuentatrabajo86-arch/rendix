@@ -367,6 +367,21 @@
   .rx-cobro-row .sub{font-size:.84rem;color:var(--niebla);margin-top:1px}
   .rx-cobro-row .acc{display:flex;flex-direction:column;align-items:flex-end;gap:7px;flex-shrink:0}
   .rx-cobrar-btn{width:38px;height:38px;border-radius:50%;border:none;background:var(--dorado);color:#3A2D05;font-family:var(--display);font-weight:800;font-size:1.15rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .rx-acc-btns{display:flex;align-items:center;gap:7px}
+  .rx-nota-btn{width:38px;height:38px;border-radius:50%;border:1px solid var(--linea);background:#fff;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .rx-nota-btn:active{transform:scale(.95)}
+  .rx-nota-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
+  .rx-nota-chip{border:1px solid var(--linea);background:#fff;color:var(--tinta);font-size:.82rem;font-weight:600;padding:7px 11px;border-radius:999px;cursor:pointer;font-family:var(--texto)}
+  .rx-nota-chip:active{transform:scale(.96)}
+  .rx-nota-seccion{margin-top:16px;background:#fff;border:1px solid var(--linea);border-radius:13px;padding:13px 15px}
+  .rx-nota-titulo{font-family:var(--display);font-weight:700;color:var(--tinta);font-size:.96rem;margin-bottom:8px}
+  .rx-nota-item{padding:9px 0;border-bottom:1px solid var(--linea)}
+  .rx-nota-item:last-child{border-bottom:none}
+  .rx-nota-meta{font-size:.75rem;color:var(--niebla);font-weight:600;margin-bottom:2px}
+  .rx-nota-txt{font-size:.92rem;color:var(--tinta);line-height:1.4;white-space:pre-wrap}
+  .rx-nota-vacia{font-size:.86rem;color:var(--niebla);padding:4px 0}
+  .rx-nota-cob{font-weight:800;color:var(--azul-claro)}
+  .rx-nota-fecha-grupo{font-size:.74rem;font-weight:700;color:var(--niebla);text-transform:uppercase;letter-spacing:.04em;margin:16px 2px 8px}
   .rx-cobro-vacio{text-align:center;color:var(--niebla);font-size:.92rem;padding:34px 12px;background:#fff;border:1px dashed var(--linea);border-radius:14px}
 
   /* ===== Cierre de caja · Etapa 4 ===== */
@@ -470,7 +485,7 @@
       <button class="rx-btn" type="submit" id="btnEntrar">Entrar</button>
       <div class="rx-error" id="errLogin" role="alert"></div>
     </form>
-    <div class="rx-firma">Rendix v1.7 · Powered by <b>Iván Jiménez</b></div>
+    <div class="rx-firma">Rendix v1.8 · Powered by <b>Iván Jiménez</b></div>
   </section>
 
   <!-- ===== APP ===== -->
@@ -493,7 +508,7 @@
       </main>
 
       <footer class="rx-pie">
-        <div class="firma">Rendix v1.7 · Powered by <b>Iván Jiménez</b></div>
+        <div class="firma">Rendix v1.8 · Powered by <b>Iván Jiménez</b></div>
       </footer>
     </div>
 
@@ -1105,10 +1120,12 @@
           <span class="conteo">${S.rutas.length}</span>
         </button>
         <button class="rx-modulo" id="modCierresAdmin"><div class="ico">📊</div><div class="nom">Cierres y jornadas</div>${cerraronHoy>0?`<span class="conteo">${cerraronHoy}</span>`:''}</button>
+        <button class="rx-modulo" id="modNotasAdmin"><div class="ico">📝</div><div class="nom">Notas de visita</div></button>
       </div>
       ${cerraronHoy>0?`<div class="rx-banner ok" style="margin-top:22px">📥 Hoy <b>${cerraronHoy}</b> cobrador(es) cerraron y entregaron. Toca "Cierres y jornadas" para ver el detalle.</div>`:''}`;
     $('tabInicio').querySelectorAll('[data-ir]').forEach(b=> b.onclick=()=>irATab(b.dataset.ir));
     const _mca=$('modCierresAdmin'); if(_mca) _mca.onclick = abrirCierresAdmin;
+    const _mna=$('modNotasAdmin'); if(_mna) _mna.onclick = abrirNotasAdmin;
     pintarConexion();
   }
 
@@ -1155,7 +1172,7 @@
         <button class="rx-modulo" data-ir="clientes"><div class="ico">🧾</div><div class="nom">Mis clientes</div><span class="conteo">${S.clientes.length}</span></button>
         <button class="rx-modulo" data-ir="cobrar"><div class="ico">💵</div><div class="nom">Cobrar el día</div></button>
         <button class="rx-modulo" id="modCierre"><div class="ico">🧮</div><div class="nom">Cierre de caja</div></button>
-        <div class="rx-modulo bloq"><div class="ico">📝</div><div class="nom">Notas de visita</div><span class="etapa">pronto</span></div>
+        <button class="rx-modulo" id="modNotas"><div class="ico">📝</div><div class="nom">Notas de visita</div></button>
       </div>
       ${cerrado
         ? `<div class="rx-banner ok" style="margin-top:22px"><span>🔒 Cerraste tu día. Vuelve mañana para una nueva jornada.</span></div>`
@@ -1165,6 +1182,7 @@
              <div class="hint" style="margin-top:6px;text-align:center">Confirma tu base para empezar a cobrar.</div>`)}`;
     $('tabInicio').querySelectorAll('[data-ir]').forEach(b=> b.onclick=()=>irATab(b.dataset.ir));
     const _mc=$('modCierre'); if(_mc) _mc.onclick = abrirCierreCaja;
+    const _mn=$('modNotas'); if(_mn) _mn.onclick = abrirNotasCobrador;
     const _ad=$('cobAbrirDia'); if(_ad) _ad.onclick = abrirElDia;
     pintarConexion();
   }
@@ -1870,6 +1888,11 @@
     const tabla = filas.length===0
       ? `<div class="vacia">Aún no hay abonos registrados.<br>Cada cuota que cobres aparecerá aquí.</div>`
       : filas.join('');
+    const notasC = (movs||[]).filter(m=> m.tipo==='nota')
+      .sort((a,b)=> String(b.fecha).localeCompare(String(a.fecha)) || ((b.ts||0)-(a.ts||0)));
+    const notasCHTML = notasC.length===0
+      ? `<div class="rx-nota-vacia">Sin notas de visita todavía.</div>`
+      : notasC.map(m=> notaItemHTML(m,{fecha:true})).join('');
     abrirHoja(`
       <div class="rx-carton">
         <div class="cab">
@@ -1891,12 +1914,21 @@
         ${tabla}
         <div class="pie"><span class="et">Saldo pendiente</span><span class="va">${pesos(r.saldo)}</span></div>
       </div>
+      <div class="rx-nota-seccion">
+        <div class="rx-nota-titulo">📝 Notas de visita</div>
+        ${notasCHTML}
+      </div>
       <div class="rx-acciones" style="margin-top:18px">
         ${r.saldo>0 ? `<button class="rx-btn-prim" id="cartonRenovar">🔄  Renovar préstamo</button>` : ''}
         ${r.saldo>0 ? `<button class="rx-btn-fant" id="cartonMulta">⚠ Registrar multa</button>` : ''}
+        <button class="rx-btn-fant" id="cartonNota">📝 Agregar nota</button>
         <button class="rx-btn-fant" id="cartonCerrar">Cerrar</button>
       </div>`);
     $('cartonCerrar').onclick = ()=> fichaPrestamo(p.id);
+    const _cn=$('cartonNota'); if(_cn) _cn.onclick = ()=> formNota(p, cli, async ()=>{
+      let mv; try{ const s=await getDocs(query(collection(db,'empresas',S.empresaId,'movimientos'), where('prestamoId','==',p.id))); mv=s.docs.map(d=>({id:d.id,...d.data()})); }catch(_){ mv=movsDe(p.id); }
+      abrirCarton(p, cli, mv, rxResumen(p, mv));
+    });
     const _crv=$('cartonRenovar'); if(_crv) _crv.onclick = ()=>{
       const cliR = S.clientes.find(c=>c.id===p.clienteId) || cli;
       formPrestamo(cliR, { prestamoViejo:p, saldoViejo:r.saldo });
@@ -1952,6 +1984,106 @@
     };
   }
 
+  // ===========================================================
+  //  NOTAS DE VISITA · el cobrador deja constancia de la calle
+  //  (no estaba, se mudó, pidió plazo…). Es un movimiento tipo
+  //  'nota' INMUTABLE: rxResumen no lo procesa, así que NUNCA toca
+  //  el saldo ni la caja. El admin las lee todas.
+  // ===========================================================
+  function notaItemHTML(m, opt){
+    opt = opt || {};
+    const bits = [];
+    if(opt.cobrador) bits.push(`<span class="rx-nota-cob">${escapar(nombreCobrador(m.cobradorId)||'—')}</span>`);
+    if(opt.cliente && m.clienteNombre) bits.push(escapar(m.clienteNombre));
+    if(opt.fecha) bits.push(escapar(m.fecha||''));
+    return `<div class="rx-nota-item"><div class="rx-nota-meta">${bits.join(' · ')}</div><div class="rx-nota-txt">${escapar(m.texto||'')}</div></div>`;
+  }
+  function agruparNotasPorFecha(notas, opt){
+    const porF = {};
+    for(const m of notas){ (porF[m.fecha] || (porF[m.fecha]=[])).push(m); }
+    return Object.keys(porF).sort().reverse().map(f=>
+      `<div class="rx-nota-fecha-grupo">${escapar(f)}</div><div class="rx-nota-seccion" style="margin-top:0">${porF[f].map(m=> notaItemHTML(m, opt)).join('')}</div>`
+    ).join('');
+  }
+
+  // Formulario para dejar una nota de visita sobre un préstamo/cliente.
+  function formNota(p, cli, volver){
+    cli = cli || { nombre:p.clienteNombre };
+    volver = volver || cerrarHoja;
+    const atajos = ['No se encontró','Casa cerrada','Se mudó','Pidió plazo','Negó el pago','Paga mañana'];
+    abrirHoja(`
+      <h2>Nota de visita</h2>
+      <div class="sub">${escapar(cli.nombre||p.clienteNombre||'Cliente')} · ${hoyISO()}</div>
+      <div class="rx-form-err" id="notaErr"></div>
+      <div class="rx-nota-chips">
+        ${atajos.map(a=>`<button type="button" class="rx-nota-chip" data-txt="${escapar(a)}">${escapar(a)}</button>`).join('')}
+      </div>
+      <div class="rx-form-campo" style="margin-top:12px">
+        <label for="notaTexto">Detalle de la visita</label>
+        <textarea class="rx-fin" id="notaTexto" rows="3" maxlength="240" placeholder="Ej: No estaba, volver el viernes"></textarea>
+      </div>
+      <div class="rx-acciones" style="margin-top:18px">
+        <button class="rx-btn-prim" id="notaGuardar">Guardar nota</button>
+        <button class="rx-btn-fant" id="notaCancelar">Cancelar</button>
+      </div>`);
+    document.querySelectorAll('.rx-nota-chip').forEach(b=> b.onclick = ()=>{
+      const t = $('notaTexto'); const add = b.dataset.txt;
+      t.value = t.value.trim() ? (t.value.trim() + '. ' + add) : add;
+      t.focus();
+    });
+    $('notaCancelar').onclick = volver;
+    $('notaGuardar').onclick = async ()=>{
+      const texto = String($('notaTexto').value||'').trim();
+      if(texto.length<2){ valErr('notaErr','Escribe una nota o toca un atajo.'); return; }
+      const btn=$('notaGuardar'); btn.disabled=true; btn.textContent='Guardando…';
+      try{
+        await addDoc(collection(db,'empresas',S.empresaId,'movimientos'), {
+          tipo:'nota', texto,
+          prestamoId:p.id, clienteId:p.clienteId, clienteNombre: cli.nombre||p.clienteNombre||'',
+          cobradorId: p.cobradorId || S.uid,
+          registradoPor: S.uid, fecha: hoyISO(), ts: Date.now(),
+          creadoEn: serverTimestamp()
+        });
+        toast('Nota guardada.');
+        volver();
+      }catch(e){ btn.disabled=false; btn.textContent='Guardar nota'; toast('No se pudo guardar la nota: '+(e.message||e), true); }
+    };
+  }
+
+  // Módulo del COBRADOR: bitácora de sus notas, por día.
+  function abrirNotasCobrador(){
+    const notas = S.movimientos.filter(m=> m.tipo==='nota')
+      .sort((a,b)=> String(b.fecha).localeCompare(String(a.fecha)) || ((b.ts||0)-(a.ts||0)));
+    const cuerpo = notas.length===0
+      ? `<div class="rx-nota-vacia" style="padding:18px 0">Aún no has registrado notas. Desde <b>Cobrar el día</b> (botón 📝) o el cartón de un cliente puedes dejar una nota de visita.</div>`
+      : agruparNotasPorFecha(notas, { cliente:true });
+    abrirHoja(`
+      <h2>Notas de visita</h2>
+      <div class="sub">Lo que registraste en tus visitas, por día.</div>
+      ${cuerpo}
+      <div class="rx-acciones" style="margin-top:20px">
+        <button class="rx-btn-fant" id="notasCerrar">Cerrar</button>
+      </div>`);
+    $('notasCerrar').onclick = cerrarHoja;
+  }
+
+  // Módulo del ADMIN: todas las notas de todos los cobradores, por día.
+  function abrirNotasAdmin(){
+    const notas = S.movimientos.filter(m=> m.tipo==='nota')
+      .sort((a,b)=> String(b.fecha).localeCompare(String(a.fecha)) || ((b.ts||0)-(a.ts||0)));
+    const cuerpo = notas.length===0
+      ? `<div class="rx-nota-vacia" style="padding:18px 0">Aún no hay notas de visita. Cuando un cobrador deje una nota en la calle, aquí la verás.</div>`
+      : agruparNotasPorFecha(notas, { cliente:true, cobrador:true });
+    abrirHoja(`
+      <h2>Notas de visita</h2>
+      <div class="sub">Lo que tus cobradores reportaron en la calle, por día.</div>
+      ${cuerpo}
+      <div class="rx-acciones" style="margin-top:20px">
+        <button class="rx-btn-fant" id="notasCerrar">Cerrar</button>
+      </div>`);
+    $('notasCerrar').onclick = cerrarHoja;
+  }
+
   // ---- ficha de un préstamo (carga sus movimientos) ----
   async function fichaPrestamo(prestamoId){
     const p = S.prestamos.find(x=>x.id===prestamoId); if(!p) return;
@@ -1967,7 +2099,7 @@
     const r = rxResumen(p, movs);
     const est = RX_ESTADO[r.estado];
     const cli = S.clientes.find(c=>c.id===p.clienteId) || { id:p.clienteId, nombre:p.clienteNombre, telefono:'' };
-    const histo = movs.filter(m=> m.tipo!=='desembolso')
+    const histo = movs.filter(m=> m.tipo!=='desembolso' && m.tipo!=='nota')
       .sort((a,b)=> String(b.fecha).localeCompare(String(a.fecha)));
     const movsHtml = histo.length===0
       ? `<div style="text-align:center;color:var(--niebla);font-size:.88rem;padding:12px 0">Aún no hay cobros registrados.</div>`
@@ -2037,7 +2169,10 @@
             </div>
             <div class="acc">
               <span class="rx-est ${f.est.c}">${f.est.t}</span>
-              <button class="rx-cobrar-btn" tabindex="-1">$</button>
+              <div class="rx-acc-btns">
+                <button class="rx-nota-btn" data-nota="${f.p.id}" tabindex="-1" title="Nota de visita">📝</button>
+                <button class="rx-cobrar-btn" tabindex="-1">$</button>
+              </div>
             </div>
           </div>`).join('');
 
@@ -2053,6 +2188,14 @@
       ${cerrado?`<div class="rx-aviso-cerrado">🔒 Día cerrado. Si entró un pago tarde, pídele al administrador que reabra tu día.</div>`:''}
       ${lista}`;
 
+    $('tabCobrar').querySelectorAll('[data-nota]').forEach(b=>{
+      b.onclick = (e)=>{
+        e.stopPropagation();
+        const p = S.prestamos.find(x=>x.id===b.dataset.nota); if(!p) return;
+        const cli = S.clientes.find(c=>c.id===p.clienteId) || { nombre:p.clienteNombre };
+        formNota(p, cli, cerrarHoja);
+      };
+    });
     $('tabCobrar').querySelectorAll('[data-cobrar]').forEach(row=>{
       row.onclick = ()=>{
         if(cerrado){ toast('El día está cerrado. El administrador debe reabrirlo.'); return; }

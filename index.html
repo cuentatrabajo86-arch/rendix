@@ -257,6 +257,8 @@
   .rx-est{font-size:.68rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border-radius:7px;white-space:nowrap}
   .rx-est-ok{color:#1d5c43;background:rgba(46,125,91,.14)}
   .rx-est-mora{color:#8a3a1c;background:rgba(192,83,43,.16)}
+  .rx-sub-atraso{color:var(--peligro);font-size:.78rem;font-weight:700;margin-top:2px}
+  .rx-carton .trow.trow-multa .fe{color:var(--peligro);font-weight:600}
   .rx-est-pago{color:#5A6678;background:rgba(122,134,153,.16)}
   .rx-avatar.cli{background:linear-gradient(160deg,#D8E4F5,#B2CAEC);color:var(--azul-profundo);font-size:1.15rem}
   .rx-avatar img,.rx-mini-cli .av img{width:100%;height:100%;object-fit:cover;display:block}
@@ -465,7 +467,7 @@
       <button class="rx-btn" type="submit" id="btnEntrar">Entrar</button>
       <div class="rx-error" id="errLogin" role="alert"></div>
     </form>
-    <div class="rx-firma">Rendix v1.5 · Powered by <b>Iván Jiménez</b></div>
+    <div class="rx-firma">Rendix v1.6 · Powered by <b>Iván Jiménez</b></div>
   </section>
 
   <!-- ===== APP ===== -->
@@ -488,7 +490,7 @@
       </main>
 
       <footer class="rx-pie">
-        <div class="firma">Rendix v1.5 · Powered by <b>Iván Jiménez</b></div>
+        <div class="firma">Rendix v1.6 · Powered by <b>Iván Jiménez</b></div>
       </footer>
     </div>
 
@@ -742,6 +744,12 @@
     atrasado: { t:'Atrasado',  c:'rx-est-mora' },
     pagado:   { t:'Pagado',    c:'rx-est-pago' }
   };
+
+  // Días de atraso de un préstamo, en texto, según la modalidad.
+  function txtAtraso(r, modalidad){
+    const d = Math.round((Number(r.cuotasAtraso)||0) * (RX_DIAS_CUOTA[modalidad]||1));
+    return d===1 ? '1 día atrasado' : d+' días atrasado';
+  }
 
   // ---- indicador de conexión ----
   function pintarConexion(){
@@ -1842,6 +1850,9 @@
       if(m.tipo==='cobro'){
         saldo -= (Number(m.monto)||0); n++;
         filas.push(`<div class="trow"><span class="n">${n}</span><span class="fe">${escapar(m.fecha||'')}${m.metodo==='transferencia'?' 📲':''}</span><span class="ab">${pesos(m.monto)}</span><span class="sa">${pesos(Math.max(0,saldo))}</span></div>`);
+      } else if(m.tipo==='multa'){
+        saldo += (Number(m.monto)||0);
+        filas.push(`<div class="trow trow-multa"><span class="n">⚠</span><span class="fe">${escapar(m.fecha||'')} · multa${m.motivo?' ('+escapar(m.motivo)+')':''}</span><span class="ab" style="color:var(--peligro)">+${pesos(m.monto)}</span><span class="sa">${pesos(Math.max(0,saldo))}</span></div>`);
       } else { saldo += (Number(m.monto)||0); }
     }
     const tabla = filas.length===0
@@ -1862,6 +1873,7 @@
           <div class="dato"><div class="et">Cédula</div><div class="va">${escapar(cli.cedula||'—')}</div></div>
           <div class="dato"><div class="et">Cuota diaria</div><div class="va">${pesos(r.cuota)}</div></div>
           <div class="dato"><div class="et">Cuotas pagadas</div><div class="va">${r.cuotasPagadas} de ${p.numeroCuotas}</div></div>
+          ${r.cuotasAtraso>=1?`<div class="dato"><div class="et">Atraso</div><div class="va" style="color:var(--peligro)">${txtAtraso(r,p.modalidad)}</div></div>`:''}
         </div>
         <div class="thead"><span>#</span><span>Fecha</span><span style="text-align:right">Abono</span><span style="text-align:right">Saldo</span></div>
         ${tabla}
@@ -1869,12 +1881,62 @@
       </div>
       <div class="rx-acciones" style="margin-top:18px">
         ${r.saldo>0 ? `<button class="rx-btn-prim" id="cartonRenovar">🔄  Renovar préstamo</button>` : ''}
+        ${r.saldo>0 ? `<button class="rx-btn-fant" id="cartonMulta">⚠ Registrar multa</button>` : ''}
         <button class="rx-btn-fant" id="cartonCerrar">Cerrar</button>
       </div>`);
     $('cartonCerrar').onclick = ()=> fichaPrestamo(p.id);
     const _crv=$('cartonRenovar'); if(_crv) _crv.onclick = ()=>{
       const cliR = S.clientes.find(c=>c.id===p.clienteId) || cli;
       formPrestamo(cliR, { prestamoViejo:p, saldoViejo:r.saldo });
+    };
+    const _cm=$('cartonMulta'); if(_cm) _cm.onclick = ()=> formMulta(p, cli);
+  }
+
+  // formMulta: registra una multa (mora) sobre un préstamo. La aplica el cobrador
+  // en la calle con el valor que disponga el supervisor; es inmutable, queda con su
+  // nombre y la fecha, y rxResumen la suma al saldo del cliente.
+  function formMulta(p, cli){
+    cli = cli || { nombre:p.clienteNombre };
+    const saldoAct = rxResumen(p, movsDe(p.id)).saldo;
+    abrirHoja(`
+      <h2>Registrar multa</h2>
+      <div class="sub">${escapar(cli.nombre||p.clienteNombre||'Cliente')} · saldo actual ${pesos(saldoAct)}</div>
+      <div class="rx-form-err" id="multaErr"></div>
+      <div class="rx-form-campo" style="margin-top:8px">
+        <label for="multaValor">Valor de la multa</label>
+        <input class="rx-fin" id="multaValor" type="number" inputmode="numeric" min="1" placeholder="0" />
+      </div>
+      <div class="rx-form-campo">
+        <label for="multaMotivo">Motivo (opcional)</label>
+        <input class="rx-fin" id="multaMotivo" type="text" maxlength="60" placeholder="Ej: 3 días de atraso" />
+      </div>
+      <div class="hint">La multa se suma al saldo del cliente. Queda registrada con tu nombre y la fecha; no se puede borrar.</div>
+      <div class="rx-acciones" style="margin-top:18px">
+        <button class="rx-btn-prim" id="multaConfirmar">Aplicar multa</button>
+        <button class="rx-btn-fant" id="multaCancelar">Cancelar</button>
+      </div>`);
+    $('multaCancelar').onclick = ()=> abrirCarton(p, cli, movsDe(p.id), rxResumen(p, movsDe(p.id)));
+    $('multaConfirmar').onclick = async ()=>{
+      const valor = Math.round(Number($('multaValor').value)||0);
+      const motivo = String($('multaMotivo').value||'').trim();
+      if(valor<=0){ valErr('multaErr','Escribe un valor de multa mayor a 0.'); return; }
+      const btn=$('multaConfirmar'); btn.disabled=true; btn.textContent='Aplicando…';
+      try{
+        await addDoc(collection(db,'empresas',S.empresaId,'movimientos'), {
+          tipo:'multa', monto:valor, motivo,
+          prestamoId:p.id, clienteId:p.clienteId,
+          cobradorId: p.cobradorId || S.uid,
+          registradoPor: S.uid, fecha: hoyISO(), ts: Date.now(),
+          creadoEn: serverTimestamp()
+        });
+        toast('Multa registrada.');
+        let movs=[];
+        try{
+          const snap = await getDocs(query(collection(db,'empresas',S.empresaId,'movimientos'), where('prestamoId','==',p.id)));
+          movs = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+        }catch(_){ movs = movsDe(p.id); }
+        abrirCarton(p, cli, movs, rxResumen(p, movs));
+      }catch(e){ btn.disabled=false; btn.textContent='Aplicar multa'; toast('No se pudo registrar la multa: '+(e.message||e), true); }
     };
   }
 
@@ -1959,6 +2021,7 @@
             <div class="info">
               <div class="nom">${escapar(f.cli.nombre||'Sin nombre')}${f.pagoHoy?'<span class="ok-hoy">✓ hoy</span>':''}</div>
               <div class="sub">Saldo ${pesos(f.r.saldo)} · Cuota ${pesos(f.r.cuota)}</div>
+              ${f.r.cuotasAtraso>=1?`<div class="rx-sub-atraso">⚠ ${txtAtraso(f.r,f.p.modalidad)} · debe ${pesos(f.r.montoAtraso)}</div>`:''}
             </div>
             <div class="acc">
               <span class="rx-est ${f.est.c}">${f.est.t}</span>
@@ -1975,12 +2038,12 @@
         <div class="c oro"><div class="k">Cobrado hoy</div><div class="v">${pesos(cobradoHoy)}</div></div>
         <div class="c"><div class="k">Por visitar</div><div class="v">${pendientes}</div></div>
       </div>
-      ${cerrado?`<div class="rx-aviso-cerrado">🔒 Día cerrado. Para cobrar de nuevo, reábrelo desde el Cierre de caja.</div>`:''}
+      ${cerrado?`<div class="rx-aviso-cerrado">🔒 Día cerrado. Si entró un pago tarde, pídele al administrador que reabra tu día.</div>`:''}
       ${lista}`;
 
     $('tabCobrar').querySelectorAll('[data-cobrar]').forEach(row=>{
       row.onclick = ()=>{
-        if(cerrado){ toast('El día está cerrado. Reábrelo desde el Cierre de caja.'); return; }
+        if(cerrado){ toast('El día está cerrado. El administrador debe reabrirlo.'); return; }
         const p = S.prestamos.find(x=>x.id===row.dataset.cobrar); if(!p) return;
         const r = rxResumen(p, movsDe(p.id));
         const cli = S.clientes.find(c=>c.id===p.clienteId) || { nombre:p.clienteNombre, telefono:'' };

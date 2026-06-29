@@ -162,6 +162,12 @@
 
   /* lista de tarjetas (cobradores / rutas) */
   .rx-lista{display:flex;flex-direction:column;gap:10px}
+  .rx-buscar{width:100%;box-sizing:border-box;background:#fff;border:1px solid var(--linea);border-radius:12px;padding:12px 14px;font-size:15px;color:var(--tinta);margin-bottom:12px;outline:none;-webkit-appearance:none}
+  .rx-buscar:focus{border-color:var(--azul-claro);box-shadow:0 0 0 3px rgba(52,97,168,.12)}
+  .rx-buscar::-webkit-search-cancel-button{-webkit-appearance:none;height:16px;width:16px;background:var(--niebla);border-radius:50%;cursor:pointer}
+  .rx-vacio-mini{text-align:center;color:var(--niebla);padding:24px 12px;font-size:14px}
+  .rx-cob-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:middle;flex:0 0 auto}
+  .rx-card-cob .nom{display:flex;align-items:center}
   .rx-card{
     background:#fff;border:1px solid var(--linea);border-radius:14px;padding:14px 15px;display:flex;align-items:center;gap:13px;cursor:pointer;transition:transform .06s,box-shadow .2s;
   }
@@ -257,8 +263,6 @@
   .rx-est{font-size:.68rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border-radius:7px;white-space:nowrap}
   .rx-est-ok{color:#1d5c43;background:rgba(46,125,91,.14)}
   .rx-est-mora{color:#8a3a1c;background:rgba(192,83,43,.16)}
-  .rx-sub-atraso{color:var(--peligro);font-size:.78rem;font-weight:700;margin-top:2px}
-  .rx-carton .trow.trow-multa .fe{color:var(--peligro);font-weight:600}
   .rx-est-pago{color:#5A6678;background:rgba(122,134,153,.16)}
   .rx-avatar.cli{background:linear-gradient(160deg,#D8E4F5,#B2CAEC);color:var(--azul-profundo);font-size:1.15rem}
   .rx-avatar img,.rx-mini-cli .av img{width:100%;height:100%;object-fit:cover;display:block}
@@ -367,21 +371,6 @@
   .rx-cobro-row .sub{font-size:.84rem;color:var(--niebla);margin-top:1px}
   .rx-cobro-row .acc{display:flex;flex-direction:column;align-items:flex-end;gap:7px;flex-shrink:0}
   .rx-cobrar-btn{width:38px;height:38px;border-radius:50%;border:none;background:var(--dorado);color:#3A2D05;font-family:var(--display);font-weight:800;font-size:1.15rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
-  .rx-acc-btns{display:flex;align-items:center;gap:7px}
-  .rx-nota-btn{width:38px;height:38px;border-radius:50%;border:1px solid var(--linea);background:#fff;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
-  .rx-nota-btn:active{transform:scale(.95)}
-  .rx-nota-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
-  .rx-nota-chip{border:1px solid var(--linea);background:#fff;color:var(--tinta);font-size:.82rem;font-weight:600;padding:7px 11px;border-radius:999px;cursor:pointer;font-family:var(--texto)}
-  .rx-nota-chip:active{transform:scale(.96)}
-  .rx-nota-seccion{margin-top:16px;background:#fff;border:1px solid var(--linea);border-radius:13px;padding:13px 15px}
-  .rx-nota-titulo{font-family:var(--display);font-weight:700;color:var(--tinta);font-size:.96rem;margin-bottom:8px}
-  .rx-nota-item{padding:9px 0;border-bottom:1px solid var(--linea)}
-  .rx-nota-item:last-child{border-bottom:none}
-  .rx-nota-meta{font-size:.75rem;color:var(--niebla);font-weight:600;margin-bottom:2px}
-  .rx-nota-txt{font-size:.92rem;color:var(--tinta);line-height:1.4;white-space:pre-wrap}
-  .rx-nota-vacia{font-size:.86rem;color:var(--niebla);padding:4px 0}
-  .rx-nota-cob{font-weight:800;color:var(--azul-claro)}
-  .rx-nota-fecha-grupo{font-size:.74rem;font-weight:700;color:var(--niebla);text-transform:uppercase;letter-spacing:.04em;margin:16px 2px 8px}
   .rx-cobro-vacio{text-align:center;color:var(--niebla);font-size:.92rem;padding:34px 12px;background:#fff;border:1px dashed var(--linea);border-radius:14px}
 
   /* ===== Cierre de caja · Etapa 4 ===== */
@@ -424,9 +413,6 @@
   .rx-cierre-item .nom{font-weight:700;color:var(--tinta);font-size:1rem}
   .rx-cierre-item .sub{font-size:.8rem;color:var(--niebla);margin-top:2px}
   .rx-cierre-item .der{font-family:var(--display);font-weight:800;font-size:1.1rem;color:var(--azul-claro);white-space:nowrap}
-  .rx-cierre-item .izq{display:flex;align-items:center;gap:11px;min-width:0}
-  .rx-cob-dot{flex:0 0 auto;width:34px;height:34px;border-radius:50%;color:#fff;font-weight:800;font-size:.95rem;display:flex;align-items:center;justify-content:center;font-family:var(--display)}
-  .rx-cob-pend{display:inline-block;margin-top:4px;font-size:.72rem;font-weight:700;color:#8a3a1c;background:rgba(192,83,43,.16);padding:2px 8px;border-radius:999px}
   .rx-carton{background:#fff;border:1px solid var(--linea);border-radius:16px;overflow:hidden;margin-top:8px;box-shadow:0 8px 26px rgba(13,27,58,.12)}
   .rx-carton .cab{background:linear-gradient(135deg,var(--azul),var(--azul-profundo));color:#fff;padding:16px 18px;position:relative}
   .rx-carton .cab .marca{position:absolute;top:14px;right:16px;font-size:.6rem;font-weight:800;letter-spacing:.12em;opacity:.5;text-transform:uppercase}
@@ -485,7 +471,7 @@
       <button class="rx-btn" type="submit" id="btnEntrar">Entrar</button>
       <div class="rx-error" id="errLogin" role="alert"></div>
     </form>
-    <div class="rx-firma">Rendix v1.8 · Powered by <b>Iván Jiménez</b></div>
+    <div class="rx-firma">Rendix v1.5 · Powered by <b>Iván Jiménez</b></div>
   </section>
 
   <!-- ===== APP ===== -->
@@ -508,7 +494,7 @@
       </main>
 
       <footer class="rx-pie">
-        <div class="firma">Rendix v1.8 · Powered by <b>Iván Jiménez</b></div>
+        <div class="firma">Rendix v1.5 · Powered by <b>Iván Jiménez</b></div>
       </footer>
     </div>
 
@@ -762,12 +748,6 @@
     atrasado: { t:'Atrasado',  c:'rx-est-mora' },
     pagado:   { t:'Pagado',    c:'rx-est-pago' }
   };
-
-  // Días de atraso de un préstamo, en texto, según la modalidad.
-  function txtAtraso(r, modalidad){
-    const d = Math.round((Number(r.cuotasAtraso)||0) * (RX_DIAS_CUOTA[modalidad]||1));
-    return d===1 ? '1 día atrasado' : d+' días atrasado';
-  }
 
   // ---- indicador de conexión ----
   function pintarConexion(){
@@ -1071,15 +1051,6 @@
     return c ? c.nombre : '(sin asignar)';
   }
 
-  // Color fijo por cobrador (mismo cobrador → mismo color), para distinguir
-  // de un vistazo sus tarjetas en la vista de cierres del administrador.
-  function colorCobrador(id){
-    const pal = ['#1E3D6B','#2E9E63','#C9A227','#8C5544','#5B4B8A','#1F7A8C','#B23A33','#9C6B1E'];
-    let h = 0; const s = String(id||'');
-    for(let i=0;i<s.length;i++){ h = (h*31 + s.charCodeAt(i)) >>> 0; }
-    return pal[h % pal.length];
-  }
-
   // ===========================================================
   //  INICIO — ADMIN
   // ===========================================================
@@ -1120,12 +1091,10 @@
           <span class="conteo">${S.rutas.length}</span>
         </button>
         <button class="rx-modulo" id="modCierresAdmin"><div class="ico">📊</div><div class="nom">Cierres y jornadas</div>${cerraronHoy>0?`<span class="conteo">${cerraronHoy}</span>`:''}</button>
-        <button class="rx-modulo" id="modNotasAdmin"><div class="ico">📝</div><div class="nom">Notas de visita</div></button>
       </div>
       ${cerraronHoy>0?`<div class="rx-banner ok" style="margin-top:22px">📥 Hoy <b>${cerraronHoy}</b> cobrador(es) cerraron y entregaron. Toca "Cierres y jornadas" para ver el detalle.</div>`:''}`;
     $('tabInicio').querySelectorAll('[data-ir]').forEach(b=> b.onclick=()=>irATab(b.dataset.ir));
     const _mca=$('modCierresAdmin'); if(_mca) _mca.onclick = abrirCierresAdmin;
-    const _mna=$('modNotasAdmin'); if(_mna) _mna.onclick = abrirNotasAdmin;
     pintarConexion();
   }
 
@@ -1172,7 +1141,7 @@
         <button class="rx-modulo" data-ir="clientes"><div class="ico">🧾</div><div class="nom">Mis clientes</div><span class="conteo">${S.clientes.length}</span></button>
         <button class="rx-modulo" data-ir="cobrar"><div class="ico">💵</div><div class="nom">Cobrar el día</div></button>
         <button class="rx-modulo" id="modCierre"><div class="ico">🧮</div><div class="nom">Cierre de caja</div></button>
-        <button class="rx-modulo" id="modNotas"><div class="ico">📝</div><div class="nom">Notas de visita</div></button>
+        <div class="rx-modulo bloq"><div class="ico">📝</div><div class="nom">Notas de visita</div><span class="etapa">pronto</span></div>
       </div>
       ${cerrado
         ? `<div class="rx-banner ok" style="margin-top:22px"><span>🔒 Cerraste tu día. Vuelve mañana para una nueva jornada.</span></div>`
@@ -1182,7 +1151,6 @@
              <div class="hint" style="margin-top:6px;text-align:center">Confirma tu base para empezar a cobrar.</div>`)}`;
     $('tabInicio').querySelectorAll('[data-ir]').forEach(b=> b.onclick=()=>irATab(b.dataset.ir));
     const _mc=$('modCierre'); if(_mc) _mc.onclick = abrirCierreCaja;
-    const _mn=$('modNotas'); if(_mn) _mn.onclick = abrirNotasCobrador;
     const _ad=$('cobAbrirDia'); if(_ad) _ad.onclick = abrirElDia;
     pintarConexion();
   }
@@ -1190,6 +1158,12 @@
   // ===========================================================
   //  MÓDULO COBRADORES (admin)
   // ===========================================================
+  // Color consistente por cobrador (derivado de su id) para identificarlo de un vistazo.
+  function colorCobrador(uid){
+    let h=0; const s=String(uid||'');
+    for(let i=0;i<s.length;i++) h=(h*31 + s.charCodeAt(i))>>>0;
+    return `hsl(${h%360} 62% 46%)`;
+  }
   function renderCobradores(){
     const cuerpo = S.cobradores.length === 0
       ? `<div class="rx-vacio"><div class="ico">👥</div><h3>Aún no hay cobradores</h3>
@@ -1200,10 +1174,11 @@
             ? '<span class="estado rx-estado-bloq">Bloqueado</span>'
             : '<span class="estado rx-estado-ok">Activo</span>';
           const r = c.rutaId ? (nombreRuta(c.rutaId) || '—') : 'Sin ruta';
-          return `<div class="rx-card" data-cob="${c.id}">
+          const col = colorCobrador(c.id);
+          return `<div class="rx-card rx-card-cob" data-cob="${c.id}" style="border-left:5px solid ${col}">
             ${avatarHTML(c,'')}
             <div class="cuerpo">
-              <div class="nom">${escapar(c.nombre||'Sin nombre')}</div>
+              <div class="nom"><span class="rx-cob-dot" style="background:${col}"></span>${escapar(c.nombre||'Sin nombre')}</div>
               <div class="meta">${escapar(r)} · base ${pesos(c.baseAsignada)}</div>
             </div>
             ${est}
@@ -1554,42 +1529,75 @@
   function modalidadTxt(v){ return (RX_MODALIDADES.find(m=>m.v===v)||{}).t || v || '—'; }
   function tipoMovTxt(t){ return { cobro:'Cobro', multa:'Multa', reembolso:'Reembolso', renovacion:'Renovación', desembolso:'Desembolso' }[t] || t; }
 
+  let _qCli = '';
+  function sinTildes(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
+  function clientesFiltrados(){
+    const q = sinTildes(_qCli.trim());
+    if(!q) return S.clientes;
+    const qn = q.replace(/\D/g,'');
+    return S.clientes.filter(c=>
+      sinTildes(c.nombre).includes(q) ||
+      sinTildes(c.telefono).includes(q) ||
+      (qn && String(c.cedula||'').replace(/\D/g,'').includes(qn))
+    );
+  }
+  function pintarListaClientes(){
+    const cont = $('cliLista'); if(!cont) return;
+    const esAdmin = S.rol==='admin';
+    const lista = clientesFiltrados();
+    if(lista.length===0){
+      cont.innerHTML = `<div class="rx-vacio-mini">Ningún cliente coincide con “${escapar(_qCli)}”.</div>`;
+      return;
+    }
+    cont.innerHTML = lista.map(c=>{
+      const np = prestamosDe(c.id).filter(p=>p.estado!=='pagado').length;
+      const deuda = deudaCliente(c.id);
+      const sub = esAdmin
+        ? `${escapar(primerNombre(nombreCobrador(c.cobradorId)||'Sin cobrador'))} · ${np} préstamo${np===1?'':'s'}`
+        : `${escapar(c.telefono||'Sin teléfono')} · ${np} préstamo${np===1?'':'s'}`;
+      const badge = deuda>0
+        ? `<span class="rx-est rx-est-ok">${pesos(deuda)}</span>`
+        : `<span class="rx-est rx-est-pago">Sin deuda</span>`;
+      return `<div class="rx-card" data-cli="${c.id}">
+        ${avatarHTML(c,'cli')}
+        <div class="cuerpo">
+          <div class="nom">${escapar(c.nombre||'Sin nombre')}</div>
+          <div class="meta">${sub}</div>
+        </div>
+        ${badge}
+      </div>`;
+    }).join('');
+    cont.querySelectorAll('[data-cli]').forEach(card=>{
+      card.onclick = ()=> fichaCliente(card.dataset.cli);
+    });
+  }
   function renderClientes(){
     const esAdmin = S.rol==='admin';
     const titulo = esAdmin ? 'Clientes' : 'Mis clientes';
-    const cuerpo = S.clientes.length === 0
-      ? `<div class="rx-vacio"><div class="ico">🧾</div><h3>Aún no hay clientes</h3>
+    if(S.clientes.length === 0){
+      $('tabClientes').innerHTML = `
+        <div class="rx-sec-head">
+          <h2>${titulo}</h2>
+          <button class="rx-mini" id="btnNuevoCli">+ Nuevo</button>
+        </div>
+        <div class="rx-vacio"><div class="ico">🧾</div><h3>Aún no hay clientes</h3>
            <p>Registra el primer cliente para poder entregarle un préstamo.</p>
-           <button class="rx-btn-prim" style="max-width:260px;margin:0 auto" id="vacioNuevoCli">+ Nuevo cliente</button></div>`
-      : `<div class="rx-lista">${S.clientes.map(c=>{
-          const np = prestamosDe(c.id).filter(p=>p.estado!=='pagado').length;
-          const deuda = deudaCliente(c.id);
-          const sub = esAdmin
-            ? `${escapar(primerNombre(nombreCobrador(c.cobradorId)||'Sin cobrador'))} · ${np} préstamo${np===1?'':'s'}`
-            : `${escapar(c.telefono||'Sin teléfono')} · ${np} préstamo${np===1?'':'s'}`;
-          const badge = deuda>0
-            ? `<span class="rx-est rx-est-ok">${pesos(deuda)}</span>`
-            : `<span class="rx-est rx-est-pago">Sin deuda</span>`;
-          return `<div class="rx-card" data-cli="${c.id}">
-            ${avatarHTML(c,'cli')}
-            <div class="cuerpo">
-              <div class="nom">${escapar(c.nombre||'Sin nombre')}</div>
-              <div class="meta">${sub}</div>
-            </div>
-            ${badge}
-          </div>`;
-        }).join('')}</div>`;
+           <button class="rx-btn-prim" style="max-width:260px;margin:0 auto" id="vacioNuevoCli">+ Nuevo cliente</button></div>`;
+      $('btnNuevoCli').onclick = ()=> formCliente();
+      const v = $('vacioNuevoCli'); if(v) v.onclick = ()=> formCliente();
+      return;
+    }
     $('tabClientes').innerHTML = `
       <div class="rx-sec-head">
         <h2>${titulo}</h2>
         <button class="rx-mini" id="btnNuevoCli">+ Nuevo</button>
       </div>
-      ${cuerpo}`;
+      <input class="rx-buscar" id="cliBuscar" type="search" inputmode="search" placeholder="🔍 Buscar por nombre, cédula o teléfono" value="${escapar(_qCli)}" />
+      <div class="rx-lista" id="cliLista"></div>`;
     $('btnNuevoCli').onclick = ()=> formCliente();
-    const v = $('vacioNuevoCli'); if(v) v.onclick = ()=> formCliente();
-    $('tabClientes').querySelectorAll('[data-cli]').forEach(card=>{
-      card.onclick = ()=> fichaCliente(card.dataset.cli);
-    });
+    const bcli = $('cliBuscar');
+    bcli.oninput = ()=>{ _qCli = bcli.value; pintarListaClientes(); };
+    pintarListaClientes();
   }
 
   // ---- formulario crear / editar cliente ----
@@ -1632,6 +1640,13 @@
     wireFoto(editar ? cli.foto : null);
   }
 
+  // Detecta si ya existe un cliente con la misma cédula (ignora puntos, espacios y guiones).
+  function cedulaDuplicada(cedula, exceptoId){
+    const n = String(cedula||'').replace(/\D/g,'');
+    if(!n) return null;
+    return S.clientes.find(c=> c.id!==exceptoId && String(c.cedula||'').replace(/\D/g,'')===n) || null;
+  }
+
   async function crearCliente(){
     const nombre = $('cliNombre').value.trim();
     const cedula = $('cliCedula').value.trim();
@@ -1640,6 +1655,8 @@
     $('cliErr').classList.remove('visible');
     if(!nombre) return valErr('cliErr','Escribe el nombre del cliente.');
     if(!cedula) return valErr('cliErr','La cédula es obligatoria.');
+    const dupC = cedulaDuplicada(cedula, null);
+    if(dupC) return valErr('cliErr', `Ya tienes un cliente con esa cédula: ${escapar(dupC.nombre||'sin nombre')}. Revisa el número antes de continuar.`);
     if(!telefono) return valErr('cliErr','El teléfono es obligatorio.');
     if(!direccion) return valErr('cliErr','La dirección es obligatoria.');
     if(!_fotoTmp) return valErr('cliErr','La foto del cliente es obligatoria.');
@@ -1676,6 +1693,8 @@
     $('cliErr').classList.remove('visible');
     if(!nombre) return valErr('cliErr','El nombre no puede quedar vacío.');
     if(!cedula) return valErr('cliErr','La cédula es obligatoria.');
+    const dupE = cedulaDuplicada(cedula, cli.id);
+    if(dupE) return valErr('cliErr', `Otro cliente ya tiene esa cédula: ${escapar(dupE.nombre||'sin nombre')}.`);
     if(!telefono) return valErr('cliErr','El teléfono es obligatorio.');
     if(!direccion) return valErr('cliErr','La dirección es obligatoria.');
     if(!_fotoTmp) return valErr('cliErr','La foto del cliente es obligatoria.');
@@ -1880,19 +1899,11 @@
       if(m.tipo==='cobro'){
         saldo -= (Number(m.monto)||0); n++;
         filas.push(`<div class="trow"><span class="n">${n}</span><span class="fe">${escapar(m.fecha||'')}${m.metodo==='transferencia'?' 📲':''}</span><span class="ab">${pesos(m.monto)}</span><span class="sa">${pesos(Math.max(0,saldo))}</span></div>`);
-      } else if(m.tipo==='multa'){
-        saldo += (Number(m.monto)||0);
-        filas.push(`<div class="trow trow-multa"><span class="n">⚠</span><span class="fe">${escapar(m.fecha||'')} · multa${m.motivo?' ('+escapar(m.motivo)+')':''}</span><span class="ab" style="color:var(--peligro)">+${pesos(m.monto)}</span><span class="sa">${pesos(Math.max(0,saldo))}</span></div>`);
       } else { saldo += (Number(m.monto)||0); }
     }
     const tabla = filas.length===0
       ? `<div class="vacia">Aún no hay abonos registrados.<br>Cada cuota que cobres aparecerá aquí.</div>`
       : filas.join('');
-    const notasC = (movs||[]).filter(m=> m.tipo==='nota')
-      .sort((a,b)=> String(b.fecha).localeCompare(String(a.fecha)) || ((b.ts||0)-(a.ts||0)));
-    const notasCHTML = notasC.length===0
-      ? `<div class="rx-nota-vacia">Sin notas de visita todavía.</div>`
-      : notasC.map(m=> notaItemHTML(m,{fecha:true})).join('');
     abrirHoja(`
       <div class="rx-carton">
         <div class="cab">
@@ -1908,180 +1919,20 @@
           <div class="dato"><div class="et">Cédula</div><div class="va">${escapar(cli.cedula||'—')}</div></div>
           <div class="dato"><div class="et">Cuota diaria</div><div class="va">${pesos(r.cuota)}</div></div>
           <div class="dato"><div class="et">Cuotas pagadas</div><div class="va">${r.cuotasPagadas} de ${p.numeroCuotas}</div></div>
-          ${r.cuotasAtraso>=1?`<div class="dato"><div class="et">Atraso</div><div class="va" style="color:var(--peligro)">${txtAtraso(r,p.modalidad)}</div></div>`:''}
         </div>
         <div class="thead"><span>#</span><span>Fecha</span><span style="text-align:right">Abono</span><span style="text-align:right">Saldo</span></div>
         ${tabla}
         <div class="pie"><span class="et">Saldo pendiente</span><span class="va">${pesos(r.saldo)}</span></div>
       </div>
-      <div class="rx-nota-seccion">
-        <div class="rx-nota-titulo">📝 Notas de visita</div>
-        ${notasCHTML}
-      </div>
       <div class="rx-acciones" style="margin-top:18px">
         ${r.saldo>0 ? `<button class="rx-btn-prim" id="cartonRenovar">🔄  Renovar préstamo</button>` : ''}
-        ${r.saldo>0 ? `<button class="rx-btn-fant" id="cartonMulta">⚠ Registrar multa</button>` : ''}
-        <button class="rx-btn-fant" id="cartonNota">📝 Agregar nota</button>
         <button class="rx-btn-fant" id="cartonCerrar">Cerrar</button>
       </div>`);
     $('cartonCerrar').onclick = ()=> fichaPrestamo(p.id);
-    const _cn=$('cartonNota'); if(_cn) _cn.onclick = ()=> formNota(p, cli, async ()=>{
-      let mv; try{ const s=await getDocs(query(collection(db,'empresas',S.empresaId,'movimientos'), where('prestamoId','==',p.id))); mv=s.docs.map(d=>({id:d.id,...d.data()})); }catch(_){ mv=movsDe(p.id); }
-      abrirCarton(p, cli, mv, rxResumen(p, mv));
-    });
     const _crv=$('cartonRenovar'); if(_crv) _crv.onclick = ()=>{
       const cliR = S.clientes.find(c=>c.id===p.clienteId) || cli;
       formPrestamo(cliR, { prestamoViejo:p, saldoViejo:r.saldo });
     };
-    const _cm=$('cartonMulta'); if(_cm) _cm.onclick = ()=> formMulta(p, cli);
-  }
-
-  // formMulta: registra una multa (mora) sobre un préstamo. La aplica el cobrador
-  // en la calle con el valor que disponga el supervisor; es inmutable, queda con su
-  // nombre y la fecha, y rxResumen la suma al saldo del cliente.
-  function formMulta(p, cli){
-    cli = cli || { nombre:p.clienteNombre };
-    const saldoAct = rxResumen(p, movsDe(p.id)).saldo;
-    abrirHoja(`
-      <h2>Registrar multa</h2>
-      <div class="sub">${escapar(cli.nombre||p.clienteNombre||'Cliente')} · saldo actual ${pesos(saldoAct)}</div>
-      <div class="rx-form-err" id="multaErr"></div>
-      <div class="rx-form-campo" style="margin-top:8px">
-        <label for="multaValor">Valor de la multa</label>
-        <input class="rx-fin" id="multaValor" type="number" inputmode="numeric" min="1" placeholder="0" />
-      </div>
-      <div class="rx-form-campo">
-        <label for="multaMotivo">Motivo (opcional)</label>
-        <input class="rx-fin" id="multaMotivo" type="text" maxlength="60" placeholder="Ej: 3 días de atraso" />
-      </div>
-      <div class="hint">La multa se suma al saldo del cliente. Queda registrada con tu nombre y la fecha; no se puede borrar.</div>
-      <div class="rx-acciones" style="margin-top:18px">
-        <button class="rx-btn-prim" id="multaConfirmar">Aplicar multa</button>
-        <button class="rx-btn-fant" id="multaCancelar">Cancelar</button>
-      </div>`);
-    $('multaCancelar').onclick = ()=> abrirCarton(p, cli, movsDe(p.id), rxResumen(p, movsDe(p.id)));
-    $('multaConfirmar').onclick = async ()=>{
-      const valor = Math.round(Number($('multaValor').value)||0);
-      const motivo = String($('multaMotivo').value||'').trim();
-      if(valor<=0){ valErr('multaErr','Escribe un valor de multa mayor a 0.'); return; }
-      const btn=$('multaConfirmar'); btn.disabled=true; btn.textContent='Aplicando…';
-      try{
-        await addDoc(collection(db,'empresas',S.empresaId,'movimientos'), {
-          tipo:'multa', monto:valor, motivo,
-          prestamoId:p.id, clienteId:p.clienteId,
-          cobradorId: p.cobradorId || S.uid,
-          registradoPor: S.uid, fecha: hoyISO(), ts: Date.now(),
-          creadoEn: serverTimestamp()
-        });
-        toast('Multa registrada.');
-        let movs=[];
-        try{
-          const snap = await getDocs(query(collection(db,'empresas',S.empresaId,'movimientos'), where('prestamoId','==',p.id)));
-          movs = snap.docs.map(d=>({ id:d.id, ...d.data() }));
-        }catch(_){ movs = movsDe(p.id); }
-        abrirCarton(p, cli, movs, rxResumen(p, movs));
-      }catch(e){ btn.disabled=false; btn.textContent='Aplicar multa'; toast('No se pudo registrar la multa: '+(e.message||e), true); }
-    };
-  }
-
-  // ===========================================================
-  //  NOTAS DE VISITA · el cobrador deja constancia de la calle
-  //  (no estaba, se mudó, pidió plazo…). Es un movimiento tipo
-  //  'nota' INMUTABLE: rxResumen no lo procesa, así que NUNCA toca
-  //  el saldo ni la caja. El admin las lee todas.
-  // ===========================================================
-  function notaItemHTML(m, opt){
-    opt = opt || {};
-    const bits = [];
-    if(opt.cobrador) bits.push(`<span class="rx-nota-cob">${escapar(nombreCobrador(m.cobradorId)||'—')}</span>`);
-    if(opt.cliente && m.clienteNombre) bits.push(escapar(m.clienteNombre));
-    if(opt.fecha) bits.push(escapar(m.fecha||''));
-    return `<div class="rx-nota-item"><div class="rx-nota-meta">${bits.join(' · ')}</div><div class="rx-nota-txt">${escapar(m.texto||'')}</div></div>`;
-  }
-  function agruparNotasPorFecha(notas, opt){
-    const porF = {};
-    for(const m of notas){ (porF[m.fecha] || (porF[m.fecha]=[])).push(m); }
-    return Object.keys(porF).sort().reverse().map(f=>
-      `<div class="rx-nota-fecha-grupo">${escapar(f)}</div><div class="rx-nota-seccion" style="margin-top:0">${porF[f].map(m=> notaItemHTML(m, opt)).join('')}</div>`
-    ).join('');
-  }
-
-  // Formulario para dejar una nota de visita sobre un préstamo/cliente.
-  function formNota(p, cli, volver){
-    cli = cli || { nombre:p.clienteNombre };
-    volver = volver || cerrarHoja;
-    const atajos = ['No se encontró','Casa cerrada','Se mudó','Pidió plazo','Negó el pago','Paga mañana'];
-    abrirHoja(`
-      <h2>Nota de visita</h2>
-      <div class="sub">${escapar(cli.nombre||p.clienteNombre||'Cliente')} · ${hoyISO()}</div>
-      <div class="rx-form-err" id="notaErr"></div>
-      <div class="rx-nota-chips">
-        ${atajos.map(a=>`<button type="button" class="rx-nota-chip" data-txt="${escapar(a)}">${escapar(a)}</button>`).join('')}
-      </div>
-      <div class="rx-form-campo" style="margin-top:12px">
-        <label for="notaTexto">Detalle de la visita</label>
-        <textarea class="rx-fin" id="notaTexto" rows="3" maxlength="240" placeholder="Ej: No estaba, volver el viernes"></textarea>
-      </div>
-      <div class="rx-acciones" style="margin-top:18px">
-        <button class="rx-btn-prim" id="notaGuardar">Guardar nota</button>
-        <button class="rx-btn-fant" id="notaCancelar">Cancelar</button>
-      </div>`);
-    document.querySelectorAll('.rx-nota-chip').forEach(b=> b.onclick = ()=>{
-      const t = $('notaTexto'); const add = b.dataset.txt;
-      t.value = t.value.trim() ? (t.value.trim() + '. ' + add) : add;
-      t.focus();
-    });
-    $('notaCancelar').onclick = volver;
-    $('notaGuardar').onclick = async ()=>{
-      const texto = String($('notaTexto').value||'').trim();
-      if(texto.length<2){ valErr('notaErr','Escribe una nota o toca un atajo.'); return; }
-      const btn=$('notaGuardar'); btn.disabled=true; btn.textContent='Guardando…';
-      try{
-        await addDoc(collection(db,'empresas',S.empresaId,'movimientos'), {
-          tipo:'nota', texto,
-          prestamoId:p.id, clienteId:p.clienteId, clienteNombre: cli.nombre||p.clienteNombre||'',
-          cobradorId: p.cobradorId || S.uid,
-          registradoPor: S.uid, fecha: hoyISO(), ts: Date.now(),
-          creadoEn: serverTimestamp()
-        });
-        toast('Nota guardada.');
-        volver();
-      }catch(e){ btn.disabled=false; btn.textContent='Guardar nota'; toast('No se pudo guardar la nota: '+(e.message||e), true); }
-    };
-  }
-
-  // Módulo del COBRADOR: bitácora de sus notas, por día.
-  function abrirNotasCobrador(){
-    const notas = S.movimientos.filter(m=> m.tipo==='nota')
-      .sort((a,b)=> String(b.fecha).localeCompare(String(a.fecha)) || ((b.ts||0)-(a.ts||0)));
-    const cuerpo = notas.length===0
-      ? `<div class="rx-nota-vacia" style="padding:18px 0">Aún no has registrado notas. Desde <b>Cobrar el día</b> (botón 📝) o el cartón de un cliente puedes dejar una nota de visita.</div>`
-      : agruparNotasPorFecha(notas, { cliente:true });
-    abrirHoja(`
-      <h2>Notas de visita</h2>
-      <div class="sub">Lo que registraste en tus visitas, por día.</div>
-      ${cuerpo}
-      <div class="rx-acciones" style="margin-top:20px">
-        <button class="rx-btn-fant" id="notasCerrar">Cerrar</button>
-      </div>`);
-    $('notasCerrar').onclick = cerrarHoja;
-  }
-
-  // Módulo del ADMIN: todas las notas de todos los cobradores, por día.
-  function abrirNotasAdmin(){
-    const notas = S.movimientos.filter(m=> m.tipo==='nota')
-      .sort((a,b)=> String(b.fecha).localeCompare(String(a.fecha)) || ((b.ts||0)-(a.ts||0)));
-    const cuerpo = notas.length===0
-      ? `<div class="rx-nota-vacia" style="padding:18px 0">Aún no hay notas de visita. Cuando un cobrador deje una nota en la calle, aquí la verás.</div>`
-      : agruparNotasPorFecha(notas, { cliente:true, cobrador:true });
-    abrirHoja(`
-      <h2>Notas de visita</h2>
-      <div class="sub">Lo que tus cobradores reportaron en la calle, por día.</div>
-      ${cuerpo}
-      <div class="rx-acciones" style="margin-top:20px">
-        <button class="rx-btn-fant" id="notasCerrar">Cerrar</button>
-      </div>`);
-    $('notasCerrar').onclick = cerrarHoja;
   }
 
   // ---- ficha de un préstamo (carga sus movimientos) ----
@@ -2099,7 +1950,7 @@
     const r = rxResumen(p, movs);
     const est = RX_ESTADO[r.estado];
     const cli = S.clientes.find(c=>c.id===p.clienteId) || { id:p.clienteId, nombre:p.clienteNombre, telefono:'' };
-    const histo = movs.filter(m=> m.tipo!=='desembolso' && m.tipo!=='nota')
+    const histo = movs.filter(m=> m.tipo!=='desembolso')
       .sort((a,b)=> String(b.fecha).localeCompare(String(a.fecha)));
     const movsHtml = histo.length===0
       ? `<div style="text-align:center;color:var(--niebla);font-size:.88rem;padding:12px 0">Aún no hay cobros registrados.</div>`
@@ -2165,14 +2016,10 @@
             <div class="info">
               <div class="nom">${escapar(f.cli.nombre||'Sin nombre')}${f.pagoHoy?'<span class="ok-hoy">✓ hoy</span>':''}</div>
               <div class="sub">Saldo ${pesos(f.r.saldo)} · Cuota ${pesos(f.r.cuota)}</div>
-              ${f.r.cuotasAtraso>=1?`<div class="rx-sub-atraso">⚠ ${txtAtraso(f.r,f.p.modalidad)} · debe ${pesos(f.r.montoAtraso)}</div>`:''}
             </div>
             <div class="acc">
               <span class="rx-est ${f.est.c}">${f.est.t}</span>
-              <div class="rx-acc-btns">
-                <button class="rx-nota-btn" data-nota="${f.p.id}" tabindex="-1" title="Nota de visita">📝</button>
-                <button class="rx-cobrar-btn" tabindex="-1">$</button>
-              </div>
+              <button class="rx-cobrar-btn" tabindex="-1">$</button>
             </div>
           </div>`).join('');
 
@@ -2185,20 +2032,12 @@
         <div class="c oro"><div class="k">Cobrado hoy</div><div class="v">${pesos(cobradoHoy)}</div></div>
         <div class="c"><div class="k">Por visitar</div><div class="v">${pendientes}</div></div>
       </div>
-      ${cerrado?`<div class="rx-aviso-cerrado">🔒 Día cerrado. Si entró un pago tarde, pídele al administrador que reabra tu día.</div>`:''}
+      ${cerrado?`<div class="rx-aviso-cerrado">🔒 Día cerrado. Para cobrar de nuevo, reábrelo desde el Cierre de caja.</div>`:''}
       ${lista}`;
 
-    $('tabCobrar').querySelectorAll('[data-nota]').forEach(b=>{
-      b.onclick = (e)=>{
-        e.stopPropagation();
-        const p = S.prestamos.find(x=>x.id===b.dataset.nota); if(!p) return;
-        const cli = S.clientes.find(c=>c.id===p.clienteId) || { nombre:p.clienteNombre };
-        formNota(p, cli, cerrarHoja);
-      };
-    });
     $('tabCobrar').querySelectorAll('[data-cobrar]').forEach(row=>{
       row.onclick = ()=>{
-        if(cerrado){ toast('El día está cerrado. El administrador debe reabrirlo.'); return; }
+        if(cerrado){ toast('El día está cerrado. Reábrelo desde el Cierre de caja.'); return; }
         const p = S.prestamos.find(x=>x.id===row.dataset.cobrar); if(!p) return;
         const r = rxResumen(p, movsDe(p.id));
         const cli = S.clientes.find(c=>c.id===p.clienteId) || { nombre:p.clienteNombre, telefono:'' };
@@ -2330,7 +2169,7 @@
       else { dif.className='rx-conteo-dif falta'; dif.textContent=`Faltan ${pesos(Math.abs(d))}`; }
     };
     inp.addEventListener('input', evaluar);
-    $('conteoCancelar').onclick = ()=> pintarCierre();
+    $('conteoCancelar').onclick = ()=> { cerrarHoja(); pintarCierre(); };
     $('conteoConfirmar').onclick = ()=> confirmarCierre(c, Number(inp.value)||0, inp.value==='');
   }
 
@@ -2354,25 +2193,20 @@
         creadoEn: serverTimestamp()
       });
       toast(diferencia===0 ? 'Día cerrado, caja cuadrada ✓' : (sinContar ? 'Día cerrado' : 'Día cerrado · descuadre registrado'));
+      cerrarHoja();
       pintarCierre();
     }catch(e){ toast('No se pudo cerrar: '+(e.message||e), true); }
   }
 
-  // Reapertura SOLO por administrador, sobre el día de un cobrador concreto.
-  // El cobrador ya NO puede reabrir: una vez selló y entregó la plata, tocar los
-  // números queda fuera de su alcance (separación de funciones).
-  async function reabrirElDia(cobradorId, fecha, cierreId){
-    if(S.rol !== 'admin'){ toast('Solo el administrador puede reabrir un día.', true); return; }
-    if(!cobradorId || !fecha){ toast('Falta el cobrador o la fecha del día.', true); return; }
-    const nom = nombreCobrador(cobradorId) || 'el cobrador';
-    if(!confirm(`¿Reabrir el día ${fecha} de ${nom}? El cobrador podrá registrar pagos en ese día y deberá cerrar de nuevo.`)) return;
+  async function reabrirElDia(){
+    const hoy = hoyISO();
+    if(!confirm('Vas a REABRIR el día para registrar un pago tardío.\n\nCuando termines, cierra de nuevo y entrega la diferencia.\n\n¿Reabrir el día?')) return;
     try{
       await addDoc(collection(db,'empresas',S.empresaId,'movimientos'), {
-        tipo:'reapertura', fecha, cobradorId, ts:Date.now(),
-        reabiertoPor: S.uid, creadoEn: serverTimestamp()
+        tipo:'reapertura', fecha:hoy, cobradorId:S.uid, ts:Date.now(), creadoEn: serverTimestamp()
       });
-      toast(`Día reabierto para ${primerNombre(nom)}. Ya puede registrar pagos.`);
-      if(cierreId) detalleCierre(cierreId); else abrirCierresAdmin();
+      toast('Día reabierto. Puedes cobrar de nuevo.');
+      pintarCierre();
     }catch(e){ toast('No se pudo reabrir: '+(e.message||e), true); }
   }
 
@@ -2385,28 +2219,15 @@
     const cuerpo = fechas.length===0
       ? `<div class="rx-cierre-vacio">Aún no hay cierres. Cuando un cobrador cierre su día, aquí verás lo que entregó.</div>`
       : fechas.map(f=>{
-          // Un cierre VIGENTE por cobrador/día: si reabrió y volvió a cerrar,
-          // se queda el último (por ts) y no se suma dos veces.
-          const byCob = {};
-          for(const c of porFecha[f]){ const k=c.cobradorId||c.id; if(!byCob[k] || (Number(c.ts)||0)>(Number(byCob[k].ts)||0)) byCob[k]=c; }
-          const vigentes = Object.values(byCob).sort((a,b)=> (Number(b.ts)||0)-(Number(a.ts)||0));
-          const items = vigentes.map(c=>{
-            const col = colorCobrador(c.cobradorId);
-            const ini = ((nombreCobrador(c.cobradorId)||'?').trim().charAt(0) || '?').toUpperCase();
-            return `
-            <button class="rx-cierre-item" data-cierre="${c.id}" style="border-left:5px solid ${col}">
+          const items = porFecha[f].slice().sort((a,b)=> (b.ts||0)-(a.ts||0)).map(c=>`
+            <button class="rx-cierre-item" data-cierre="${c.id}" style="border-left:5px solid ${colorCobrador(c.cobradorId)}">
               <div class="izq">
-                <span class="rx-cob-dot" style="background:${col}">${escapar(ini)}</span>
-                <div>
-                  <div class="nom">${escapar(nombreCobrador(c.cobradorId))}</div>
-                  <div class="sub">Efectivo${c.cobradoTransf>0?` · +${pesos(c.cobradoTransf)} transf.`:''}</div>
-                  ${c.nPendientes>0?`<span class="rx-cob-pend">${c.nPendientes} sin pagar</span>`:''}
-                </div>
+                <div class="nom"><span class="rx-cob-dot" style="background:${colorCobrador(c.cobradorId)}"></span>${escapar(nombreCobrador(c.cobradorId))}</div>
+                <div class="sub">Efectivo${c.cobradoTransf>0?` · +${pesos(c.cobradoTransf)} transf.`:''}${c.nPendientes>0?` · ${c.nPendientes} sin pagar`:''}</div>
               </div>
               <div class="der">${pesos(c.efectivoFinal)}</div>
-            </button>`;
-          }).join('');
-          const totalDia = vigentes.reduce((t,c)=> t+(Number(c.efectivoFinal)||0), 0);
+            </button>`).join('');
+          const totalDia = porFecha[f].reduce((t,c)=> t+(Number(c.efectivoFinal)||0), 0);
           return `<div class="rx-cierre-fechagrupo">
             <div class="rx-cierre-fecha"><span>${f}</span><span class="tot">${pesos(totalDia)}</span></div>
             ${items}
@@ -2455,17 +2276,10 @@
       </div>`:''}
       <div class="rx-seccion-titulo" style="margin-top:20px"><span>${pend.length>0?`Quedaron sin pagar (${pend.length})`:'Cobranza del día'}</span></div>
       ${pendHTML}
-      <div class="rx-seccion-titulo" style="margin-top:20px"><span>Estado del día</span></div>
-      ${diaEstaCerrado(c.cobradorId, c.fecha)
-        ? `<div class="rx-dia-cerrado"><div class="ic">&#128274;</div><div class="tx"><b>Día sellado.</b> El cobrador no puede registrar más pagos en este día.</div></div>
-           <button class="rx-btn-fant" id="detReabrir" style="margin-top:12px">Reabrir este día</button>
-           <div class="hint" style="margin-top:6px">Reábrelo solo para registrar un pago tardío; el cobrador deberá cerrar de nuevo.</div>`
-        : `<div class="rx-dia-cerrado"><div class="ic">&#128275;</div><div class="tx"><b>Día reabierto.</b> El cobrador puede registrar pagos; queda pendiente que cierre de nuevo.</div></div>`}
       <div class="rx-acciones" style="margin-top:20px">
         <button class="rx-btn-fant" id="detCerrar">Volver</button>
       </div>`);
     $('detCerrar').onclick = abrirCierresAdmin;
-    const _dr = $('detReabrir'); if(_dr) _dr.onclick = ()=> reabrirElDia(c.cobradorId, c.fecha, c.id);
   }
 
   function abrirCierreCaja(){ abrirHoja('<div id="cierreBody"></div>'); pintarCierre(); }
@@ -2521,7 +2335,9 @@
         <div class="ic">🔒</div>
         <div class="tx"><b>Día cerrado.</b> Ya entregaste tu cuadre; no puedes cobrar más hoy.${pendientes.length>0?` Quedaron <b>${pendientes.length}</b> sin pagar.`:''}</div>
       </div>
-      <div class="hint" style="margin-top:10px">¿Un cliente pagó tarde? Pídele al administrador que reabra tu día desde su panel.</div>` : `
+      <div class="rx-acciones" style="margin-top:12px">
+        <button class="rx-btn-fant" id="cierreReabrir">Reabrir el día</button>
+      </div>` : `
       <button class="rx-btn-sellar" id="cierreSellar" style="margin-top:20px">🔒 Cerrar el día</button>
       <div class="hint" style="margin-top:6px;text-align:center">Sella tu jornada y entrega el cuadre al administrador.</div>`) : ''}
       <div class="rx-seccion-titulo" style="margin-top:22px"><span>Días anteriores</span></div>
@@ -2531,6 +2347,7 @@
       </div>`;
     const _cc = $('cierreCerrar'); if(_cc) _cc.onclick = cerrarHoja;
     const _cs = $('cierreSellar'); if(_cs) _cs.onclick = cerrarElDia;
+    const _cr = $('cierreReabrir'); if(_cr) _cr.onclick = reabrirElDia;
   }
 
   // ===========================================================

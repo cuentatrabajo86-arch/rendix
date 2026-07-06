@@ -10,6 +10,14 @@
 <link rel="icon" type="image/png" href="./favicon-64.png" />
 <link rel="apple-touch-icon" href="./icon-192.png" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
+<!-- NUEVO v2.1: arranque más rápido — conexiones y módulos por adelantado -->
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin />
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin />
+<link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin />
+<link rel="preconnect" href="https://securetoken.googleapis.com" crossorigin />
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js" />
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js" />
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Rendix" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -198,6 +206,8 @@
   .rx-wa-mini{border:none;background:#E8F7EE;color:#128C46;border-radius:8px;padding:3px 7px;font-size:.85rem;cursor:pointer;margin-left:6px;vertical-align:middle}
   .rx-card .prox{font-size:.76rem;font-weight:600;color:var(--azul-claro);margin-top:2px}
   .rx-card .prox.hoy{color:var(--alerta)}
+  .rx-card .prox.mora{color:var(--peligro)}
+  .rx-cobro-row .sub .atr{color:var(--peligro);font-weight:700}
   .rx-filtros{margin:12px 0 2px}
   .rx-chip-sel.roja{color:var(--peligro);border-color:rgba(178,58,51,.4)}
   .rx-chip-sel.roja.activa{background:var(--peligro);border-color:var(--peligro);color:#fff}
@@ -342,7 +352,13 @@
   #cargando{position:fixed;inset:0;background:var(--azul-profundo);color:var(--dorado-claro);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:50}
   #cargando.oculto{display:none}
   .rx-spin{width:30px;height:30px;border:3px solid rgba(228,199,102,.25);border-top-color:var(--dorado-claro);border-radius:50%;animation:rx-girar .8s linear infinite}
-  .rx-cargando-marca{font-family:var(--display);font-weight:800;font-size:1.4rem;letter-spacing:.02em}
+  .rx-cargando-marca{font-family:var(--display);font-weight:800;font-size:1.4rem;letter-spacing:.02em;animation:rxLatido 2.2s ease-in-out infinite}
+  .rx-cargando-marca b{color:var(--dorado)}
+  .rx-barra-carga{width:170px;height:4px;border-radius:99px;background:rgba(228,199,102,.18);overflow:hidden;margin-top:18px}
+  .rx-barra-carga i{display:block;height:100%;width:42%;border-radius:99px;background:linear-gradient(90deg,var(--dorado),var(--dorado-claro));animation:rxBarra 1.1s ease-in-out infinite}
+  @keyframes rxBarra{0%{transform:translateX(-110%)}100%{transform:translateX(290%)}}
+  @keyframes rxLatido{0%,100%{opacity:1}50%{opacity:.7}}
+  .rx-carga-msg{margin-top:12px;font-size:.78rem;color:rgba(246,244,238,.78);letter-spacing:.03em;min-height:1em}
   @keyframes rx-girar{to{transform:rotate(360deg)}}
   @media(prefers-reduced-motion:reduce){.rx-spin{animation:none}}
   /* ===== Cobro · Bloque 3B ===== */
@@ -481,8 +497,9 @@
 
   <!-- Carga inicial -->
   <div id="cargando">
-    <div class="rx-cargando-marca">Rendix</div>
-    <div class="rx-spin" aria-hidden="true"></div>
+    <div class="rx-cargando-marca">Rend<b>ix</b></div>
+    <div class="rx-barra-carga" aria-hidden="true"><i></i></div>
+    <div class="rx-carga-msg" id="cargaMsg">Iniciando…</div>
   </div>
 
   <!-- ===== LOGIN ===== -->
@@ -504,7 +521,7 @@
       <button class="rx-btn" type="submit" id="btnEntrar">Entrar</button>
       <div class="rx-error" id="errLogin" role="alert"></div>
     </form>
-    <div class="rx-firma">Rendix v2.0 · Powered by <b>Iván Jiménez</b></div>
+    <div class="rx-firma">Rendix v2.1 · Powered by <b>Iván Jiménez</b></div>
   </section>
 
   <!-- ===== APP ===== -->
@@ -527,7 +544,7 @@
       </main>
 
       <footer class="rx-pie">
-        <div class="firma">Rendix v2.0 · Powered by <b>Iván Jiménez</b></div>
+        <div class="firma">Rendix v2.1 · Powered by <b>Iván Jiménez</b></div>
       </footer>
     </div>
 
@@ -571,7 +588,7 @@
   } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
   import {
     initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
-    doc, getDoc, getDocs, setDoc, updateDoc, addDoc, deleteDoc,
+    doc, getDoc, getDocFromCache, getDocs, setDoc, updateDoc, addDoc, deleteDoc,
     collection, query, where, orderBy,
     onSnapshot, serverTimestamp, writeBatch
   } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
@@ -592,6 +609,7 @@
   // ============================================================
 
   const $ = (id) => document.getElementById(id);
+  function setCarga(txt){ const el=$('cargaMsg'); if(el) el.textContent = txt; }   // NUEVO v2.1
   const vistas = { login:$('vistaLogin'), app:$('vistaApp'), estado:$('vistaEstado') };
   function mostrar(nombre){
     $('cargando').classList.add('oculto');
@@ -857,6 +875,7 @@
   // ===========================================================
   //  SESIÓN
   // ===========================================================
+  setCarga('Verificando tu sesión…');
   onAuthStateChanged(auth, async (user) => {
     if(!user){
       limpiarListeners();
@@ -869,9 +888,20 @@
     await cargarPerfilYRender(user);
   });
 
+  // NUEVO v2.1: lee primero del caché local (arranque instantáneo en aparatos que ya
+  // entraron antes) y deja que el servidor refresque en segundo plano.
+  async function getDocRapido(ref){
+    try{
+      const c = await getDocFromCache(ref);
+      if(c.exists()) return c;
+    }catch(_){ /* aún no hay caché: primera vez en este aparato */ }
+    return getDoc(ref);
+  }
+
   async function cargarPerfilYRender(user){
     try {
-      const mapSnap = await getDoc(doc(db, 'usuariosGlobal', user.uid));
+      setCarga('Cargando tu cartera…');
+      const mapSnap = await getDocRapido(doc(db, 'usuariosGlobal', user.uid));
       if(!mapSnap.exists()){
         return pantallaEstado({
           ico:'🪪', titulo:'Usuario sin configurar',
@@ -880,6 +910,11 @@
         });
       }
       const map = mapSnap.data();
+      // NUEVO v2.1: guardián — refresca del servidor en segundo plano; si el admin
+      // bloqueó a este usuario, la sesión se cierra apenas llega el dato fresco.
+      getDoc(doc(db,'usuariosGlobal',user.uid)).then(s=>{
+        if(s.exists() && s.data().bloqueado===true) signOut(auth);
+      }).catch(()=>{});
       if(map.bloqueado === true){
         return pantallaEstado({
           ico:'🔒', titulo:'Acceso bloqueado',
@@ -889,8 +924,8 @@
       }
       const empresaId = map.empresaId, rol = map.rol;
       const [empSnap, userSnap] = await Promise.all([
-        getDoc(doc(db, 'empresas', empresaId)),
-        getDoc(doc(db, 'empresas', empresaId, 'usuarios', user.uid))
+        getDocRapido(doc(db, 'empresas', empresaId)),
+        getDocRapido(doc(db, 'empresas', empresaId, 'usuarios', user.uid))
       ]);
       if(!empSnap.exists()){
         return pantallaEstado({
@@ -1103,7 +1138,7 @@
       let prox;
       if(dias>0 && dias % paso === 0 && dias<=maxDias && !pagoHoy) prox = dias;   // toca HOY
       else prox = (Math.floor(Math.max(dias,0)/paso)+1) * paso;                    // la que sigue
-      const cand = { cuota:Math.min(r.cuota,r.saldo), enDias:(prox>maxDias?null:prox-dias), vencido:r.estado==='atrasado', saldo:r.saldo };
+      const cand = { cuota:Math.min(r.cuota,r.saldo), enDias:(prox>maxDias?null:prox-dias), vencido:r.estado==='atrasado', saldo:r.saldo, cuotasAtraso:(r.cuotasAtraso||0), montoAtraso:(r.montoAtraso||0) };
       if(!mejor || (cand.enDias!==null && (mejor.enDias===null || cand.enDias<mejor.enDias))) mejor = cand;
     }
     return mejor;
@@ -1714,7 +1749,9 @@
         <div class="cuerpo">
           <div class="nom">${escapar(c.nombre||'Sin nombre')}</div>
           <div class="meta">${sub}</div>
-          ${(pc && pc.enDias!==null)?`<div class="prox ${pc.enDias<=0?'hoy':''}">Próx. cuota ${pesos(pc.cuota)} · ${proxTxt(pc)}</div>`:''}
+          ${(pc && pc.vencido && pc.cuotasAtraso>=1)
+            ? `<div class="prox mora">⚠ Debe ${Math.round(pc.cuotasAtraso)} cuota${Math.round(pc.cuotasAtraso)===1?'':'s'} · ${pesos(pc.montoAtraso)}</div>`
+            : ((pc && pc.enDias!==null)?`<div class="prox ${pc.enDias<=0?'hoy':''}">Próx. cuota ${pesos(pc.cuota)} · ${proxTxt(pc)}</div>`:'')}
         </div>
         ${badge}
       </div>`;
@@ -1888,6 +1925,7 @@
             </div>
             <div class="barra"><i style="width:${pct}%"></i></div>
             <div class="pie"><span>Saldo: <b>${pesos(r.saldo)}</b></span><span>Cuota <b>${pesos(r.cuota)}</b></span></div>
+            ${r.cuotasAtraso>=1?`<div class="pie" style="margin-top:2px"><span style="color:var(--peligro)">⚠ Debe <b>${Math.round(r.cuotasAtraso)} cuota${Math.round(r.cuotasAtraso)===1?'':'s'}</b></span><span style="color:var(--peligro)"><b>${pesos(r.montoAtraso)}</b></span></div>`:''}
             <button class="rx-pres-carton" data-carton="${p.id}">🎴 Ver cartón</button>
           </div>`;
         }).join('');
@@ -2189,7 +2227,9 @@
             ${avatarHTML(f.cli,'cli',44)}
             <div class="info">
               <div class="nom">${escapar(f.cli.nombre||'Sin nombre')}${f.pagoHoy?'<span class="ok-hoy">✓ hoy</span>':''}${f.notaHoy?'<span class="nota-hoy">📝</span>':''}</div>
-              <div class="sub">Saldo ${pesos(f.r.saldo)} · Cuota ${pesos(f.r.cuota)}</div>
+              <div class="sub">${f.r.cuotasAtraso>=1
+                ? `<span class="atr">Debe ${Math.round(f.r.cuotasAtraso)} cuota${Math.round(f.r.cuotasAtraso)===1?'':'s'} · ${pesos(f.r.montoAtraso)}</span> · Saldo ${pesos(f.r.saldo)}`
+                : `Saldo ${pesos(f.r.saldo)} · Cuota ${pesos(f.r.cuota)}`}</div>
             </div>
             <div class="acc">
               <span class="rx-est ${f.est.c}">${f.est.t}</span>
@@ -2662,7 +2702,7 @@
       <div class="sub">${escapar(cli.nombre||p.clienteNombre||'')} · ${modalidadTxt(p.modalidad)}</div>
       <div class="rx-res">
         <div class="c"><div class="k">Saldo actual</div><div class="v">${pesos(saldo)}</div></div>
-        <div class="c ${r.montoAtraso>0?'mora':''}"><div class="k">${r.montoAtraso>0?'En atraso':'Cuota'}</div><div class="v">${pesos(r.montoAtraso>0?r.montoAtraso:cuota)}</div></div>
+        <div class="c ${r.montoAtraso>0?'mora':''}"><div class="k">${r.montoAtraso>0?`Atraso · ${Math.round(r.cuotasAtraso)} cuota${Math.round(r.cuotasAtraso)===1?'':'s'}`:'Cuota'}</div><div class="v">${pesos(r.montoAtraso>0?r.montoAtraso:cuota)}</div></div>
       </div>
       ${yaHoy>0?`<div class="rx-aviso-hoy"><span>⚠️</span><span>Hoy ya le cobraste <b>${pesos(yaHoy)}</b> a ${escapar(cli.nombre||p.clienteNombre||'este cliente')}. Si registras este cobro, será un <b>abono adicional</b> del mismo día.</span></div>`:''}
       <div class="rx-form-err" id="cobroErr"></div>

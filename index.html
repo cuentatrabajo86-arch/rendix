@@ -202,7 +202,7 @@
   .rx-carton .trow.multa{background:rgba(178,58,51,.07)}
   .rx-carton .trow.multa .n,.rx-carton .trow.multa .ab{color:var(--peligro);font-weight:700}
   /* NUEVO v2.0: WhatsApp + próxima cuota + filtros */
-  .rx-btn-wa{width:42px;height:42px;border-radius:50%;border:none;background:#1FA855;color:#fff;font-size:1.15rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:0 0 auto;box-shadow:0 3px 10px rgba(31,168,85,.35)}
+  .rx-btn-wa{width:42px !important;min-width:42px;max-width:42px;height:42px !important;padding:0 !important;border-radius:50% !important;border:none;background:#1FA855;color:#fff;font-size:1.15rem;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:0 0 42px !important;box-shadow:0 3px 10px rgba(31,168,85,.35)}
   .rx-wa-mini{border:none;background:#E8F7EE;color:#128C46;border-radius:8px;padding:3px 7px;font-size:.85rem;cursor:pointer;margin-left:6px;vertical-align:middle}
   .rx-card .prox{font-size:.76rem;font-weight:600;color:var(--azul-claro);margin-top:2px}
   .rx-card .prox.hoy{color:var(--alerta)}
@@ -521,7 +521,7 @@
       <button class="rx-btn" type="submit" id="btnEntrar">Entrar</button>
       <div class="rx-error" id="errLogin" role="alert"></div>
     </form>
-    <div class="rx-firma">Rendix v2.1 · Powered by <b>Iván Jiménez</b></div>
+    <div class="rx-firma">Rendix v2.2 · Powered by <b>Iván Jiménez</b></div>
   </section>
 
   <!-- ===== APP ===== -->
@@ -544,7 +544,7 @@
       </main>
 
       <footer class="rx-pie">
-        <div class="firma">Rendix v2.1 · Powered by <b>Iván Jiménez</b></div>
+        <div class="firma">Rendix v2.2 · Powered by <b>Iván Jiménez</b></div>
       </footer>
     </div>
 
@@ -1189,6 +1189,7 @@
     const realHoy = cobrosHoy.reduce((t,m)=> t+(Number(m.monto)||0), 0);
     let esperadoHoy = 0, vencidoTotal = 0;
     const clientesMora = new Set();
+    const cobConCuotaHoy = new Set();   // NUEVO v2.2: cobradores a los que HOY sí les toca cobrar
     const hoyD = rxFecha(hoy);
     for(const p of S.prestamos){
       if(p.estado==='pagado') continue;
@@ -1199,10 +1200,12 @@
       const dias = Math.floor((hoyD - rxFecha(p.fechaInicio)) / 86400000);
       if(dias>0 && dias % paso === 0 && Math.floor(dias/paso) <= (Number(p.numeroCuotas)||0)){
         esperadoHoy += Math.min(r.cuota, r.saldo);
+        cobConCuotaHoy.add(p.cobradorId);
       }
       if(r.estado==='atrasado'){
         clientesMora.add(p.clienteId);
         vencidoTotal += rxRedondea(Math.min((r.cuotasAtraso||0) * r.cuota, r.saldo));
+        cobConCuotaHoy.add(p.cobradorId);
       }
     }
     esperadoHoy = rxRedondea(esperadoHoy);
@@ -1221,7 +1224,7 @@
       const ap = aperturaDelDia(c.id, hoy), cer = diaEstaCerrado(c.id, hoy);
       const d = porCob[c.id] || {ef:0,tr:0,n:0};
       if(!ap && !cer && d.n===0) sinAbrir.push(c);
-      else if(ap && !cer && d.n===0) abiertosSinCobro.push(c);
+      else if(ap && !cer && d.n===0 && cobConCuotaHoy.has(c.id)) abiertosSinCobro.push(c);
       const est = cer ? '🔒 cerró' : (ap ? '✓ abierto' : '· sin abrir');
       const col = colorCobrador(c.id);
       return `<div class="rx-hoycob"><span class="rx-cob-dot" style="background:${col}"></span><span class="nm">${escapar(primerNombre(c.nombre||'—'))} <i>${est}</i></span><span class="mm">${pesos(d.ef)}${d.tr>0?` <b>+${pesos(d.tr)} 📲</b>`:''}</span></div>`;
@@ -2197,8 +2200,14 @@
       const r = rxResumen(p, movs);
       const cli = S.clientes.find(c=>c.id===p.clienteId) || { nombre:p.clienteNombre };
       const pagoHoy = movs.some(m=> m.tipo==='cobro' && m.fecha===hoy);
-      const notaHoy = movs.some(m=> m.tipo==='nota' && m.fecha===hoy);   // NUEVO
-      return { p, cli, r, est:RX_ESTADO[r.estado], pagoHoy, notaHoy };
+      const notaHoy = movs.some(m=> m.tipo==='nota' && m.fecha===hoy);
+      // NUEVO v2.2: ¿a este préstamo le toca cuota HOY según su modalidad?
+      const paso = RX_DIAS_CUOTA[p.modalidad] || 1;
+      const diasP = Math.floor((rxFecha(hoy) - rxFecha(p.fechaInicio))/86400000);
+      const tocaHoy = diasP>0 && diasP % paso === 0 && Math.floor(diasP/paso) <= (Number(p.numeroCuotas)||0);
+      let proxDias = tocaHoy && !pagoHoy ? 0 : ((Math.floor(Math.max(diasP,0)/paso)+1)*paso - diasP);
+      if((Math.floor(Math.max(diasP,0)/paso)+1) > (Number(p.numeroCuotas)||0) && !tocaHoy) proxDias = null;
+      return { p, cli, r, est:RX_ESTADO[r.estado], pagoHoy, notaHoy, tocaHoy, proxDias };
     }).sort((a,b)=>{
       if(a.pagoHoy!==b.pagoHoy) return a.pagoHoy ? 1 : -1;        // pendientes arriba
       const oa = a.r.estado==='atrasado'?0:1, ob = b.r.estado==='atrasado'?0:1;
@@ -2206,7 +2215,8 @@
       return (a.cli.nombre||'').localeCompare(b.cli.nombre||'');
     });
 
-    const pendientes = filas.filter(f=> !f.pagoHoy).length;
+    const pendientes = filas.filter(f=> !f.pagoHoy && (f.tocaHoy || f.r.estado==='atrasado')).length;
+    const cuandoTxt = d => d===1 ? 'mañana' : new Date(rxFecha(hoy).getTime()+d*86400000).toLocaleDateString('es-CO',{weekday:'short', day:'numeric', timeZone:'UTC'});
     // NUEVO v2.0: filtros rápidos (los conteos salen de la lista completa)
     const nAtras = filas.filter(f=> f.r.estado==='atrasado').length;
     const nAldia = filas.filter(f=> f.r.estado==='al_dia').length;
@@ -2229,7 +2239,9 @@
               <div class="nom">${escapar(f.cli.nombre||'Sin nombre')}${f.pagoHoy?'<span class="ok-hoy">✓ hoy</span>':''}${f.notaHoy?'<span class="nota-hoy">📝</span>':''}</div>
               <div class="sub">${f.r.cuotasAtraso>=1
                 ? `<span class="atr">Debe ${Math.round(f.r.cuotasAtraso)} cuota${Math.round(f.r.cuotasAtraso)===1?'':'s'} · ${pesos(f.r.montoAtraso)}</span> · Saldo ${pesos(f.r.saldo)}`
-                : `Saldo ${pesos(f.r.saldo)} · Cuota ${pesos(f.r.cuota)}`}</div>
+                : (!f.tocaHoy && f.proxDias!==null && f.proxDias>0
+                  ? `Saldo ${pesos(f.r.saldo)} · Cuota ${pesos(f.r.cuota)} · próx. ${cuandoTxt(f.proxDias)}`
+                  : `Saldo ${pesos(f.r.saldo)} · Cuota ${pesos(f.r.cuota)}`)}</div>
             </div>
             <div class="acc">
               <span class="rx-est ${f.est.c}">${f.est.t}</span>
@@ -2394,6 +2406,11 @@
       if(mp.some(m=> m.tipo==='cobro' && m.fecha===hoy)) continue;
       const r = rxResumen(p, mp);
       if(r.saldo>0){
+        // NUEVO v2.2: semanal/quincenal/mensual solo cuenta "sin pagar" su día de cuota o si va en mora.
+        const paso = RX_DIAS_CUOTA[p.modalidad] || 1;
+        const diasP = Math.floor((rxFecha(hoy) - rxFecha(p.fechaInicio))/86400000);
+        const toca = diasP>0 && diasP % paso === 0 && Math.floor(diasP/paso) <= (Number(p.numeroCuotas)||0);
+        if(!(toca || r.estado==='atrasado')) continue;
         const cli = S.clientes.find(c=>c.id===p.clienteId) || { nombre:p.clienteNombre };
         pendientes.push({ nombre: cli.nombre||'Sin nombre', saldo: r.saldo, clienteId: p.clienteId||'', telefono: cli.telefono||'' });
       }

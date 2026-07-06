@@ -193,6 +193,14 @@
   .rx-cobro-row .nota-hoy{font-size:.78em;margin-left:6px;opacity:.8}
   .rx-carton .trow.multa{background:rgba(178,58,51,.07)}
   .rx-carton .trow.multa .n,.rx-carton .trow.multa .ab{color:var(--peligro);font-weight:700}
+  /* NUEVO v2.0: WhatsApp + próxima cuota + filtros */
+  .rx-btn-wa{width:42px;height:42px;border-radius:50%;border:none;background:#1FA855;color:#fff;font-size:1.15rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:0 0 auto;box-shadow:0 3px 10px rgba(31,168,85,.35)}
+  .rx-wa-mini{border:none;background:#E8F7EE;color:#128C46;border-radius:8px;padding:3px 7px;font-size:.85rem;cursor:pointer;margin-left:6px;vertical-align:middle}
+  .rx-card .prox{font-size:.76rem;font-weight:600;color:var(--azul-claro);margin-top:2px}
+  .rx-card .prox.hoy{color:var(--alerta)}
+  .rx-filtros{margin:12px 0 2px}
+  .rx-chip-sel.roja{color:var(--peligro);border-color:rgba(178,58,51,.4)}
+  .rx-chip-sel.roja.activa{background:var(--peligro);border-color:var(--peligro);color:#fff}
   .rx-card{
     background:#fff;border:1px solid var(--linea);border-radius:14px;padding:14px 15px;display:flex;align-items:center;gap:13px;cursor:pointer;transition:transform .06s,box-shadow .2s;
   }
@@ -496,7 +504,7 @@
       <button class="rx-btn" type="submit" id="btnEntrar">Entrar</button>
       <div class="rx-error" id="errLogin" role="alert"></div>
     </form>
-    <div class="rx-firma">Rendix v1.9 · Powered by <b>Iván Jiménez</b></div>
+    <div class="rx-firma">Rendix v2.0 · Powered by <b>Iván Jiménez</b></div>
   </section>
 
   <!-- ===== APP ===== -->
@@ -519,7 +527,7 @@
       </main>
 
       <footer class="rx-pie">
-        <div class="firma">Rendix v1.9 · Powered by <b>Iván Jiménez</b></div>
+        <div class="firma">Rendix v2.0 · Powered by <b>Iván Jiménez</b></div>
       </footer>
     </div>
 
@@ -1065,6 +1073,59 @@
     return prestamosDe(clienteId)
       .filter(p=> p.estado!=='pagado')
       .reduce((t,p)=> t + saldoPrestamo(p), 0);
+  }
+
+  // NUEVO v2.0: WhatsApp directo al cliente ------------------------------
+  function waNumero(tel){
+    let d = String(tel||'').replace(/\D/g,'');
+    if(!d) return null;
+    if(d.length===10 && d.startsWith('3')) d = '57'+d;   // celular colombiano sin indicativo
+    return d;
+  }
+  function waAbrir(tel, msg){
+    const n = waNumero(tel);
+    if(!n){ toast('Este cliente no tiene teléfono guardado.', true); return; }
+    window.open('https://wa.me/'+n+'?text='+encodeURIComponent(msg), '_blank');
+  }
+  // NUEVO v2.0: próxima cuota del cliente (valor + cuándo), derivada de sus préstamos.
+  function proximaCuota(clienteId){
+    const hoy = hoyISO(), hoyD = rxFecha(hoy);
+    let mejor = null;
+    for(const p of prestamosDe(clienteId)){
+      if(p.estado==='pagado') continue;
+      const movs = movsDe(p.id);
+      const r = rxResumen(p, movs);
+      if(r.saldo<=0) continue;
+      const paso = RX_DIAS_CUOTA[p.modalidad] || 1;
+      const dias = Math.floor((hoyD - rxFecha(p.fechaInicio))/86400000);
+      const maxDias = (Number(p.numeroCuotas)||0) * paso;
+      const pagoHoy = movs.some(m=> m.tipo==='cobro' && m.fecha===hoy);
+      let prox;
+      if(dias>0 && dias % paso === 0 && dias<=maxDias && !pagoHoy) prox = dias;   // toca HOY
+      else prox = (Math.floor(Math.max(dias,0)/paso)+1) * paso;                    // la que sigue
+      const cand = { cuota:Math.min(r.cuota,r.saldo), enDias:(prox>maxDias?null:prox-dias), vencido:r.estado==='atrasado', saldo:r.saldo };
+      if(!mejor || (cand.enDias!==null && (mejor.enDias===null || cand.enDias<mejor.enDias))) mejor = cand;
+    }
+    return mejor;
+  }
+  function proxTxt(pc){
+    if(!pc || pc.enDias===null) return (pc && pc.vencido) ? 'plazo vencido' : '';
+    if(pc.enDias<=0) return 'HOY';
+    if(pc.enDias===1) return 'mañana';
+    const d = new Date(rxFecha(hoyISO()).getTime() + pc.enDias*86400000);
+    return d.toLocaleDateString('es-CO',{weekday:'short', day:'numeric', month:'short', timeZone:'UTC'});
+  }
+  function waMsgCliente(cli){
+    const pc = proximaCuota(cli.id);
+    const emp = S.empresaNombre || 'su cobrador';
+    const nom = primerNombre(cli.nombre||'');
+    if(pc && pc.enDias!==null){
+      const cuando = pc.enDias<=0 ? 'hoy' : (pc.enDias===1 ? 'mañana' : 'el '+proxTxt(pc));
+      return `Buen día ${nom}, le saluda ${emp}. Le recordamos su cuota de ${pesos(pc.cuota)} ${cuando}.${pc.vencido?' Presenta cuotas en mora, por favor póngase al día.':''} ¡Gracias!`;
+    }
+    const deuda = deudaCliente(cli.id);
+    if(deuda>0) return `Buen día ${nom}, le saluda ${emp}. Su saldo pendiente es ${pesos(deuda)}. ¡Gracias!`;
+    return `Buen día ${nom}, le saluda ${emp}. ¡Gracias por su cumplimiento!`;
   }
 
   function nombreRuta(rutaId){
@@ -1618,6 +1679,7 @@
   function tipoMovTxt(t){ return { cobro:'Cobro', multa:'Multa', reembolso:'Reembolso', renovacion:'Renovación', desembolso:'Desembolso', nota:'Nota', apertura:'Apertura', cierre:'Cierre', reapertura:'Reapertura' }[t] || t; }
 
   let _qCli = '';
+  let _fCobro = 'todos';   // NUEVO v2.0: filtro activo de la planilla de cobro
   function sinTildes(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
   function clientesFiltrados(){
     const q = sinTildes(_qCli.trim());
@@ -1640,6 +1702,7 @@
     cont.innerHTML = lista.map(c=>{
       const np = prestamosDe(c.id).filter(p=>p.estado!=='pagado').length;
       const deuda = deudaCliente(c.id);
+      const pc = np>0 ? proximaCuota(c.id) : null;   // NUEVO v2.0
       const sub = esAdmin
         ? `${escapar(primerNombre(nombreCobrador(c.cobradorId)||'Sin cobrador'))} · ${np} préstamo${np===1?'':'s'}`
         : `${escapar(c.telefono||'Sin teléfono')} · ${np} préstamo${np===1?'':'s'}`;
@@ -1651,6 +1714,7 @@
         <div class="cuerpo">
           <div class="nom">${escapar(c.nombre||'Sin nombre')}</div>
           <div class="meta">${sub}</div>
+          ${(pc && pc.enDias!==null)?`<div class="prox ${pc.enDias<=0?'hoy':''}">Próx. cuota ${pesos(pc.cuota)} · ${proxTxt(pc)}</div>`:''}
         </div>
         ${badge}
       </div>`;
@@ -1827,6 +1891,7 @@
             <button class="rx-pres-carton" data-carton="${p.id}">🎴 Ver cartón</button>
           </div>`;
         }).join('');
+    const pcC = proximaCuota(id);   // NUEVO v2.0
     abrirHoja(`
       <div style="display:flex;align-items:center;gap:14px;margin:4px 0 16px">
         ${avatarHTML(c,'cli',54)}
@@ -1834,11 +1899,13 @@
           <h2 style="margin:0">${escapar(c.nombre||'Sin nombre')}</h2>
           <div style="margin-top:3px;color:var(--niebla);font-size:.85rem">${escapar(c.telefono||'Sin teléfono')}</div>
         </div>
+        ${c.telefono?`<button class="rx-btn-wa" id="fcliWa" title="Escribirle por WhatsApp">💬</button>`:''}
       </div>
       <div class="rx-detalle-fila"><span class="et">Cédula</span><span class="va">${escapar(c.cedula||'—')}</span></div>
       <div class="rx-detalle-fila"><span class="et">Dirección</span><span class="va">${escapar(c.direccion||'—')}</span></div>
       ${esAdmin?`<div class="rx-detalle-fila"><span class="et">Cobrador</span><span class="va">${escapar(nombreCobrador(c.cobradorId)||'—')}</span></div>`:''}
       <div class="rx-detalle-fila"><span class="et">Ruta</span><span class="va">${escapar(nombreRuta(c.rutaId)||'—')}</span></div>
+      ${(pcC && pcC.enDias!==null)?`<div class="rx-detalle-fila"><span class="et">Próxima cuota</span><span class="va" style="${pcC.enDias<=0?'color:var(--alerta)':''}">${pesos(pcC.cuota)} · ${proxTxt(pcC)}</span></div>`:''}
       <div class="rx-ficha-sub"><span>Préstamos</span>${puedePrestar ? `<button class="rx-mini" id="fcliPrestar">+ Prestar</button>` : `<span class="rx-mini" style="opacity:.45;pointer-events:none">Préstamo activo</span>`}</div>
       ${(!esAdmin && tieneActivo) ? `<div class="hint" style="margin-top:2px;margin-bottom:6px">Este cliente ya tiene un préstamo en curso. Para entregarle otro, pide autorización al supervisor.</div>` : ''}
       ${listaPres}
@@ -1848,6 +1915,7 @@
       </div>`);
     $('fcliCerrar').onclick = cerrarHoja;
     $('fcliEditar').onclick = ()=> formCliente(c);
+    const _fw=$('fcliWa'); if(_fw) _fw.onclick = ()=> waAbrir(c.telefono, waMsgCliente(c));
     if(puedePrestar){
       $('fcliPrestar').onclick = ()=> {
         if(esAdmin && tieneActivo){
@@ -2101,12 +2169,22 @@
     });
 
     const pendientes = filas.filter(f=> !f.pagoHoy).length;
+    // NUEVO v2.0: filtros rápidos (los conteos salen de la lista completa)
+    const nAtras = filas.filter(f=> f.r.estado==='atrasado').length;
+    const nAldia = filas.filter(f=> f.r.estado==='al_dia').length;
+    const nHoy   = filas.filter(f=> f.pagoHoy).length;
+    const filtradas = filas.filter(f=>
+      _fCobro==='atrasados' ? f.r.estado==='atrasado' :
+      _fCobro==='aldia'     ? f.r.estado==='al_dia'   :
+      _fCobro==='hoy'       ? f.pagoHoy               : true);
     let ruta = 'Tu ruta';
     if(S.perfil && S.perfil.rutaId){ const rr=S.rutas.find(x=>x.id===S.perfil.rutaId); if(rr) ruta = escapar(rr.nombre); }
 
     const lista = filas.length===0
       ? `<div class="rx-cobro-vacio">Aún no tienes préstamos activos para cobrar.<br>Entrégale un préstamo a un cliente para empezar tu jornada.</div>`
-      : filas.map(f=>`
+      : (filtradas.length===0
+        ? `<div class="rx-cobro-vacio">Ningún cliente en este filtro.</div>`
+        : filtradas.map(f=>`
           <div class="rx-cobro-row ${f.pagoHoy?'pago':''} ${cerrado?'bloq':''}" data-cobrar="${f.p.id}">
             ${avatarHTML(f.cli,'cli',44)}
             <div class="info">
@@ -2118,7 +2196,7 @@
               <button class="rx-nota-btn" data-nota="${f.p.id}" tabindex="-1" title="Nota de visita">📝</button>
               <button class="rx-cobrar-btn" tabindex="-1">$</button>
             </div>
-          </div>`).join('');
+          </div>`).join(''));
 
     $('tabCobrar').innerHTML = `
       <div class="rx-cobrar-head">
@@ -2128,6 +2206,12 @@
       <div class="rx-cobrar-resumen">
         <div class="c oro"><div class="k">Cobrado hoy</div><div class="v">${pesos(cobradoHoy)}</div></div>
         <div class="c"><div class="k">Por visitar</div><div class="v">${pendientes}</div></div>
+      </div>
+      <div class="rx-chips rx-filtros" id="cobFiltros">
+        <button class="rx-chip-sel ${_fCobro==='todos'?'activa':''}" data-f="todos">Todos (${filas.length})</button>
+        <button class="rx-chip-sel roja ${_fCobro==='atrasados'?'activa':''}" data-f="atrasados">Mora (${nAtras})</button>
+        <button class="rx-chip-sel ${_fCobro==='aldia'?'activa':''}" data-f="aldia">Al día (${nAldia})</button>
+        <button class="rx-chip-sel ${_fCobro==='hoy'?'activa':''}" data-f="hoy">✓ Hoy (${nHoy})</button>
       </div>
       ${cerrado?`<div class="rx-aviso-cerrado">🔒 Día cerrado. Solo el administrador puede reabrirlo.</div>`:''}
       ${lista}`;
@@ -2142,6 +2226,9 @@
         _volverCobro = cerrarHoja;   // tras cobrar/cancelar volvemos a la planilla (se refresca sola)
         formCobro(p, r, cli);
       };
+    });
+    const _cf=$('cobFiltros'); if(_cf) _cf.querySelectorAll('[data-f]').forEach(b=>{
+      b.onclick = ()=>{ _fCobro = b.dataset.f; renderCobrarDia(); };
     });
     $('tabCobrar').querySelectorAll('[data-nota]').forEach(btn=>{
       btn.addEventListener('click', (e)=>{
@@ -2171,10 +2258,16 @@
         <label for="notaTexto">Detalle (opcional)</label>
         <input class="rx-fin" id="notaTexto" type="text" maxlength="120" placeholder="Ej: volver por la tarde" />
       </div>
+      ${cli.telefono?`<button type="button" class="rx-btn-fant" id="notaWa" style="width:100%">💬 Avisarle por WhatsApp</button>`:''}
       <div class="rx-acciones" style="margin-top:16px">
         <button class="rx-btn-prim" id="notaGuardar">Guardar nota</button>
         <button class="rx-btn-fant" id="notaCancelar">Cancelar</button>
       </div>`);
+    const _nw=$('notaWa'); if(_nw) _nw.onclick = ()=>{
+      const pc = proximaCuota(p.clienteId);
+      const cuotaTxt = (pc&&pc.cuota)?` de ${pesos(pc.cuota)}`:'';
+      waAbrir(cli.telefono, `Buen día ${primerNombre(cli.nombre||'')}, pasé a cobrar su cuota${cuotaTxt} y no lo encontré. Quedo pendiente. — ${S.empresaNombre||''}`);
+    };
     document.querySelectorAll('#notaChips .rx-chip-sel').forEach(b=>{
       b.onclick = ()=>{ _motivo = b.dataset.motivo;
         document.querySelectorAll('#notaChips .rx-chip-sel').forEach(x=>x.classList.toggle('activa', x===b)); };
@@ -2262,7 +2355,7 @@
       const r = rxResumen(p, mp);
       if(r.saldo>0){
         const cli = S.clientes.find(c=>c.id===p.clienteId) || { nombre:p.clienteNombre };
-        pendientes.push({ nombre: cli.nombre||'Sin nombre', saldo: r.saldo });
+        pendientes.push({ nombre: cli.nombre||'Sin nombre', saldo: r.saldo, clienteId: p.clienteId||'', telefono: cli.telefono||'' });
       }
     }
     return { base, cobrosHoy, cobrosTransf, desembHoy, cobradoTransf, totalCobrado, cobradoEfectivo, entregado, papeleriaHoy, efectivoFinal, pendientes };
@@ -2438,7 +2531,11 @@
     const pend = Array.isArray(c.pendientes) ? c.pendientes : [];
     const pendHTML = pend.length===0
       ? `<div class="hint" style="margin-top:6px">Todos los clientes activos pagaron ese día. 🎉</div>`
-      : pend.map(p=>`<div class="rx-detalle-fila"><span class="et">${escapar(p.nombre||'Sin nombre')}</span><span class="va">debe ${pesos(p.saldo)}</span></div>`).join('');
+      : pend.map(pp=>{
+          const cliP = S.clientes.find(x=> x.id===pp.clienteId) || S.clientes.find(x=> x.nombre===pp.nombre);
+          const tel = pp.telefono || (cliP && cliP.telefono) || '';
+          return `<div class="rx-detalle-fila"><span class="et">${escapar(pp.nombre||'Sin nombre')}</span><span class="va">debe ${pesos(pp.saldo)}${tel?` <button class="rx-wa-mini" data-watel="${escapar(tel)}" data-wanom="${escapar(pp.nombre||'')}" title="Cobrarle por WhatsApp">💬</button>`:''}</span></div>`;
+        }).join('');
     abrirHoja(`
       <h2>${escapar(nombreCobrador(c.cobradorId))}</h2>
       <div class="sub">Cierre del ${c.fecha}</div>
@@ -2470,6 +2567,8 @@
         <button class="rx-btn-fant" id="detCerrar">Volver</button>
       </div>`);
     $('detCerrar').onclick = abrirCierresAdmin;
+    document.querySelectorAll('[data-watel]').forEach(b=> b.onclick = ()=>
+      waAbrir(b.dataset.watel, `Buen día ${primerNombre(b.dataset.wanom||'')}, le saluda ${S.empresaNombre||'su cobrador'}. Quedó pendiente su cuota del ${c.fecha}. ¡Gracias!`));
     const _dr = $('detReabrir'); if(_dr) _dr.onclick = ()=> reabrirDiaAdmin(c.cobradorId, c.fecha);
   }
 

@@ -521,7 +521,7 @@
       <button class="rx-btn" type="submit" id="btnEntrar">Entrar</button>
       <div class="rx-error" id="errLogin" role="alert"></div>
     </form>
-    <div class="rx-firma">Rendix v2.2 · Powered by <b>Iván Jiménez</b></div>
+    <div class="rx-firma">Rendix v2.3 · Powered by <b>Iván Jiménez</b></div>
   </section>
 
   <!-- ===== APP ===== -->
@@ -544,7 +544,7 @@
       </main>
 
       <footer class="rx-pie">
-        <div class="firma">Rendix v2.2 · Powered by <b>Iván Jiménez</b></div>
+        <div class="firma">Rendix v2.3 · Powered by <b>Iván Jiménez</b></div>
       </footer>
     </div>
 
@@ -1254,34 +1254,32 @@
           ? `<div class="bar"><i style="width:${pctHoy}%"></i></div><div class="pct">${pctHoy}% de lo esperado hoy</div>`
           : `<div class="pct">Hoy no hay cuotas programadas.</div>`}
       </div>
+      <button id="chipsMora" style="all:unset;display:block;width:100%;cursor:pointer">
       <div class="rx-info">
-        <div class="rx-chip ${clientesMora.size>0?'mora':''}"><div class="k">Clientes en mora</div><div class="v">${clientesMora.size}</div></div>
-        <div class="rx-chip ${clientesMora.size>0?'mora':''}"><div class="k">Vencido</div><div class="v">${pesos(vencidoTotal)}</div></div>
+        <div class="rx-chip ${clientesMora.size>0?'mora':''}"><div class="k">Clientes en mora ${clientesMora.size>0?'›':''}</div><div class="v">${clientesMora.size}</div></div>
+        <div class="rx-chip ${clientesMora.size>0?'mora':''}"><div class="k">Vencido ${clientesMora.size>0?'›':''}</div><div class="v">${pesos(vencidoTotal)}</div></div>
       </div>
+      </button>
       ${sinAbrir.length>0?`<div class="rx-banner" style="margin-top:14px">⏰ <b>Sin abrir jornada:</b> ${nombresDots(sinAbrir)}</div>`:''}
       ${abiertosSinCobro.length>0?`<div class="rx-banner" style="margin-top:10px">⚠️ <b>Abrieron y llevan 0 cobros:</b> ${nombresDots(abiertosSinCobro)}</div>`:''}
       ${cobActivos.length>0?`
       <div class="rx-seccion-titulo"><span>Hoy por cobrador</span></div>
       <div class="rx-hoycob-lista">${filasCob}</div>`:''}
-      <div class="rx-seccion-titulo"><span>Gestión</span></div>
+      <div class="rx-seccion-titulo"><span>Acciones</span></div>
       <div class="rx-modulos">
-        <button class="rx-modulo" data-ir="clientes">
-          <div class="ico">🧾</div><div class="nom">Clientes y préstamos</div>
-          <span class="conteo">${S.clientes.length}</span>
+        <button class="rx-modulo" id="modMorosos">
+          <div class="ico">⚠️</div><div class="nom">Préstamos en mora</div>
+          ${clientesMora.size>0?`<span class="conteo" style="background:var(--peligro)">${clientesMora.size}</span>`:''}
         </button>
-        <button class="rx-modulo" data-ir="cobradores">
-          <div class="ico">👥</div><div class="nom">Cobradores</div>
-          <span class="conteo">${S.cobradores.length}</span>
+        <button class="rx-modulo" id="modPrestamoRapido">
+          <div class="ico">💸</div><div class="nom">Préstamo rápido</div>
         </button>
-        <button class="rx-modulo" data-ir="rutas">
-          <div class="ico">🗺️</div><div class="nom">Rutas</div>
-          <span class="conteo">${S.rutas.length}</span>
-        </button>
-        <button class="rx-modulo" id="modCierresAdmin"><div class="ico">📊</div><div class="nom">Cierres y jornadas</div>${cerraronHoy>0?`<span class="conteo">${cerraronHoy}</span>`:''}</button>
       </div>
-      ${cerraronHoy>0?`<div class="rx-banner ok" style="margin-top:22px">📥 Hoy <b>${cerraronHoy}</b> cobrador(es) cerraron y entregaron. Toca "Cierres y jornadas" para ver el detalle.</div>`:''}`;
+      ${cerraronHoy>0?`<div class="rx-banner ok" style="margin-top:22px">📥 Hoy <b>${cerraronHoy}</b> cobrador(es) cerraron y entregaron. Toca <b>Cierres</b> en la barra de abajo para confirmar el recibido.</div>`:''}`;
     $('tabInicio').querySelectorAll('[data-ir]').forEach(b=> b.onclick=()=>irATab(b.dataset.ir));
-    const _mca=$('modCierresAdmin'); if(_mca) _mca.onclick = abrirCierresAdmin;
+    const _mmo=$('modMorosos'); if(_mmo) _mmo.onclick = abrirMorosos;
+    const _mpr=$('modPrestamoRapido'); if(_mpr) _mpr.onclick = selectorPrestamoRapido;
+    const _chm=$('chipsMora'); if(_chm) _chm.onclick = abrirMorosos;
     pintarConexion();
   }
 
@@ -2544,6 +2542,104 @@
   }
 
   // ---- Historial de cierres (vista del ADMIN) ----
+  // NUEVO v2.3: recepción — el admin confirma que recibió la plata del cierre (movimiento inmutable).
+  function recepcionDe(cierreId){
+    return S.movimientos.find(m=> m.tipo==='recepcion' && m.cierreId===cierreId) || null;
+  }
+  async function confirmarRecepcion(c){
+    const monto = Number($('recMonto').value)||0;
+    const esperado = (typeof c.efectivoReal==='number' && c.efectivoReal!==null ? c.efectivoReal : c.efectivoFinal)||0;
+    const btn=$('recConfirmar'); btn.disabled=true; btn.textContent='Confirmando…';
+    try{
+      await addDoc(collection(db,'empresas',S.empresaId,'movimientos'), {
+        tipo:'recepcion', cierreId:c.id, cobradorId:c.cobradorId, fecha:c.fecha,
+        ts:Date.now(), montoRecibido:monto, diferenciaRecepcion: monto - esperado,
+        recibidoPor:S.uid, creadoEn: serverTimestamp()
+      });
+      toast('Recibido confirmado ✓');
+      detalleCierre(c.id);
+    }catch(e){ btn.disabled=false; btn.textContent='✓ Confirmar recibido'; toast('No se pudo confirmar: '+(e.message||e), true); }
+  }
+
+  // NUEVO v2.3: morosos de toda la cartera, ordenados del peor al menor.
+  function listaMorosos(){
+    const por = new Map();
+    for(const p of S.prestamos){
+      if(p.estado==='pagado') continue;
+      const r = rxResumen(p, movsDe(p.id));
+      if(r.saldo<=0 || r.estado!=='atrasado') continue;
+      const o = por.get(p.clienteId) || { clienteId:p.clienteId, cobradorId:p.cobradorId, cuotas:0, monto:0, saldo:0 };
+      o.cuotas += Math.round(r.cuotasAtraso||0);
+      o.monto  += rxRedondea(Math.min((r.cuotasAtraso||0) * r.cuota, r.saldo));
+      o.saldo  += r.saldo;
+      por.set(p.clienteId, o);
+    }
+    return [...por.values()]
+      .map(o=> ({ ...o, cli: S.clientes.find(c=>c.id===o.clienteId) || { nombre:'Sin nombre' } }))
+      .sort((a,b)=> b.monto - a.monto);
+  }
+  function abrirMorosos(){
+    const lm = listaMorosos();
+    const total = lm.reduce((t,o)=> t+o.monto, 0);
+    const filas = lm.length===0
+      ? `<div class="rx-vacio-mini">Nadie está en mora. Cartera sana. 🎉</div>`
+      : lm.map(o=>`
+        <div class="rx-card" data-moroso="${o.clienteId}">
+          ${avatarHTML(o.cli,'cli',44)}
+          <div class="cuerpo">
+            <div class="nom"><span class="rx-cob-dot" style="background:${colorCobrador(o.cobradorId)}"></span>${escapar(o.cli.nombre||'Sin nombre')}</div>
+            <div class="meta" style="color:var(--peligro);font-weight:600">Debe ${o.cuotas} cuota${o.cuotas===1?'':'s'} · ${pesos(o.monto)}</div>
+          </div>
+          ${o.cli.telefono?`<button class="rx-wa-mini" data-wam="${escapar(o.cli.telefono)}" data-wamn="${escapar(o.cli.nombre||'')}" data-wamc="${o.cuotas}" data-wamm="${o.monto}" title="Cobrarle por WhatsApp">💬</button>`:''}
+        </div>`).join('');
+    abrirHoja(`
+      <h2>Clientes en mora${lm.length>0?` (${lm.length})`:''}</h2>
+      <div class="sub">${lm.length>0?`Vencido total: <b style="color:var(--peligro)">${pesos(total)}</b> · del peor al menor.`:'Así se ve una cartera al día.'}</div>
+      <div class="rx-lista" style="margin-top:14px">${filas}</div>
+      <div class="rx-acciones" style="margin-top:16px"><button class="rx-btn-fant" id="morCerrar">Cerrar</button></div>`);
+    $('morCerrar').onclick = cerrarHoja;
+    document.querySelectorAll('[data-moroso]').forEach(el=> el.onclick = ()=> fichaCliente(el.dataset.moroso));
+    document.querySelectorAll('[data-wam]').forEach(b=> b.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const n = Number(b.dataset.wamc)||0;
+      waAbrir(b.dataset.wam, `Buen día ${primerNombre(b.dataset.wamn||'')}, le saluda ${S.empresaNombre||'su cobrador'}. Presenta ${n} cuota${n===1?'':'s'} en mora por ${pesos(Number(b.dataset.wamm)||0)}. Por favor póngase al día. ¡Gracias!`);
+    }));
+  }
+
+  // NUEVO v2.3: préstamo rápido — el admin elige el cliente y presta al toque.
+  function selectorPrestamoRapido(){
+    let q = '';
+    const pinta = ()=>{
+      const s = sinTildes(q.trim());
+      const qn = s.replace(/\D/g,'');
+      const lista = S.clientes.filter(c=> !s || sinTildes(c.nombre).includes(s) || (qn && String(c.cedula||'').replace(/\D/g,'').includes(qn)));
+      $('prSel').innerHTML = lista.length===0
+        ? `<div class="rx-vacio-mini">Sin coincidencias.</div>`
+        : lista.map(c=>{
+            const act = prestamosDe(c.id).filter(p=>p.estado!=='pagado').length;
+            return `<div class="rx-card" data-pr="${c.id}">
+              ${avatarHTML(c,'cli',40)}
+              <div class="cuerpo"><div class="nom">${escapar(c.nombre||'Sin nombre')}</div>
+              <div class="meta">${act>0?`${act} préstamo${act===1?'':'s'} activo${act===1?'':'s'}`:'Sin préstamo activo'}</div></div>
+              <span class="rx-est ${act>0?'rx-est-pago':'rx-est-ok'}">${act>0?'Ver ficha':'Prestar'}</span>
+            </div>`;
+          }).join('');
+      $('prSel').querySelectorAll('[data-pr]').forEach(el=> el.onclick = ()=>{
+        const c = S.clientes.find(x=>x.id===el.dataset.pr); if(!c) return;
+        prestamosDe(c.id).some(p=>p.estado!=='pagado') ? fichaCliente(c.id) : formPrestamo(c);
+      });
+    };
+    abrirHoja(`
+      <h2>Préstamo rápido</h2>
+      <div class="sub">Elige quién recibe el préstamo. Si ya tiene uno activo, verás su ficha.</div>
+      <input class="rx-buscar" id="prBuscar" type="search" inputmode="search" placeholder="🔍 Nombre o cédula" style="margin-top:12px" />
+      <div class="rx-lista" id="prSel"></div>
+      <div class="rx-acciones" style="margin-top:16px"><button class="rx-btn-fant" id="prCerrar">Cancelar</button></div>`);
+    $('prCerrar').onclick = cerrarHoja;
+    const b = $('prBuscar'); b.oninput = ()=>{ q = b.value; pinta(); };
+    pinta();
+  }
+
   function abrirCierresAdmin(){
     const cierres = S.movimientos.filter(m=> m.tipo==='cierre');
     const porFecha = {};
@@ -2560,7 +2656,7 @@
             <button class="rx-cierre-item" data-cierre="${c.id}" style="border-left:5px solid ${colorCobrador(c.cobradorId)}">
               <div class="izq">
                 <div class="nom"><span class="rx-cob-dot" style="background:${colorCobrador(c.cobradorId)}"></span>${escapar(nombreCobrador(c.cobradorId))}</div>
-                <div class="sub">Efectivo${c.cobradoTransf>0?` · +${pesos(c.cobradoTransf)} transf.`:''}${c.nPendientes>0?` · ${c.nPendientes} sin pagar`:''}</div>
+                <div class="sub">Efectivo${c.cobradoTransf>0?` · +${pesos(c.cobradoTransf)} transf.`:''}${c.nPendientes>0?` · ${c.nPendientes} sin pagar`:''}${recepcionDe(c.id)?` · <b style="color:var(--ok)">✓ recibido</b>`:''}</div>
               </div>
               <div class="der">${pesos(c.efectivoFinal)}</div>
             </button>`).join('');
@@ -2586,6 +2682,7 @@
     if(!c){ toast('No se encontró el cierre.'); return; }
     const totalCobrado = (Number(c.cobradoEfectivo)||0) + (Number(c.cobradoTransf)||0);
     const pend = Array.isArray(c.pendientes) ? c.pendientes : [];
+    const recep = recepcionDe(cierreId);   // NUEVO v2.3
     const pendHTML = pend.length===0
       ? `<div class="hint" style="margin-top:6px">Todos los clientes activos pagaron ese día. 🎉</div>`
       : pend.map(pp=>{
@@ -2615,9 +2712,17 @@
         <div class="r1"><span>📲 Por transferencia</span><span>${pesos(c.cobradoTransf)}</span></div>
         <div class="r2">Ya cayó en tu cuenta. Total cobrado ese día: <b>${pesos(totalCobrado)}</b>.</div>
       </div>`:''}
+      ${recep
+        ? `<div class="rx-banner ok" style="margin-top:16px">✓ <b>Recibido confirmado:</b> ${pesos(recep.montoRecibido)}${(Number(recep.diferenciaRecepcion)||0)!==0?` · ${recep.diferenciaRecepcion>0?'sobraron':'faltaron'} ${pesos(Math.abs(recep.diferenciaRecepcion))}`:''}</div>`
+        : `<div class="rx-form-campo" style="margin-top:18px">
+        <label for="recMonto">¿Cuánto efectivo te entregó?</label>
+        <input class="rx-fin" id="recMonto" type="number" inputmode="numeric" min="0" value="${(typeof c.efectivoReal==='number' && c.efectivoReal!==null ? c.efectivoReal : c.efectivoFinal)||0}" />
+      </div>
+      <button class="rx-btn-prim" id="recConfirmar" style="width:100%">✓ Confirmar recibido</button>
+      <div class="hint" style="margin-top:5px;text-align:center">Cuenta la plata en tu mano y confirma. Cierra el ciclo.</div>`}
       <div class="rx-seccion-titulo" style="margin-top:20px"><span>${pend.length>0?`Quedaron sin pagar (${pend.length})`:'Cobranza del día'}</span></div>
       ${pendHTML}
-      ${(c.fecha===hoyISO() && diaEstaCerrado(c.cobradorId, c.fecha)) ? `
+      ${(c.fecha===hoyISO() && diaEstaCerrado(c.cobradorId, c.fecha) && !recep) ? `
       <button class="rx-btn-fant" id="detReabrir" style="margin-top:18px;width:100%">🔓 Reabrir el día de este cobrador</button>
       <div class="hint" style="margin-top:5px;text-align:center">Podrá registrar de nuevo y deberá cerrar otra vez.</div>` : ''}
       <div class="rx-acciones" style="margin-top:20px">
@@ -2627,6 +2732,7 @@
     document.querySelectorAll('[data-watel]').forEach(b=> b.onclick = ()=>
       waAbrir(b.dataset.watel, `Buen día ${primerNombre(b.dataset.wanom||'')}, le saluda ${S.empresaNombre||'su cobrador'}. Quedó pendiente su cuota del ${c.fecha}. ¡Gracias!`));
     const _dr = $('detReabrir'); if(_dr) _dr.onclick = ()=> reabrirDiaAdmin(c.cobradorId, c.fecha);
+    const _rcf = $('recConfirmar'); if(_rcf) _rcf.onclick = ()=> confirmarRecepcion(c);
   }
 
   function abrirCierreCaja(){ abrirHoja('<div id="cierreBody"></div>'); pintarCierre(); }
@@ -2682,7 +2788,8 @@
         <div class="ic">🔒</div>
         <div class="tx"><b>Día cerrado.</b> Ya entregaste tu cuadre; no puedes cobrar más hoy.${pendientes.length>0?` Quedaron <b>${pendientes.length}</b> sin pagar.`:''}</div>
       </div>
-      <div class="hint" style="margin-top:10px">¿Necesitas registrar algo más? <b>Solo el administrador</b> puede reabrir tu día.</div>` : `
+      <div class="hint" style="margin-top:10px">¿Necesitas registrar algo más? <b>Solo el administrador</b> puede reabrir tu día.</div>
+      ${(()=>{ const uc=S.movimientos.filter(m=>m.tipo==='cierre'&&m.cobradorId===S.uid&&m.fecha===hoyISO()).sort((a,b)=>(a.ts||0)-(b.ts||0)).pop(); const rp=uc?recepcionDe(uc.id):null; return rp?`<div class="rx-banner ok" style="margin-top:12px">✓ El administrador confirmó el recibido: <b>${pesos(rp.montoRecibido)}</b></div>`:''; })()}` : `
       <button class="rx-btn-sellar" id="cierreSellar" style="margin-top:20px">🔒 Cerrar el día</button>
       <div class="hint" style="margin-top:6px;text-align:center">Sella tu jornada y entrega el cuadre al administrador.</div>`) : ''}
       <div class="rx-seccion-titulo" style="margin-top:22px"><span>Días anteriores</span></div>

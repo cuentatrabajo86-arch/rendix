@@ -193,6 +193,8 @@
   .rx-hoycob .nm i{font-style:normal;color:var(--niebla);font-weight:400;font-size:.8em;margin-left:4px}
   .rx-hoycob .mm{font-weight:700;white-space:nowrap}
   .rx-hoycob .mm b{font-weight:600;color:var(--azul-claro);font-size:.82em}
+  .rx-recarga-btn{width:28px;height:28px;border-radius:50%;border:1px solid var(--dorado);background:#fff;color:var(--dorado);font-size:.9rem;line-height:1;cursor:pointer;flex:0 0 auto;margin-left:6px}
+  .rx-verTransf{width:100%;box-sizing:border-box;margin-top:10px;background:#fff;border:1px solid var(--linea);border-radius:12px;padding:11px 14px;font-size:.88rem;font-weight:600;color:var(--azul);cursor:pointer;text-align:left}
   /* NUEVO v1.9: notas y multas */
   .rx-chips{display:flex;flex-wrap:wrap;gap:8px}
   .rx-chip-sel{border:1px solid var(--linea);background:#fff;color:var(--tinta);border-radius:99px;padding:8px 13px;font-size:.86rem;cursor:pointer}
@@ -521,7 +523,7 @@
       <button class="rx-btn" type="submit" id="btnEntrar">Entrar</button>
       <div class="rx-error" id="errLogin" role="alert"></div>
     </form>
-    <div class="rx-firma">Rendix v2.3 · Powered by <b>Iván Jiménez</b></div>
+    <div class="rx-firma">Rendix v2.4 · Powered by <b>Iván Jiménez</b></div>
   </section>
 
   <!-- ===== APP ===== -->
@@ -544,7 +546,7 @@
       </main>
 
       <footer class="rx-pie">
-        <div class="firma">Rendix v2.3 · Powered by <b>Iván Jiménez</b></div>
+        <div class="firma">Rendix v2.4 · Powered by <b>Iván Jiménez</b></div>
       </footer>
     </div>
 
@@ -1227,7 +1229,7 @@
       else if(ap && !cer && d.n===0 && cobConCuotaHoy.has(c.id)) abiertosSinCobro.push(c);
       const est = cer ? '🔒 cerró' : (ap ? '✓ abierto' : '· sin abrir');
       const col = colorCobrador(c.id);
-      return `<div class="rx-hoycob"><span class="rx-cob-dot" style="background:${col}"></span><span class="nm">${escapar(primerNombre(c.nombre||'—'))} <i>${est}</i></span><span class="mm">${pesos(d.ef)}${d.tr>0?` <b>+${pesos(d.tr)} 📲</b>`:''}</span></div>`;
+      return `<div class="rx-hoycob"><span class="rx-cob-dot" style="background:${col}"></span><span class="nm">${escapar(primerNombre(c.nombre||'—'))} <i>${est}</i></span><span class="mm">${pesos(d.ef)}${d.tr>0?` <b>+${pesos(d.tr)} 📲</b>`:''}</span>${!cer?`<button class="rx-recarga-btn" data-rec="${c.id}" title="Recargar base">➕</button>`:''}</div>`;
     }).join('');
     const nombresDots = arr => arr.map(c=>`<span class="rx-cob-dot" style="background:${colorCobrador(c.id)}"></span>${escapar(primerNombre(c.nombre||'—'))}`).join(', ');
 
@@ -1253,7 +1255,9 @@
         ${esperadoHoy>0
           ? `<div class="bar"><i style="width:${pctHoy}%"></i></div><div class="pct">${pctHoy}% de lo esperado hoy</div>`
           : `<div class="pct">Hoy no hay cuotas programadas.</div>`}
+        ${(()=>{const th=cobrosHoy.filter(m=>m.metodo==='transferencia').reduce((t,m)=>t+(Number(m.monto)||0),0);return th>0?`<div class="pct">Efectivo ${pesos(realHoy-th)} · 📲 Transferencias ${pesos(th)}</div>`:'';})()}
       </div>
+      ${(()=>{const ct=cobrosHoy.filter(m=>m.metodo==='transferencia');return ct.length>0?`<button class="rx-verTransf" id="verTransfHoy">📲 Ver las ${ct.length} transferencia${ct.length===1?'':'s'} de hoy ›</button>`:'';})()}
       <button id="chipsMora" style="all:unset;display:block;width:100%;cursor:pointer">
       <div class="rx-info">
         <div class="rx-chip ${clientesMora.size>0?'mora':''}"><div class="k">Clientes en mora ${clientesMora.size>0?'›':''}</div><div class="v">${clientesMora.size}</div></div>
@@ -1280,6 +1284,8 @@
     const _mmo=$('modMorosos'); if(_mmo) _mmo.onclick = abrirMorosos;
     const _mpr=$('modPrestamoRapido'); if(_mpr) _mpr.onclick = selectorPrestamoRapido;
     const _chm=$('chipsMora'); if(_chm) _chm.onclick = abrirMorosos;
+    const _vt=$('verTransfHoy'); if(_vt) _vt.onclick = abrirTransferenciasHoy;
+    $('tabInicio').querySelectorAll('[data-rec]').forEach(b=> b.onclick = ()=> abrirRecarga(b.dataset.rec));
     pintarConexion();
   }
 
@@ -1331,7 +1337,7 @@
       ${cerrado
         ? `<div class="rx-banner ok" style="margin-top:22px"><span>🔒 Cerraste tu día. Vuelve mañana para una nueva jornada.</span></div>`
         : (abierto
-          ? `<div class="rx-banner ok" style="margin-top:22px"><span>✓ Día abierto con base <b>${pesos(baseHoy)}</b>. Toca <b>Cobrar</b> para tu jornada.</span></div>`
+          ? `<div class="rx-banner ok" style="margin-top:22px"><span>✓ Día abierto con base <b>${pesos(baseHoy)}</b>${(()=>{const rh=S.movimientos.filter(m=>m.tipo==='recarga'&&m.cobradorId===S.uid&&m.fecha===hoy).reduce((t,m)=>t+(Number(m.monto)||0),0);return rh>0?` + recarga <b>${pesos(rh)}</b>`:'';})()}. Toca <b>Cobrar</b> para tu jornada.</span></div>`
           : `<button class="rx-btn-sellar" id="cobAbrirDia" style="margin-top:22px">🌅 Abrir el día</button>
              <div class="hint" style="margin-top:6px;text-align:center">Confirma tu base para empezar a cobrar.</div>`)}`;
     $('tabInicio').querySelectorAll('[data-ir]').forEach(b=> b.onclick=()=>irATab(b.dataset.ir));
@@ -2380,6 +2386,9 @@
   function calcularCierre(hoy){
     const base = baseDelDia(S.uid, hoy);
     const movs = S.movimientos;
+    // NUEVO v2.4: recargas de base — efectivo extra que el admin le entregó durante el día.
+    const recargas = movs.filter(m=> m.tipo==='recarga' && m.cobradorId===S.uid && m.fecha===hoy)
+                         .reduce((t,m)=> t+(Number(m.monto)||0), 0);
     // Los cobros de liquidación por renovación (renovacion:true) NO son cobranza real;
     // se compensan descontando el saldo viejo del desembolso nuevo, así que se excluyen.
     const cobrosHoy = movs.filter(m=> m.tipo==='cobro' && m.fecha===hoy && !m.renovacion);
@@ -2396,7 +2405,7 @@
     }, 0);
     const papeleriaHoy = S.prestamos.filter(p=> p.fechaInicio===hoy).reduce((t,p)=> t+(Number(p.papeleria)||0), 0);
     const entregado = prestadoHoy - papeleriaHoy;
-    const efectivoFinal = base + cobradoEfectivo - entregado;
+    const efectivoFinal = base + recargas + cobradoEfectivo - entregado;
     const pendientes = [];
     for(const p of S.prestamos){
       if(p.estado==='pagado') continue;
@@ -2413,7 +2422,7 @@
         pendientes.push({ nombre: cli.nombre||'Sin nombre', saldo: r.saldo, clienteId: p.clienteId||'', telefono: cli.telefono||'' });
       }
     }
-    return { base, cobrosHoy, cobrosTransf, desembHoy, cobradoTransf, totalCobrado, cobradoEfectivo, entregado, papeleriaHoy, efectivoFinal, pendientes };
+    return { base, recargas, cobrosHoy, cobrosTransf, desembHoy, cobradoTransf, totalCobrado, cobradoEfectivo, entregado, papeleriaHoy, efectivoFinal, pendientes };
   }
 
   // Estado del día (DERIVADO): cerrado si el último evento del día es 'cierre'.
@@ -2478,7 +2487,7 @@
       <div class="sub">Cuenta tu efectivo físico y confírmalo.</div>
       <div class="rx-conteo">
         <div class="esperado"><span>Efectivo esperado</span><b>${pesos(c.efectivoFinal)}</b></div>
-        ${c.efectivoFinal<0?`<div class="rx-conteo-dif falta" style="display:block;margin:6px 0 10px">⚠️ Esperado en negativo: entregaste en préstamos (${pesos(c.entregado)}) más de lo que tenías en caja (base ${pesos(c.base)} + cobrado ${pesos(c.cobradoEfectivo)}). Si el administrador te recargó base durante el día, dilo al cerrar.</div>`:''}
+        ${c.efectivoFinal<0?`<div class="rx-conteo-dif falta" style="display:block;margin:6px 0 10px">⚠️ Esperado en negativo: pusiste ${pesos(Math.abs(c.efectivoFinal))} de tu bolsillo (entregaste ${pesos(c.entregado)} teniendo base ${pesos(c.base)}${c.recargas>0?` + recargas ${pesos(c.recargas)}`:''} + cobrado ${pesos(c.cobradoEfectivo)}). Pídele al administrador que registre la <b>recarga</b> si te dio plata hoy.</div>`:''}
         <label for="conteoReal">¿Cuánto efectivo tienes en la mano?</label>
         <input class="rx-fin" id="conteoReal" type="number" inputmode="numeric" min="0" placeholder="Cuenta los billetes y escribe el total" />
         <div class="rx-conteo-dif" id="conteoDif" style="display:none"></div>
@@ -2515,7 +2524,7 @@
       await addDoc(collection(db,'empresas',S.empresaId,'movimientos'), {
         tipo:'cierre', fecha:hoy, cobradorId:S.uid, ts:Date.now(),
         rutaId: S.perfil?.rutaId || '',
-        base: c.base, cobradoEfectivo: c.cobradoEfectivo, cobradoTransf: c.cobradoTransf,
+        base: c.base, recargas: c.recargas||0, cobradoEfectivo: c.cobradoEfectivo, cobradoTransf: c.cobradoTransf,
         totalCobrado: c.totalCobrado, entregado: c.entregado, efectivoFinal: c.efectivoFinal,
         ...(sinContar ? {} : { efectivoReal, diferencia }),
         nPendientes: c.pendientes.length, pendientes: c.pendientes,
@@ -2548,7 +2557,7 @@
   }
   async function confirmarRecepcion(c){
     const monto = Number($('recMonto').value)||0;
-    const esperado = (typeof c.efectivoReal==='number' && c.efectivoReal!==null ? c.efectivoReal : c.efectivoFinal)||0;
+    const esperado = Math.max(0, (typeof c.efectivoReal==='number' && c.efectivoReal!==null ? c.efectivoReal : c.efectivoFinal)||0);
     const btn=$('recConfirmar'); btn.disabled=true; btn.textContent='Confirmando…';
     try{
       await addDoc(collection(db,'empresas',S.empresaId,'movimientos'), {
@@ -2640,6 +2649,81 @@
     pinta();
   }
 
+  // NUEVO v2.4: recarga de base — el admin registra el efectivo extra que le da al cobrador a mitad del día.
+  function abrirRecarga(cobradorId){
+    const hoy = hoyISO();
+    if(diaEstaCerrado(cobradorId, hoy)){ toast('Ese cobrador ya cerró su día. La recarga aplica solo con el día abierto.', true); return; }
+    abrirHoja(`
+      <h2>Recargar base</h2>
+      <div class="sub">${escapar(nombreCobrador(cobradorId))} · queda como movimiento sellado y suma a su caja de hoy.</div>
+      <div class="rx-form-err" id="recErr"></div>
+      <div class="rx-form-campo" style="margin-top:12px">
+        <label for="recargaMonto">¿Cuánto efectivo le entregaste?</label>
+        <input class="rx-fin" id="recargaMonto" type="number" inputmode="numeric" min="1" placeholder="Ej: 50000" />
+      </div>
+      <div class="rx-form-campo">
+        <label for="recargaNota">Nota (opcional)</label>
+        <input class="rx-fin" id="recargaNota" type="text" maxlength="80" placeholder="Ej: para los préstamos de la tarde" />
+      </div>
+      <div class="rx-acciones" style="margin-top:16px">
+        <button class="rx-btn-prim" id="recargaGuardar">➕ Registrar recarga</button>
+        <button class="rx-btn-fant" id="recargaCancelar">Cancelar</button>
+      </div>`);
+    $('recargaCancelar').onclick = cerrarHoja;
+    $('recargaGuardar').onclick = async ()=>{
+      const monto = Number($('recargaMonto').value)||0;
+      if(monto<=0) return valErr('recErr','Escribe cuánto efectivo le entregaste.');
+      const btn=$('recargaGuardar'); btn.disabled=true; btn.textContent='Registrando…';
+      try{
+        await addDoc(collection(db,'empresas',S.empresaId,'movimientos'), {
+          tipo:'recarga', cobradorId, fecha:hoy, ts:Date.now(),
+          monto, nota: $('recargaNota').value.trim(), entregadoPor:S.uid,
+          creadoEn: serverTimestamp()
+        });
+        cerrarHoja(); toast('Recarga registrada ➕ Su caja ya la refleja.');
+      }catch(e){ btn.disabled=false; btn.textContent='➕ Registrar recarga'; valErr('recErr','No se pudo registrar: '+(e.message||e)); }
+    };
+  }
+
+  // NUEVO v2.4: transferencias del día — para conciliar tu Nequi/cuenta contra la app.
+  function abrirTransferenciasHoy(){
+    const hoy = hoyISO();
+    const trs = S.movimientos
+      .filter(m=> m.tipo==='cobro' && m.fecha===hoy && m.metodo==='transferencia' && !m.renovacion)
+      .sort((a,b)=> (b.ts||0)-(a.ts||0));
+    const total = trs.reduce((t,m)=> t+(Number(m.monto)||0), 0);
+    const filas = trs.length===0
+      ? `<div class="rx-vacio-mini">Hoy no han entrado transferencias.</div>`
+      : trs.map(m=>{
+          const cli = S.clientes.find(x=> x.id===m.clienteId) || { nombre:'Cliente' };
+          return `<div class="rx-card" style="cursor:${m.comprobante?'pointer':'default'}" ${m.comprobante?`data-comp="${m.id}"`:''}>
+            <div class="cuerpo">
+              <div class="nom"><span class="rx-cob-dot" style="background:${colorCobrador(m.cobradorId)}"></span>${escapar(cli.nombre||'Cliente')}</div>
+              <div class="meta">${escapar(m.destino||'Transferencia')} · ${escapar(primerNombre(nombreCobrador(m.cobradorId)))}${m.comprobante?' · 📎 comprobante':''}</div>
+            </div>
+            <span class="rx-est rx-est-ok">${pesos(m.monto)}</span>
+          </div>`;
+        }).join('');
+    abrirHoja(`
+      <h2>📲 Transferencias de hoy${trs.length>0?` (${trs.length})`:''}</h2>
+      <div class="sub">${trs.length>0?`Total en tu cuenta: <b>${pesos(total)}</b> · compáralo con tu app bancaria.`:'Cuando un cobrador registre un pago por transferencia, aparece aquí.'}</div>
+      <div class="rx-lista" style="margin-top:14px">${filas}</div>
+      <div class="rx-acciones" style="margin-top:16px"><button class="rx-btn-fant" id="trCerrar">Cerrar</button></div>`);
+    $('trCerrar').onclick = cerrarHoja;
+    document.querySelectorAll('[data-comp]').forEach(el=> el.onclick = ()=> verComprobante(el.dataset.comp));
+  }
+  function verComprobante(movId){
+    const m = S.movimientos.find(x=> x.id===movId);
+    if(!m || !m.comprobante){ toast('Este pago no tiene comprobante adjunto.'); return; }
+    const cli = S.clientes.find(x=> x.id===m.clienteId) || { nombre:'Cliente' };
+    abrirHoja(`
+      <h2>Comprobante</h2>
+      <div class="sub">${escapar(cli.nombre||'Cliente')} · ${pesos(m.monto)} · ${escapar(m.destino||'Transferencia')} · ${escapar(m.fecha||'')}</div>
+      <img src="${m.comprobante}" alt="Comprobante" style="width:100%;border-radius:12px;margin-top:12px;border:1px solid var(--linea)" />
+      <div class="rx-acciones" style="margin-top:16px"><button class="rx-btn-fant" id="compVolver">← Volver</button></div>`);
+    $('compVolver').onclick = abrirTransferenciasHoy;
+  }
+
   function abrirCierresAdmin(){
     const cierres = S.movimientos.filter(m=> m.tipo==='cierre');
     const porFecha = {};
@@ -2695,6 +2779,7 @@
       <div class="sub">Cierre del ${c.fecha}</div>
       <div class="rx-cuadre">
         <div class="fila"><span>Base del día</span><span>${pesos(c.base)}</span></div>
+        ${(Number(c.recargas)||0)>0?`<div class="fila pos"><span>+ Recarga de base</span><span>${pesos(c.recargas)}</span></div>`:''}
         <div class="fila pos"><span>+ Cobrado en efectivo</span><span>${pesos(c.cobradoEfectivo)}</span></div>
         <div class="fila neg"><span>− Entregado en préstamos</span><span>${pesos(c.entregado)}</span></div>
         <div class="fila total"><span>Efectivo entregado</span><span>${pesos(c.efectivoFinal)}</span></div>
@@ -2712,11 +2797,12 @@
         <div class="r1"><span>📲 Por transferencia</span><span>${pesos(c.cobradoTransf)}</span></div>
         <div class="r2">Ya cayó en tu cuenta. Total cobrado ese día: <b>${pesos(totalCobrado)}</b>.</div>
       </div>`:''}
+      ${(c.efectivoFinal<0 && !recep)?`<div class="rx-conteo-dif falta" style="display:block;margin-top:14px">⚠️ Este día quedó en <b>${pesos(c.efectivoFinal)}</b>: el cobrador puso plata de su bolsillo, o le diste una recarga que no quedó registrada. Puedes registrarla en <b>Inicio → Hoy por cobrador → ➕</b> (solo si el día sigue abierto) o saldar la diferencia con él.</div>`:''}
       ${recep
         ? `<div class="rx-banner ok" style="margin-top:16px">✓ <b>Recibido confirmado:</b> ${pesos(recep.montoRecibido)}${(Number(recep.diferenciaRecepcion)||0)!==0?` · ${recep.diferenciaRecepcion>0?'sobraron':'faltaron'} ${pesos(Math.abs(recep.diferenciaRecepcion))}`:''}</div>`
         : `<div class="rx-form-campo" style="margin-top:18px">
         <label for="recMonto">¿Cuánto efectivo te entregó?</label>
-        <input class="rx-fin" id="recMonto" type="number" inputmode="numeric" min="0" value="${(typeof c.efectivoReal==='number' && c.efectivoReal!==null ? c.efectivoReal : c.efectivoFinal)||0}" />
+        <input class="rx-fin" id="recMonto" type="number" inputmode="numeric" min="0" value="${Math.max(0,(typeof c.efectivoReal==='number' && c.efectivoReal!==null ? c.efectivoReal : c.efectivoFinal)||0)}" />
       </div>
       <button class="rx-btn-prim" id="recConfirmar" style="width:100%">✓ Confirmar recibido</button>
       <div class="hint" style="margin-top:5px;text-align:center">Cuenta la plata en tu mano y confirma. Cierra el ciclo.</div>`}
@@ -2741,7 +2827,7 @@
     const hoy = hoyISO();
     const c = calcularCierre(hoy);
     const movs = S.movimientos;
-    const { base, cobrosTransf, desembHoy, cobradoTransf, totalCobrado, cobradoEfectivo, entregado, papeleriaHoy, efectivoFinal, pendientes } = c;
+    const { base, recargas, cobrosTransf, desembHoy, cobradoTransf, totalCobrado, cobradoEfectivo, entregado, papeleriaHoy, efectivoFinal, pendientes } = c;
     const nEfectivo = c.cobrosHoy.length - cobrosTransf.length;
     const entregadoHoy = entregado, efectivoCaja = efectivoFinal, cobradoHoy = totalCobrado;
     const cerrado = diaEstaCerrado(S.uid, hoy);
@@ -2772,12 +2858,15 @@
       <div class="sub">${hoy} · ${ruta}</div>
       <div class="rx-cuadre">
         <div class="fila"><span>Base del día</span><span>${pesos(base)}</span></div>
+        ${recargas>0?`<div class="fila pos"><span>+ Recarga de base</span><span>${pesos(recargas)}</span></div>`:''}
         <div class="fila pos"><span>+ Cobrado en efectivo (${nEfectivo})</span><span>${pesos(cobradoEfectivo)}</span></div>
         <div class="fila neg"><span>− Entregado en préstamos (${desembHoy.length})</span><span>${pesos(entregadoHoy)}</span></div>
         ${papeleriaHoy>0?`<div class="fila nota"><span>Papelería retenida (ganancia)</span><span>${pesos(papeleriaHoy)}</span></div>`:''}
-        <div class="fila total"><span>Efectivo a entregar</span><span>${pesos(efectivoCaja)}</span></div>
+        <div class="fila total"><span>Efectivo a entregar</span><span style="${efectivoCaja<0?'color:var(--peligro)':''}">${pesos(efectivoCaja)}</span></div>
       </div>
-      <div class="hint" style="margin-top:4px">Este es el efectivo <b>físico</b> que le entregas al administrador.</div>
+      ${efectivoCaja<0
+        ? `<div class="rx-conteo-dif falta" style="display:block;margin-top:8px">⚠️ Quedaste en negativo: pusiste <b>${pesos(Math.abs(efectivoCaja))}</b> de tu bolsillo. Si el administrador te dio plata durante el día, pídele que registre la <b>recarga de base</b> para que tu caja cuadre.</div>`
+        : `<div class="hint" style="margin-top:4px">Este es el efectivo <b>físico</b> que le entregas al administrador.</div>`}
       ${cobradoTransf>0?`
       <div class="rx-transf-resumen">
         <div class="r1"><span>📲 Por transferencia (${cobrosTransf.length})</span><span>${pesos(cobradoTransf)}</span></div>

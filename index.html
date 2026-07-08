@@ -523,7 +523,7 @@
       <button class="rx-btn" type="submit" id="btnEntrar">Entrar</button>
       <div class="rx-error" id="errLogin" role="alert"></div>
     </form>
-    <div class="rx-firma">Rendix v2.4 · Powered by <b>Iván Jiménez</b></div>
+    <div class="rx-firma">Rendix v2.5 · Powered by <b>Iván Jiménez</b></div>
   </section>
 
   <!-- ===== APP ===== -->
@@ -546,7 +546,7 @@
       </main>
 
       <footer class="rx-pie">
-        <div class="firma">Rendix v2.4 · Powered by <b>Iván Jiménez</b></div>
+        <div class="firma">Rendix v2.5 · Powered by <b>Iván Jiménez</b></div>
       </footer>
     </div>
 
@@ -1310,7 +1310,7 @@
     const hoy = hoyISO();
     const abierto = !!aperturaDelDia(S.uid, hoy);
     const cerrado = diaEstaCerrado(S.uid, hoy);
-    const baseHoy = baseDelDia(S.uid, hoy);
+    const baseHoy = baseDelDia(S.uid, hoy);   // v2.5: sin apertura = 0, nada heredado
     const base = abierto ? pesos(baseHoy) : 'Abre tu día';
     const miCartera = S.prestamos.filter(p=>p.estado!=='pagado')
       .reduce((t,p)=> t + saldoPrestamo(p), 0);
@@ -1370,7 +1370,7 @@
             ${avatarHTML(c,'')}
             <div class="cuerpo">
               <div class="nom"><span class="rx-cob-dot" style="background:${col}"></span>${escapar(c.nombre||'Sin nombre')}</div>
-              <div class="meta">${escapar(r)} · base ${pesos(c.baseAsignada)}</div>
+              <div class="meta">${escapar(r)}</div>
             </div>
             ${est}
           </div>`;
@@ -1422,8 +1422,7 @@
         ${S.rutas.length===0 ? '<div class="hint">No tienes rutas aún. Puedes crearla luego y asignarla.</div>' : ''}
       </div>
       <div class="rx-form-campo">
-        <label for="cobBase">Base del día (efectivo asignado)</label>
-        <input class="rx-fin" id="cobBase" type="number" inputmode="numeric" min="0" placeholder="0" value="${editar?(cob.baseAsignada??''):''}" />
+        <!-- v2.5: la base ya no vive en el perfil; cada día se declara al abrir la jornada -->
         <div class="hint">Cuánto efectivo arranca cargando. Se usa en el cierre (Etapa 4).</div>
       </div>
       <div class="rx-acciones">
@@ -1443,7 +1442,6 @@
     const correo = $('cobCorreo').value.trim();
     const clave  = $('cobClave').value;
     const rutaId = $('cobRuta').value;
-    const base   = $('cobBase').value === '' ? 0 : Number($('cobBase').value);
     $('cobErr').classList.remove('visible');
 
     if(!nombre) return valErr('cobErr','Escribe el nombre del cobrador.');
@@ -1466,7 +1464,7 @@
       const lote = writeBatch(db);
       lote.set(doc(db, 'usuariosGlobal', uid), { empresaId:S.empresaId, rol:'cobrador', bloqueado:false });
       lote.set(doc(db, 'empresas', S.empresaId, 'usuarios', uid), {
-        nombre, correo, foto:_fotoTmp, rol:'cobrador', rutaId: rutaId||'', baseAsignada: base,
+        nombre, correo, foto:_fotoTmp, rol:'cobrador', rutaId: rutaId||'',
         bloqueado:false, creadoEn: serverTimestamp()
       });
       if(rutaId) lote.update(doc(db, 'empresas', S.empresaId, 'rutas', rutaId), { cobradorId: uid });
@@ -1487,7 +1485,6 @@
   async function guardarEdicionCobrador(cob){
     const nombre = $('cobNombre').value.trim();
     const rutaId = $('cobRuta').value;
-    const base   = $('cobBase').value === '' ? 0 : Number($('cobBase').value);
     $('cobErr').classList.remove('visible');
     if(!nombre) return valErr('cobErr','El nombre no puede quedar vacío.');
     if(!_fotoTmp) return valErr('cobErr','La foto del cobrador es obligatoria.');
@@ -1495,7 +1492,7 @@
     const btn = $('cobGuardar'); btn.disabled = true; btn.textContent = 'Guardando…';
     try {
       const lote = writeBatch(db);
-      lote.update(doc(db, 'empresas', S.empresaId, 'usuarios', cob.id), { nombre, foto:_fotoTmp, rutaId: rutaId||'', baseAsignada: base });
+      lote.update(doc(db, 'empresas', S.empresaId, 'usuarios', cob.id), { nombre, foto:_fotoTmp, rutaId: rutaId||'' });
       if((cob.rutaId||'') !== (rutaId||'')){
         if(cob.rutaId) lote.update(doc(db,'empresas',S.empresaId,'rutas',cob.rutaId), { cobradorId:'' });
         if(rutaId)     lote.update(doc(db,'empresas',S.empresaId,'rutas',rutaId),     { cobradorId: cob.id });
@@ -1545,7 +1542,7 @@
       </div>
       <div class="rx-detalle-fila"><span class="et">Correo</span><span class="va">${escapar(c.correo||'—')}</span></div>
       <div class="rx-detalle-fila"><span class="et">Ruta</span><span class="va">${escapar(r)}</span></div>
-      <div class="rx-detalle-fila"><span class="et">Base del día</span><span class="va">${pesos(c.baseAsignada)}</span></div>
+      <div class="rx-detalle-fila"><span class="et">Base del día</span><span class="va">Se declara al abrir cada jornada</span></div>
       <div class="rx-ficha-sub"><span>Sus clientes</span></div>
       ${listaCli}
       <div class="rx-acciones" style="margin-top:18px">
@@ -2219,6 +2216,7 @@
       return (a.cli.nombre||'').localeCompare(b.cli.nombre||'');
     });
 
+    const abierto = !!aperturaDelDia(S.uid, hoy);   // v2.5: jornada obligatoria
     const pendientes = filas.filter(f=> !f.pagoHoy && (f.tocaHoy || f.r.estado==='atrasado')).length;
     const cuandoTxt = d => d===1 ? 'mañana' : new Date(rxFecha(hoy).getTime()+d*86400000).toLocaleDateString('es-CO',{weekday:'short', day:'numeric', timeZone:'UTC'});
     // NUEVO v2.0: filtros rápidos (los conteos salen de la lista completa)
@@ -2237,7 +2235,7 @@
       : (filtradas.length===0
         ? `<div class="rx-cobro-vacio">Ningún cliente en este filtro.</div>`
         : filtradas.map(f=>`
-          <div class="rx-cobro-row ${f.pagoHoy?'pago':''} ${cerrado?'bloq':''}" data-cobrar="${f.p.id}">
+          <div class="rx-cobro-row ${f.pagoHoy?'pago':''} ${(cerrado||!abierto)?'bloq':''}" data-cobrar="${f.p.id}">
             ${avatarHTML(f.cli,'cli',44)}
             <div class="info">
               <div class="nom">${escapar(f.cli.nombre||'Sin nombre')}${f.pagoHoy?'<span class="ok-hoy">✓ hoy</span>':''}${f.notaHoy?'<span class="nota-hoy">📝</span>':''}</div>
@@ -2269,12 +2267,14 @@
         <button class="rx-chip-sel ${_fCobro==='aldia'?'activa':''}" data-f="aldia">Al día (${nAldia})</button>
         <button class="rx-chip-sel ${_fCobro==='hoy'?'activa':''}" data-f="hoy">✓ Hoy (${nHoy})</button>
       </div>
-      ${cerrado?`<div class="rx-aviso-cerrado">🔒 Día cerrado. Solo el administrador puede reabrirlo.</div>`:''}
+      ${cerrado?`<div class="rx-aviso-cerrado">🔒 Día cerrado. Solo el administrador puede reabrirlo.</div>`
+        :(!abierto?`<div class="rx-aviso-cerrado" style="background:rgba(201,162,39,.12);color:#7a5f10;border-color:rgba(201,162,39,.35)">🌅 Abre tu día para empezar a cobrar. <button class="rx-mini" id="planillaAbrir" style="margin-left:8px">Abrir el día</button></div>`:'')}
       ${lista}`;
 
     $('tabCobrar').querySelectorAll('[data-cobrar]').forEach(row=>{
       row.onclick = ()=>{
         if(cerrado){ toast('El día está cerrado. Pídele al administrador que lo reabra.'); return; }
+        if(!abierto){ toast('Primero abre tu día.'); abrirElDia(); return; }
         const p = S.prestamos.find(x=>x.id===row.dataset.cobrar); if(!p) return;
         const r = rxResumen(p, movsDe(p.id));
         const cli = S.clientes.find(c=>c.id===p.clienteId) || { nombre:p.clienteNombre, telefono:'' };
@@ -2283,6 +2283,7 @@
         formCobro(p, r, cli);
       };
     });
+    const _pa=$('planillaAbrir'); if(_pa) _pa.onclick = abrirElDia;
     const _cf=$('cobFiltros'); if(_cf) _cf.querySelectorAll('[data-f]').forEach(b=>{
       b.onclick = ()=>{ _fCobro = b.dataset.f; renderCobrarDia(); };
     });
@@ -2290,6 +2291,7 @@
       btn.addEventListener('click', (e)=>{
         e.stopPropagation();
         if(cerrado){ toast('El día está cerrado. Pídele al administrador que lo reabra.'); return; }
+        if(!abierto){ toast('Primero abre tu día.'); abrirElDia(); return; }
         const p = S.prestamos.find(x=>x.id===btn.dataset.nota); if(!p) return;
         const cli = S.clientes.find(c=>c.id===p.clienteId) || { nombre:p.clienteNombre };
         formNota(p, cli);
@@ -2443,31 +2445,31 @@
   }
   // Base del día: la de la apertura si existe; si no, la base configurada del cobrador (fallback).
   function baseDelDia(cobradorId, fecha){
+    // v2.5: la base es DEL DÍA. Sin apertura no hay base — nada se hereda de otros días.
     const ap = aperturaDelDia(cobradorId, fecha);
-    if(ap) return Number(ap.base)||0;
-    if(cobradorId===S.uid) return Number(S.perfil?.baseAsignada)||0;
-    const cob = S.cobradores.find(c=>c.id===cobradorId);
-    return cob ? (Number(cob.baseAsignada)||0) : 0;
+    return ap ? (Number(ap.base)||0) : 0;
   }
 
   function abrirElDia(){
     const hoy = hoyISO();
-    const sugerida = Number(S.perfil?.baseAsignada)||0;
     abrirHoja(`
       <h2>Abrir el día</h2>
-      <div class="sub">Confirma con cuánto efectivo arrancas hoy.</div>
+      <div class="sub">Escribe con cuánto efectivo arrancas HOY.</div>
+      <div class="rx-form-err" id="aperturaErr"></div>
       <div class="rx-form-campo" style="margin-top:14px">
-        <label for="aperturaBase">Base del día (efectivo inicial)</label>
-        <input class="rx-fin" id="aperturaBase" type="number" inputmode="numeric" min="0" placeholder="0" value="${sugerida||''}" />
+        <label for="aperturaBase">Base de hoy (efectivo que recibiste)</label>
+        <input class="rx-fin" id="aperturaBase" type="number" inputmode="numeric" min="0" placeholder="Ej: 120000" />
       </div>
-      <div class="hint">Es la plata que te entregó el administrador para arrancar la jornada.</div>
+      <div class="hint">La que te entregó el administrador <b>hoy</b>. Si hoy no te dio base, escribe 0.</div>
       <div class="rx-acciones" style="margin-top:18px">
         <button class="rx-btn-prim" id="aperturaConfirmar">Abrir el día</button>
         <button class="rx-btn-fant" id="aperturaCancelar">Cancelar</button>
       </div>`);
     $('aperturaCancelar').onclick = cerrarHoja;
     $('aperturaConfirmar').onclick = async ()=>{
-      const base = Number($('aperturaBase').value)||0;
+      const v = $('aperturaBase').value;
+      if(v===''){ return valErr('aperturaErr','Escribe la base de hoy. Si no recibiste, pon 0.'); }
+      const base = Number(v)||0;
       const btn=$('aperturaConfirmar'); btn.disabled=true; btn.textContent='Abriendo…';
       try{
         await addDoc(collection(db,'empresas',S.empresaId,'movimientos'), {
@@ -2832,6 +2834,15 @@
     const entregadoHoy = entregado, efectivoCaja = efectivoFinal, cobradoHoy = totalCobrado;
     const cerrado = diaEstaCerrado(S.uid, hoy);
     const esCobrador = S.rol !== 'admin';
+    if(esCobrador && !cerrado && !aperturaDelDia(S.uid, hoy)){
+      cont.innerHTML = `
+        <div class="rx-vacio" style="padding:26px 12px"><div class="ico">🌅</div>
+          <h3>Aún no abres tu día</h3>
+          <p>Confirma tu base de hoy para arrancar. Sin apertura no hay caja que cerrar.</p>
+          <button class="rx-btn-prim" style="max-width:240px;margin:0 auto" id="cierreAbrirDia">🌅 Abrir el día</button></div>`;
+      $('cierreAbrirDia').onclick = abrirElDia;
+      return;
+    }
 
     // histórico por fecha (sin hoy)
     const porDia = {};
@@ -2997,7 +3008,8 @@
     if(monto>saldo)  return valErr('cobroErr',`El abono no puede superar el saldo de ${pesos(saldo)}.`);
     const esLiq = monto===saldo, esMult = cuota>0 && monto%cuota===0;
     if(!esLiq && !esMult) return valErr('cobroErr',`El abono debe ser múltiplo de la cuota (${pesos(cuota)}) o el saldo total (${pesos(saldo)}).`);
-    if(S.rol!=='admin' && diaEstaCerrado(S.uid, hoyISO())) return valErr('cobroErr','El día está cerrado. Reábrelo desde el Cierre de caja para registrar este pago.');
+    if(S.rol!=='admin' && diaEstaCerrado(S.uid, hoyISO())) return valErr('cobroErr','El día está cerrado. Pídele al administrador que lo reabra.');
+    if(S.rol!=='admin' && !aperturaDelDia(S.uid, hoyISO())) return valErr('cobroErr','Abre tu día antes de registrar cobros (Inicio → 🌅 Abrir el día).');
 
     const cobradorId = p.cobradorId || (S.rol!=='admin' ? S.uid : '');
     if(!cobradorId) return valErr('cobroErr','El préstamo no tiene cobrador asignado.');

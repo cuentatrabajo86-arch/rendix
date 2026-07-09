@@ -195,6 +195,28 @@
   .rx-hoycob .mm b{font-weight:600;color:var(--azul-claro);font-size:.82em}
   .rx-recarga-btn{width:28px;height:28px;border-radius:50%;border:1px solid var(--dorado);background:#fff;color:var(--dorado);font-size:.9rem;line-height:1;cursor:pointer;flex:0 0 auto;margin-left:6px}
   .rx-verTransf{width:100%;box-sizing:border-box;margin-top:10px;background:#fff;border:1px solid var(--linea);border-radius:12px;padding:11px 14px;font-size:.88rem;font-weight:600;color:var(--azul);cursor:pointer;text-align:left}
+  /* NUEVO v2.7: informes */
+  .rx-rep-cards{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+  .rx-rep-card{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:10px 12px}
+  .rx-rep-card .k{font-size:.72rem;color:var(--niebla);letter-spacing:.02em}
+  .rx-rep-card .v{font-size:1.02rem;font-weight:800;color:var(--tinta);margin-top:2px}
+  .rx-rep-card.oro .v{color:#8a6a10}
+  .rx-rep-card.azul{background:linear-gradient(135deg,var(--azul-profundo),var(--azul-claro));border:none}
+  .rx-rep-card.azul .k{color:rgba(255,255,255,.8)} .rx-rep-card.azul .v{color:#fff}
+  .rx-rep-canvas{width:100%;height:190px;display:block;margin-top:14px;background:#fff;border:1px solid var(--linea);border-radius:12px}
+  .rx-repcob{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:11px 13px;margin-top:8px}
+  .rx-repcob .l1{display:flex;align-items:center;gap:7px;font-weight:700;color:var(--tinta)}
+  .rx-repcob .l2{font-size:.8rem;color:var(--niebla);margin-top:4px;line-height:1.5}
+  .rx-repcob .l2 b{color:var(--tinta)}
+  /* NUEVO v2.8: verificación de entregas */
+  .rx-entrega{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:12px 13px;margin-top:8px}
+  .rx-entrega .l1{display:flex;align-items:center;gap:7px;font-weight:700;color:var(--tinta)}
+  .rx-entrega .l1 .neto{margin-left:auto;color:var(--ok);white-space:nowrap}
+  .rx-entrega .l2{font-size:.8rem;color:var(--niebla);margin-top:4px;line-height:1.5}
+  .rx-entrega .acc{display:flex;gap:8px;margin-top:9px;align-items:center}
+  .rx-tel-mini{border:none;background:#EDF1F8;color:var(--azul);border-radius:8px;padding:6px 10px;font-size:.82rem;font-weight:600;cursor:pointer;text-decoration:none}
+  .rx-veri-btn{border:none;background:var(--azul-profundo);color:#fff;border-radius:8px;padding:6px 12px;font-size:.82rem;font-weight:700;cursor:pointer;margin-left:auto}
+  .rx-veri-ok{margin-left:auto;color:var(--ok);font-weight:700;font-size:.84rem}
   /* NUEVO v1.9: notas y multas */
   .rx-chips{display:flex;flex-wrap:wrap;gap:8px}
   .rx-chip-sel{border:1px solid var(--linea);background:#fff;color:var(--tinta);border-radius:99px;padding:8px 13px;font-size:.86rem;cursor:pointer}
@@ -523,7 +545,7 @@
       <button class="rx-btn" type="submit" id="btnEntrar">Entrar</button>
       <div class="rx-error" id="errLogin" role="alert"></div>
     </form>
-    <div class="rx-firma">Rendix v2.5 · Powered by <b>Iván Jiménez</b></div>
+    <div class="rx-firma">Rendix v2.8 · Powered by <b>Iván Jiménez</b></div>
   </section>
 
   <!-- ===== APP ===== -->
@@ -546,7 +568,7 @@
       </main>
 
       <footer class="rx-pie">
-        <div class="firma">Rendix v2.5 · Powered by <b>Iván Jiménez</b></div>
+        <div class="firma">Rendix v2.8 · Powered by <b>Iván Jiménez</b></div>
       </footer>
     </div>
 
@@ -1258,6 +1280,7 @@
         ${(()=>{const th=cobrosHoy.filter(m=>m.metodo==='transferencia').reduce((t,m)=>t+(Number(m.monto)||0),0);return th>0?`<div class="pct">Efectivo ${pesos(realHoy-th)} · 📲 Transferencias ${pesos(th)}</div>`:'';})()}
       </div>
       ${(()=>{const ct=cobrosHoy.filter(m=>m.metodo==='transferencia');return ct.length>0?`<button class="rx-verTransf" id="verTransfHoy">📲 Ver las ${ct.length} transferencia${ct.length===1?'':'s'} de hoy ›</button>`:'';})()}
+      ${(()=>{const de=S.movimientos.filter(m=>m.tipo==='desembolso'&&m.fecha===hoy);return de.length>0?`<button class="rx-verTransf" id="verEntregasHoy">💸 Verificar las ${de.length} entrega${de.length===1?'':'s'} de préstamo de hoy ›</button>`:'';})()}
       <button id="chipsMora" style="all:unset;display:block;width:100%;cursor:pointer">
       <div class="rx-info">
         <div class="rx-chip ${clientesMora.size>0?'mora':''}"><div class="k">Clientes en mora ${clientesMora.size>0?'›':''}</div><div class="v">${clientesMora.size}</div></div>
@@ -1278,13 +1301,22 @@
         <button class="rx-modulo" id="modPrestamoRapido">
           <div class="ico">💸</div><div class="nom">Préstamo rápido</div>
         </button>
+        <button class="rx-modulo" id="modInformes">
+          <div class="ico">📈</div><div class="nom">Informes de ganancia</div>
+        </button>
+        <button class="rx-modulo" id="modRespaldo">
+          <div class="ico">💾</div><div class="nom">Respaldo y exportación</div>
+        </button>
       </div>
       ${cerraronHoy>0?`<div class="rx-banner ok" style="margin-top:22px">📥 Hoy <b>${cerraronHoy}</b> cobrador(es) cerraron y entregaron. Toca <b>Cierres</b> en la barra de abajo para confirmar el recibido.</div>`:''}`;
     $('tabInicio').querySelectorAll('[data-ir]').forEach(b=> b.onclick=()=>irATab(b.dataset.ir));
     const _mmo=$('modMorosos'); if(_mmo) _mmo.onclick = abrirMorosos;
     const _mpr=$('modPrestamoRapido'); if(_mpr) _mpr.onclick = selectorPrestamoRapido;
+    const _mre=$('modRespaldo'); if(_mre) _mre.onclick = abrirRespaldo;
+    const _min=$('modInformes'); if(_min) _min.onclick = abrirInformes;
     const _chm=$('chipsMora'); if(_chm) _chm.onclick = abrirMorosos;
     const _vt=$('verTransfHoy'); if(_vt) _vt.onclick = abrirTransferenciasHoy;
+    const _ve=$('verEntregasHoy'); if(_ve) _ve.onclick = abrirEntregasHoy;
     $('tabInicio').querySelectorAll('[data-rec]').forEach(b=> b.onclick = ()=> abrirRecarga(b.dataset.rec));
     pintarConexion();
   }
@@ -2009,7 +2041,8 @@
         <div class="fila"><span>Saldo a pagar (monto + 20%)</span><b id="calcSaldo">$ 0</b></div>
         <div class="fila"><span>Valor de cada cuota</span><b id="calcCuota">$ 0</b></div>
         ${renov ? `<div class="fila"><span>− Saldo anterior</span><b>${pesos(saldoViejo)}</b></div>` : ''}
-        <div class="fila tot"><span>Entregas en efectivo</span><b id="calcEntrega">$ 0</b></div>
+        <div class="fila" id="calcPapFila" style="display:none"><span>− Papelería</span><b id="calcPap">$ 0</b></div>
+        <div class="fila tot"><span>💵 Efectivo a entregar al cliente</span><b id="calcEntrega">$ 0</b></div>
       </div>
       <div class="rx-acciones">
         <button class="rx-btn-prim" id="preGuardar">${renov ? 'Renovar y entregar' : 'Entregar préstamo'}</button>
@@ -2021,11 +2054,21 @@
       const pap = Number($('prePap').value)||0;
       $('calcSaldo').textContent = pesos(rxSaldoInicial(monto));
       $('calcCuota').textContent = pesos(rxValorCuota(monto, cuotas));
-      $('calcEntrega').textContent = pesos(Math.max(0, monto - pap - saldoViejo));
+      $('calcPapFila').style.display = pap>0 ? '' : 'none';
+      $('calcPap').textContent = pesos(pap);
+      const neto = monto - pap - saldoViejo;
+      $('calcEntrega').textContent = pesos(Math.max(0, neto));
+      $('calcEntrega').style.color = neto<0 ? 'var(--peligro)' : '';
     };
     ['preMonto','preCuotas','prePap'].forEach(id=> $(id).addEventListener('input', recalc));
     $('preCancelar').onclick = cerrarHoja;
-    $('preGuardar').onclick = ()=> crearPrestamo(cli, renov);
+    $('preGuardar').onclick = ()=>{
+      const monto = Number($('preMonto').value)||0, pap = Number($('prePap').value)||0;
+      if(monto - pap - saldoViejo < 0){
+        return valErr('preErr', `El monto no alcanza: debe cubrir ${renov?`el saldo anterior (${pesos(saldoViejo)}) más `:''}la papelería (${pesos(pap)}). El efectivo a entregar no puede ser negativo.`);
+      }
+      crearPrestamo(cli, renov);
+    };
     recalc();
   }
 
@@ -2151,7 +2194,7 @@
     const r = rxResumen(p, movs);
     const est = RX_ESTADO[r.estado];
     const cli = S.clientes.find(c=>c.id===p.clienteId) || { id:p.clienteId, nombre:p.clienteNombre, telefono:'' };
-    const histo = movs.filter(m=> m.tipo!=='desembolso')
+    const histo = movs.filter(m=> m.tipo!=='desembolso' && m.tipo!=='verificacion')
       .sort((a,b)=> String(b.fecha).localeCompare(String(a.fecha)));
     const movsHtml = histo.length===0
       ? `<div style="text-align:center;color:var(--niebla);font-size:.88rem;padding:12px 0">Aún no hay cobros registrados.</div>`
@@ -2724,6 +2767,285 @@
       <img src="${m.comprobante}" alt="Comprobante" style="width:100%;border-radius:12px;margin-top:12px;border:1px solid var(--linea)" />
       <div class="rx-acciones" style="margin-top:16px"><button class="rx-btn-fant" id="compVolver">← Volver</button></div>`);
     $('compVolver').onclick = abrirTransferenciasHoy;
+  }
+
+  // NUEVO v2.6: RESPALDO Y EXPORTACIÓN — la #6 del blindaje: que nada se pierda jamás.
+  function descargarArchivo(nombre, contenido, tipo){
+    const blob = new Blob([contenido], { type: tipo });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = nombre;
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
+  }
+  // Celda CSV a prueba de puntos y comas, comillas y saltos de línea.
+  function csvCelda(v){ v = String(v ?? ''); return /[;"\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }
+
+  // Cartera en CSV (abre en Excel/Sheets): un préstamo activo por fila + totales.
+  // Separador ';' y BOM UTF-8: así Excel en español lo abre en columnas y con tildes.
+  function generarCarteraCSV(){
+    const filas = [['Cliente','Cédula','Teléfono','Dirección','Ruta','Cobrador','Monto préstamo','Modalidad','Cuota','Saldo','Cuotas en mora','Monto en mora','Estado','Fecha inicio']];
+    let tSaldo=0, tMora=0, n=0;
+    const orden = S.prestamos
+      .filter(p=> p.estado!=='pagado')
+      .map(p=>{
+        const cli = S.clientes.find(c=>c.id===p.clienteId) || {};
+        const r = rxResumen(p, movsDe(p.id));
+        return { p, cli, r };
+      })
+      .filter(x=> x.r.saldo>0)
+      .sort((a,b)=> sinTildes(a.cli.nombre||'').localeCompare(sinTildes(b.cli.nombre||'')));
+    for(const {p, cli, r} of orden){
+      const mora = rxRedondea(Math.min((r.cuotasAtraso||0) * r.cuota, r.saldo));
+      tSaldo += r.saldo; tMora += mora; n++;
+      filas.push([cli.nombre||'', cli.cedula||'', cli.telefono||'', cli.direccion||'',
+        nombreRuta(p.rutaId)||'', nombreCobrador(p.cobradorId)||'',
+        Number(p.monto)||0, p.modalidad||'', r.cuota, r.saldo,
+        Math.round(r.cuotasAtraso||0), mora,
+        r.estado==='atrasado' ? 'EN MORA' : 'Al día', p.fechaInicio||'']);
+    }
+    filas.push([]);
+    filas.push(['TOTALES','','','','','',`${n} préstamos activos`,'','',tSaldo,'',tMora,'',hoyISO()]);
+    return '\uFEFF' + filas.map(f=> f.map(csvCelda).join(';')).join('\n');
+  }
+
+  function abrirRespaldo(){
+    const t = { clientes:S.clientes.length, cobradores:S.cobradores.length, rutas:S.rutas.length,
+                prestamos:S.prestamos.length, movimientos:S.movimientos.length };
+    abrirHoja(`
+      <h2>🔐 Respaldo y exportación</h2>
+      <div class="sub">Tu operación completa: <b>${t.clientes}</b> clientes · <b>${t.prestamos}</b> préstamos · <b>${t.movimientos}</b> movimientos.</div>
+      <button class="rx-btn-prim" id="btnRespaldo" style="width:100%;margin-top:18px">💾 Descargar respaldo completo</button>
+      <div class="hint" style="margin-top:5px">Archivo .json con TODO: clientes, préstamos, movimientos, cierres, fotos y comprobantes. <b>Guárdalo en Google Drive o en tus mensajes guardados de WhatsApp mínimo una vez por semana.</b></div>
+      <button class="rx-btn-prim" id="btnCartera" style="width:100%;margin-top:18px">📊 Descargar cartera (Excel)</button>
+      <div class="hint" style="margin-top:5px">Archivo .csv que abre en Excel o Google Sheets: cada préstamo activo con su saldo, cuotas en mora y totales al final.</div>
+      <div class="rx-acciones" style="margin-top:18px"><button class="rx-btn-fant" id="respCerrar">Cerrar</button></div>`);
+    $('respCerrar').onclick = cerrarHoja;
+    $('btnRespaldo').onclick = ()=>{
+      const b=$('btnRespaldo'); b.disabled=true; b.textContent='Generando…';
+      try{
+        const data = JSON.stringify({
+          app:'Rendix', formato:1, generado:new Date().toISOString(), fecha:hoyISO(),
+          empresa:{ id:S.empresaId, nombre:S.empresaNombre }, totales:t,
+          clientes:S.clientes, cobradores:S.cobradores, rutas:S.rutas,
+          prestamos:S.prestamos, movimientos:S.movimientos
+        });
+        descargarArchivo(`rendix-respaldo-${hoyISO()}.json`, data, 'application/json');
+        toast('Respaldo descargado 💾 Guárdalo en un lugar seguro.');
+      }catch(e){ toast('No se pudo generar: '+(e.message||e), true); }
+      b.disabled=false; b.textContent='💾 Descargar respaldo completo';
+    };
+    $('btnCartera').onclick = ()=>{
+      const b=$('btnCartera'); b.disabled=true; b.textContent='Generando…';
+      try{
+        descargarArchivo(`rendix-cartera-${hoyISO()}.csv`, generarCarteraCSV(), 'text/csv;charset=utf-8');
+        toast('Cartera descargada 📊 Ábrela en Excel o Sheets.');
+      }catch(e){ toast('No se pudo generar: '+(e.message||e), true); }
+      b.disabled=false; b.textContent='📊 Descargar cartera (Excel)';
+    };
+  }
+
+  // NUEVO v2.7: INFORMES DE GANANCIA ------------------------------------------------
+  // Contabilidad: con el factor fijo 1.20, cada peso cobrado trae 1/6 de rédito
+  // (cuota 6.000 → 1.000 de ganancia). La papelería es ganancia el día del desembolso.
+  // Las liquidaciones por renovación SÍ cuentan como rédito (la ganancia se realizó),
+  // aunque no muevan efectivo físico.
+  let _repModo = 'dia';
+  function repFechaMenosDias(fechaISO, d){ return new Date(rxFecha(fechaISO).getTime() - d*86400000).toISOString().slice(0,10); }
+  function repLunesDe(fechaISO){ const d = rxFecha(fechaISO); const dow = (d.getUTCDay()+6)%7; return new Date(d.getTime() - dow*86400000).toISOString().slice(0,10); }
+  const REP_MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+
+  function repBuckets(modo){
+    const hoy = hoyISO(); const b = [];
+    if(modo==='dia'){
+      for(let i=13;i>=0;i--){ const f = repFechaMenosDias(hoy, i); b.push({ key:f, label:f.slice(8,10)+'/'+f.slice(5,7) }); }
+    } else if(modo==='semana'){
+      const lun = repLunesDe(hoy);
+      for(let i=11;i>=0;i--){ const f = repFechaMenosDias(lun, i*7); b.push({ key:f, label:f.slice(8,10)+'/'+f.slice(5,7) }); }
+    } else {
+      const [y,m] = [Number(hoy.slice(0,4)), Number(hoy.slice(5,7))];
+      for(let i=11;i>=0;i--){ let mm = m-i, yy = y; while(mm<=0){ mm+=12; yy--; } const k = `${yy}-${String(mm).padStart(2,'0')}`; b.push({ key:k, label:REP_MESES[mm-1] }); }
+    }
+    return b;
+  }
+  function repClaveDe(fecha, modo){
+    if(!fecha) return null;
+    if(modo==='dia') return fecha;
+    if(modo==='semana') return repLunesDe(fecha);
+    return fecha.slice(0,7);
+  }
+  function repDatos(modo){
+    const buckets = repBuckets(modo);
+    const idx = new Map(buckets.map((b,i)=>[b.key,i]));
+    const cobrosB = buckets.map(()=>0), papB = buckets.map(()=>0);
+    const desde = buckets[0].key.length===7 ? buckets[0].key+'-01' : buckets[0].key;
+    let cobradoRango=0, cobradoSinRenov=0;
+    const porCob = {};
+    const pc = id => porCob[id] || (porCob[id] = { cobros:0, ef:0, tr:0, pap:0, entrego:0, desc:0 });
+    for(const m of S.movimientos){
+      if(m.tipo==='cobro' && m.fecha >= desde){
+        const i = idx.get(repClaveDe(m.fecha, modo));
+        const v = Number(m.monto)||0;
+        if(i!==undefined){ cobrosB[i] += v; }
+        cobradoRango += v;
+        const o = pc(m.cobradorId); o.cobros += v;
+        if(!m.renovacion){ cobradoSinRenov += v; if(m.metodo==='transferencia') o.tr += v; else o.ef += v; }
+      }
+    }
+    // Papelería: el día que arranca cada préstamo.
+    for(const p of S.prestamos){
+      const pap = Number(p.papeleria)||0;
+      if(pap>0 && p.fechaInicio && p.fechaInicio >= desde){
+        const i = idx.get(repClaveDe(p.fechaInicio, modo));
+        if(i!==undefined) papB[i] += pap;
+        pc(p.cobradorId).pap += pap;
+      }
+    }
+    // Entregas: el último cierre de cada cobrador por fecha (dedupe) dentro del rango.
+    const ult = {};
+    for(const m of S.movimientos){
+      if(m.tipo==='cierre' && m.fecha >= desde){
+        const k = m.fecha+'|'+m.cobradorId;
+        if(!ult[k] || (m.ts||0) > (ult[k].ts||0)) ult[k] = m;
+      }
+    }
+    for(const c of Object.values(ult)){
+      const o = pc(c.cobradorId);
+      o.entrego += Number(c.efectivoFinal)||0;
+      if(typeof c.diferencia==='number') o.desc += c.diferencia;
+    }
+    const serie = buckets.map((b,i)=>({ label:b.label, reditos:rxRedondea(cobrosB[i]/6), pap:papB[i] }));
+    const reditosT = rxRedondea(cobradoRango/6);
+    const papT = serie.reduce((t,s)=>t+s.pap,0);
+    return { serie, reditosT, papT, gananciaT:reditosT+papT, recaudadoT:cobradoSinRenov, porCob };
+  }
+
+  function repDibujar(serie){
+    const cv = $('repCanvas'); if(!cv) return;
+    const dpr = window.devicePixelRatio||1;
+    const W = cv.clientWidth, H = cv.clientHeight;
+    cv.width = W*dpr; cv.height = H*dpr;
+    const ctx = cv.getContext('2d'); ctx.scale(dpr,dpr);
+    ctx.clearRect(0,0,W,H);
+    const padL=8, padR=8, padT=18, padB=22;
+    const max = Math.max(1, ...serie.map(s=> s.reditos+s.pap));
+    const n = serie.length, gap = 5;
+    const bw = (W-padL-padR-gap*(n-1))/n;
+    const alto = v => (v/max)*(H-padT-padB);
+    ctx.font = '9px system-ui'; ctx.textAlign='center';
+    serie.forEach((s,i)=>{
+      const x = padL + i*(bw+gap);
+      const hR = alto(s.reditos), hP = alto(s.pap);
+      const yBase = H-padB;
+      ctx.fillStyle = '#3461A8'; ctx.fillRect(x, yBase-hR, bw, hR);
+      ctx.fillStyle = '#C9A227'; ctx.fillRect(x, yBase-hR-hP, bw, hP);
+      ctx.fillStyle = '#7E8A84';
+      if(n<=14 && (n<=8 || i%2===0)) ctx.fillText(s.label, x+bw/2, H-8);
+      const tot = s.reditos+s.pap;
+      if(tot>0 && n<=8){ ctx.fillStyle='#3A2820'; ctx.font='bold 9px system-ui'; ctx.fillText((tot/1000).toFixed(0)+'k', x+bw/2, yBase-hR-hP-4); ctx.font='9px system-ui'; }
+    });
+    ctx.fillStyle='#B9C0BC'; ctx.fillRect(padL, H-padB, W-padL-padR, 1);
+  }
+
+  function abrirInformes(){
+    const d = repDatos(_repModo);
+    const titRango = _repModo==='dia' ? 'últimos 14 días' : (_repModo==='semana' ? 'últimas 12 semanas' : 'últimos 12 meses');
+    const cobs = S.cobradores
+      .map(c=>({ c, o:d.porCob[c.id] }))
+      .filter(x=> x.o && (x.o.cobros>0 || x.o.entrego>0 || x.o.pap>0));
+    const filasCob = cobs.length===0
+      ? `<div class="rx-vacio-mini">Sin actividad de cobradores en este rango.</div>`
+      : cobs.map(({c,o})=>`
+        <div class="rx-repcob">
+          <div class="l1"><span class="rx-cob-dot" style="background:${colorCobrador(c.id)}"></span>${escapar(c.nombre||'—')}</div>
+          <div class="l2">Recaudó <b>${pesos(o.ef+o.tr)}</b> (efectivo ${pesos(o.ef)}${o.tr>0?` · 📲 ${pesos(o.tr)}`:''}) · Entregó en cierres <b>${pesos(o.entrego)}</b>${o.desc!==0?` · <span style="color:${o.desc<0?'var(--peligro)':'var(--ok)'}">descuadre ${pesos(o.desc)}</span>`:''}</div>
+          <div class="l2">Ganancia que generó: réditos <b>${pesos(rxRedondea(o.cobros/6))}</b> + papelería <b>${pesos(o.pap)}</b></div>
+        </div>`).join('');
+    abrirHoja(`
+      <h2>📈 Informes de ganancia</h2>
+      <div class="sub">Réditos (el 20% realizado en cada cobro) + papelería · ${titRango}.</div>
+      <div class="rx-chips rx-filtros" id="repChips">
+        <button class="rx-chip-sel ${_repModo==='dia'?'activa':''}" data-rm="dia">Días</button>
+        <button class="rx-chip-sel ${_repModo==='semana'?'activa':''}" data-rm="semana">Semanas</button>
+        <button class="rx-chip-sel ${_repModo==='mes'?'activa':''}" data-rm="mes">Meses</button>
+      </div>
+      <div class="rx-rep-cards">
+        <div class="rx-rep-card azul"><div class="k">GANANCIA TOTAL</div><div class="v">${pesos(d.gananciaT)}</div></div>
+        <div class="rx-rep-card"><div class="k">Recaudado</div><div class="v">${pesos(d.recaudadoT)}</div></div>
+        <div class="rx-rep-card"><div class="k">Réditos</div><div class="v">${pesos(d.reditosT)}</div></div>
+        <div class="rx-rep-card oro"><div class="k">Papelería</div><div class="v">${pesos(d.papT)}</div></div>
+      </div>
+      <canvas class="rx-rep-canvas" id="repCanvas"></canvas>
+      <div class="hint" style="margin-top:4px"><span style="color:#3461A8">■</span> Réditos · <span style="color:#C9A227">■</span> Papelería</div>
+      <div class="rx-seccion-titulo" style="margin-top:16px"><span>Lo que entrega cada trabajador</span></div>
+      ${filasCob}
+      <div class="hint" style="margin-top:12px">Método: cada peso cobrado trae 1/6 de rédito (interés fijo del 20%). Las liquidaciones por renovación cuentan como rédito aunque no muevan efectivo. La papelería se gana el día del desembolso.</div>
+      <div class="rx-acciones" style="margin-top:16px"><button class="rx-btn-fant" id="repCerrar">Cerrar</button></div>`);
+    $('repCerrar').onclick = cerrarHoja;
+    document.querySelectorAll('#repChips [data-rm]').forEach(b=> b.onclick = ()=>{ _repModo = b.dataset.rm; abrirInformes(); });
+    requestAnimationFrame(()=> repDibujar(d.serie));
+  }
+
+  // NUEVO v2.8: VERIFICACIÓN DE ENTREGAS — el control anti-robo del rey.
+  // El préstamo es la DEUDA; lo que se entrega es EFECTIVO (monto − saldo viejo − papelería).
+  // La oficina llama al cliente con el número exacto y sella la verificación (inmutable).
+  function veriDe(prestamoId){
+    return S.movimientos.find(m=> m.tipo==='verificacion' && m.prestamoId===prestamoId) || null;
+  }
+  async function marcarVerificada(p, neto){
+    if(!confirm(`¿Confirmaste con el cliente que recibió ${pesos(neto)} en efectivo?`)) return;
+    try{
+      await addDoc(collection(db,'empresas',S.empresaId,'movimientos'), {
+        tipo:'verificacion', prestamoId:p.id, clienteId:p.clienteId, cobradorId:p.cobradorId,
+        fecha:hoyISO(), ts:Date.now(), montoVerificado:neto, verificadoPor:S.uid,
+        creadoEn: serverTimestamp()
+      });
+      toast('Entrega verificada ✓');
+      abrirEntregasHoy();
+    }catch(e){ toast('No se pudo verificar: '+(e.message||e), true); }
+  }
+  function abrirEntregasHoy(){
+    const hoy = hoyISO();
+    const des = S.movimientos
+      .filter(m=> m.tipo==='desembolso' && m.fecha===hoy)
+      .sort((a,b)=> String(a.cobradorId).localeCompare(String(b.cobradorId)) || ((b.ts||0)-(a.ts||0)));
+    let totalNeto = 0;
+    const filas = des.length===0
+      ? `<div class="rx-vacio-mini">Hoy no se han entregado préstamos.</div>`
+      : des.map(m=>{
+          const p = S.prestamos.find(x=> x.id===m.prestamoId) || {};
+          const cli = S.clientes.find(x=> x.id===(m.clienteId||p.clienteId)) || { nombre:'Cliente' };
+          const monto = Number(m.monto)||0;
+          const desc = Number(p.saldoDescontado)||0;
+          const pap = Number(p.papeleria)||0;
+          const neto = monto - desc - pap;
+          totalNeto += neto;
+          const deuda = rxSaldoInicial(monto);
+          const veri = veriDe(m.prestamoId);
+          const tel = waNumero(cli.telefono);
+          const guion = `Buen día ${primerNombre(cli.nombre||'')}, le hablamos de ${S.empresaNombre||'la oficina'} para confirmar su préstamo de hoy: ¿recibió ${pesos(neto)} en efectivo de ${primerNombre(nombreCobrador(p.cobradorId||m.cobradorId))}? Su deuda queda en ${pesos(deuda)} con cuota de ${pesos(Number(p.valorCuota)||0)}. Gracias por confirmar.`;
+          return `<div class="rx-entrega">
+            <div class="l1"><span class="rx-cob-dot" style="background:${colorCobrador(p.cobradorId||m.cobradorId)}"></span>${escapar(cli.nombre||'Cliente')}<span class="neto">💵 ${pesos(neto)}</span></div>
+            <div class="l2">${desc>0?'🔄 Renovación · ':''}Préstamo <b>${pesos(monto)}</b> → deuda <b>${pesos(deuda)}</b>${desc>0?` · −saldo viejo ${pesos(desc)}`:''}${pap>0?` · −papelería ${pesos(pap)}`:''}</div>
+            <div class="acc">
+              ${cli.telefono?`<a class="rx-tel-mini" href="tel:${escapar(String(cli.telefono).replace(/\D/g,''))}">📞 Llamar</a>`:''}
+              ${tel?`<button class="rx-tel-mini" data-vwa="${escapar(cli.telefono)}" data-vmsg="${escapar(guion)}">💬 WhatsApp</button>`:''}
+              ${veri?`<span class="rx-veri-ok">✓ Verificada</span>`:`<button class="rx-veri-btn" data-veri="${m.prestamoId}" data-neto="${neto}">✓ Verificar</button>`}
+            </div>
+          </div>`;
+        }).join('');
+    abrirHoja(`
+      <h2>💸 Entregas de hoy${des.length>0?` (${des.length})`:''}</h2>
+      <div class="sub">${des.length>0?`Efectivo entregado en préstamos: <b>${pesos(totalNeto)}</b>. Llama a cada cliente y confirma que recibió <b>ese número exacto</b> en la mano.`:'Cuando se entregue un préstamo, aparece aquí para verificarlo.'}</div>
+      ${filas}
+      <div class="hint" style="margin-top:12px">El préstamo es la deuda; lo que se verifica es el <b>efectivo en mano</b>. La verificación queda sellada con tu firma y no se puede borrar.</div>
+      <div class="rx-acciones" style="margin-top:16px"><button class="rx-btn-fant" id="entCerrar">Cerrar</button></div>`);
+    $('entCerrar').onclick = cerrarHoja;
+    document.querySelectorAll('[data-vwa]').forEach(b=> b.onclick = ()=> waAbrir(b.dataset.vwa, b.dataset.vmsg));
+    document.querySelectorAll('[data-veri]').forEach(b=> b.onclick = ()=>{
+      const p = S.prestamos.find(x=> x.id===b.dataset.veri); if(!p) return;
+      marcarVerificada(p, Number(b.dataset.neto)||0);
+    });
   }
 
   function abrirCierresAdmin(){

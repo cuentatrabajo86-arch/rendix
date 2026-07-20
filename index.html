@@ -545,7 +545,7 @@
       <button class="rx-btn" type="submit" id="btnEntrar">Entrar</button>
       <div class="rx-error" id="errLogin" role="alert"></div>
     </form>
-    <div class="rx-firma">Rendix v2.8 · Powered by <b>Iván Jiménez</b></div>
+    <div class="rx-firma">Rendix v2.9 · Powered by <b>Iván Jiménez</b></div>
   </section>
 
   <!-- ===== APP ===== -->
@@ -568,7 +568,7 @@
       </main>
 
       <footer class="rx-pie">
-        <div class="firma">Rendix v2.8 · Powered by <b>Iván Jiménez</b></div>
+        <div class="firma">Rendix v2.9 · Powered by <b>Iván Jiménez</b></div>
       </footer>
     </div>
 
@@ -3225,7 +3225,7 @@
 
   // ===========================================================
   //  COBRO · Bloque 3B
-  //  Regla de negocio: cada abono debe ser múltiplo exacto de la
+  //  Regla de negocio v2.9: abono LIBRE — se recibe cualquier valor
   //  cuota, o el saldo total (liquidación). El movimiento es
   //  inmutable; el saldo se reconstruye desde los movimientos.
   // ===========================================================
@@ -3255,7 +3255,7 @@
       <div class="rx-form-campo">
         <label for="cobroMonto">Monto recibido</label>
         <input class="rx-fin" id="cobroMonto" type="number" inputmode="numeric" min="0" placeholder="Ej. ${cuota}" />
-        <div class="hint">Múltiplos de la cuota (${pesos(cuota)}) o el saldo total para liquidar.</div>
+        <div class="hint">Recibe cualquier valor, hasta el saldo (${pesos(saldo)}). La cuota es ${pesos(cuota)}; los atajos de abajo son para ir rápido.</div>
       </div>
       <div class="rx-cobro-chips" id="cobroChips">
         ${chips.map(c=>`<button type="button" data-v="${c.v}" class="${c.liq?'liq':''}">${c.n}<span class="sub2">${pesos(c.v)}</span></button>`).join('')}
@@ -3295,12 +3295,11 @@
       document.querySelectorAll('#cobroChips button').forEach(b=> b.classList.toggle('sel', Number(b.dataset.v)===m && m>0));
       if(m<=0){ fb.innerHTML=''; return; }
       if(m>saldo){ fb.innerHTML=`<span class="err">Supera el saldo de ${pesos(saldo)}.</span>`; return; }
-      const esLiq = m===saldo, esMult = cuota>0 && m%cuota===0;
-      if(!esLiq && !esMult){ fb.innerHTML=`<span class="err">No es múltiplo de la cuota ni el saldo total.</span>`; return; }
       const nuevo = rxRedondea(saldo - m);
       if(nuevo<=0){ fb.innerHTML = `<b>Liquida el préstamo.</b> El saldo quedaría en $ 0. ✓`; return; }
       const nc = cuota>0 ? Math.round((m/cuota)*100)/100 : 0;
-      fb.innerHTML = `Equivale a <b>${nc} cuota${nc===1?'':'s'}</b>. Saldo restante: <b>${pesos(nuevo)}</b>.`;
+      const entero = Number.isInteger(nc);
+      fb.innerHTML = `${entero?`Equivale a <b>${nc} cuota${nc===1?'':'s'}</b> exacta${nc===1?'':'s'}.`:`Abono libre (≈ <b>${nc}</b> cuotas).`} Saldo restante: <b>${pesos(nuevo)}</b>.`;
     };
     inp.addEventListener('input', evaluar);
     document.querySelectorAll('#cobroChips button').forEach(b=>{
@@ -3328,8 +3327,6 @@
     $('cobroErr')?.classList.remove('visible');
     if(monto<=0)     return valErr('cobroErr','Escribe el monto recibido.');
     if(monto>saldo)  return valErr('cobroErr',`El abono no puede superar el saldo de ${pesos(saldo)}.`);
-    const esLiq = monto===saldo, esMult = cuota>0 && monto%cuota===0;
-    if(!esLiq && !esMult) return valErr('cobroErr',`El abono debe ser múltiplo de la cuota (${pesos(cuota)}) o el saldo total (${pesos(saldo)}).`);
     if(S.rol!=='admin' && diaEstaCerrado(S.uid, hoyISO())) return valErr('cobroErr','El día está cerrado. Pídele al administrador que lo reabra.');
     if(S.rol!=='admin' && !aperturaDelDia(S.uid, hoyISO())) return valErr('cobroErr','Abre tu día antes de registrar cobros (Inicio → 🌅 Abrir el día).');
 

@@ -208,6 +208,12 @@
   .rx-repcob .l1{display:flex;align-items:center;gap:7px;font-weight:700;color:var(--tinta)}
   .rx-repcob .l2{font-size:.8rem;color:var(--niebla);margin-top:4px;line-height:1.5}
   .rx-repcob .l2 b{color:var(--tinta)}
+  /* NUEVO v3.1: legal */
+  .rx-habeas{display:flex;gap:10px;align-items:flex-start;margin:14px 0 6px;font-size:.86rem;color:var(--tinta);line-height:1.45}
+  .rx-habeas input{width:22px;height:22px;flex:0 0 22px;margin-top:1px;accent-color:var(--azul-claro)}
+  .rx-legal{font-size:.8rem;color:var(--niebla);margin-bottom:6px}
+  .rx-legal summary{cursor:pointer;color:var(--azul-claro);font-weight:600}
+  .rx-legal p{margin:8px 0 0;line-height:1.5}
   /* NUEVO v2.8: verificación de entregas */
   .rx-entrega{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:12px 13px;margin-top:8px}
   .rx-entrega .l1{display:flex;align-items:center;gap:7px;font-weight:700;color:var(--tinta)}
@@ -545,7 +551,7 @@
       <button class="rx-btn" type="submit" id="btnEntrar">Entrar</button>
       <div class="rx-error" id="errLogin" role="alert"></div>
     </form>
-    <div class="rx-firma">Rendix v2.9 · Powered by <b>Iván Jiménez</b></div>
+    <div class="rx-firma">Rendix v3.1 · Powered by <b>Iván Jiménez</b></div>
   </section>
 
   <!-- ===== APP ===== -->
@@ -568,7 +574,7 @@
       </main>
 
       <footer class="rx-pie">
-        <div class="firma">Rendix v2.9 · Powered by <b>Iván Jiménez</b></div>
+        <div class="firma">Rendix v3.1 · Powered by <b>Iván Jiménez</b></div>
       </footer>
     </div>
 
@@ -679,7 +685,7 @@
   }
 
   // ---- estado global de la sesión ----
-  const S = { uid:null, empresaId:null, rol:null, nombre:null, empresaNombre:null, perfil:null, licenciaActiva:true,
+  const S = { uid:null, empresaId:null, rol:null, nombre:null, empresaNombre:null, perfil:null, licenciaActiva:true, vence:null, soporte:'', suspendida:false,
               cobradores:[], rutas:[], clientes:[], prestamos:[], movimientos:[], movIdx:new Map(),
               offsetReloj:0, relojCalibrado:false,
               unsubCob:null, unsubRut:null, unsubCli:null, unsubPres:null, unsubMov:null, tab:'inicio' };
@@ -804,6 +810,17 @@
       estado
     };
   }
+  // NUEVO v3.0: con abono libre las cuotas de atraso pueden ser fracción (1.67).
+  // Los PESOS son la verdad exacta; las cuotas acompañan. El monto nunca supera el saldo.
+  function moraMonto(r){ return Math.min(rxRedondea(r.montoAtraso||0), Number(r.saldo)||0); }
+  function cuotasTxt(c){
+    c = Number(c)||0;
+    const ent = Math.abs(c - Math.round(c)) < 0.02;
+    const n = ent ? Math.round(c) : Math.round(c*10)/10;
+    return `${n} cuota${n===1?'':'s'}`;
+  }
+  function moraTxt(r){ return `Debe ${pesos(moraMonto(r))} · ${cuotasTxt(r.cuotasAtraso)}`; }
+
   function rxFecha(f){
     if(!f) return new Date();
     if(f instanceof Date) return f;
@@ -965,6 +982,9 @@
       S.nombre = perfil.nombre || user.email || 'Usuario';
       S.empresaNombre = emp.nombre || 'Mi empresa';
       S.licenciaActiva = emp.licenciaActiva !== false;
+      S.vence = emp.vence || null;                 // 'YYYY-MM-DD' — opcional
+      S.soporte = emp.soporte || '';
+      S.suspendida = !S.licenciaActiva || (!!S.vence && hoyISO() > S.vence);
       S.perfil = perfil;
 
       arrancarApp();
@@ -1255,8 +1275,17 @@
     }).join('');
     const nombresDots = arr => arr.map(c=>`<span class="rx-cob-dot" style="background:${colorCobrador(c.id)}"></span>${escapar(primerNombre(c.nombre||'—'))}`).join(', ');
 
-    const banner = S.licenciaActiva ? ''
-      : `<div class="rx-banner">⚠️ La licencia de esta empresa figura como inactiva. La gestión de licencias llega en la Etapa 5.</div>`;
+    const banner = (()=>{
+      if(S.suspendida){
+        const wa = S.soporte ? ` <a href="https://wa.me/${escapar(waNumero(S.soporte)||'')}" target="_blank" style="color:inherit"><b>Escribir al soporte</b></a>` : '';
+        return `<div class="rx-banner" style="border-color:rgba(178,58,51,.4);background:rgba(178,58,51,.08)">🔒 <b>Suscripción vencida.</b> Puedes seguir cobrando y cerrando caja, pero no entregar préstamos nuevos hasta renovar.${wa}</div>`;
+      }
+      if(S.vence){
+        const faltan = Math.round((rxFecha(S.vence) - rxFecha(hoyISO()))/86400000);
+        if(faltan<=7) return `<div class="rx-banner">⏳ Tu plan vence en <b>${faltan} día${faltan===1?'':'s'}</b> (${escapar(S.vence)}). Renueva para no quedarte sin entregar préstamos.</div>`;
+      }
+      return '';
+    })();
     $('tabInicio').innerHTML = `
       <span class="rx-pill online"><span class="punto"></span><span class="txt">En línea</span></span>
       <div><span class="rx-rol-tag">Administrador</span></div>
@@ -1304,6 +1333,9 @@
         <button class="rx-modulo" id="modInformes">
           <div class="ico">📈</div><div class="nom">Informes de ganancia</div>
         </button>
+        <button class="rx-modulo" id="modTraspaso">
+          <div class="ico">🔁</div><div class="nom">Traspasar cartera</div>
+        </button>
         <button class="rx-modulo" id="modRespaldo">
           <div class="ico">💾</div><div class="nom">Respaldo y exportación</div>
         </button>
@@ -1314,6 +1346,7 @@
     const _mpr=$('modPrestamoRapido'); if(_mpr) _mpr.onclick = selectorPrestamoRapido;
     const _mre=$('modRespaldo'); if(_mre) _mre.onclick = abrirRespaldo;
     const _min=$('modInformes'); if(_min) _min.onclick = abrirInformes;
+    const _mtr=$('modTraspaso'); if(_mtr) _mtr.onclick = ()=> abrirTraspaso(null);
     const _chm=$('chipsMora'); if(_chm) _chm.onclick = abrirMorosos;
     const _vt=$('verTransfHoy'); if(_vt) _vt.onclick = abrirTransferenciasHoy;
     const _ve=$('verEntregasHoy'); if(_ve) _ve.onclick = abrirEntregasHoy;
@@ -1579,12 +1612,14 @@
       ${listaCli}
       <div class="rx-acciones" style="margin-top:18px">
         <button class="rx-btn-prim" id="fcEditar">Editar datos</button>
+        <button class="rx-btn-fant" id="fcTras">🔁 Traspasar su cartera</button>
         <button class="rx-btn-fant" id="fcBloq">${c.bloqueado?'Reactivar acceso':'Bloquear acceso'}</button>
         <button class="rx-btn-fant" id="fcCerrar">Cerrar</button>
       </div>`);
     $('fcCerrar').onclick = cerrarHoja;
     $('fcEditar').onclick = ()=> formCobrador(c);
     $('fcBloq').onclick   = ()=> alternarBloqueo(c);
+    $('fcTras').onclick   = ()=> abrirTraspaso(c.id);
     $('rxHojaContenido').querySelectorAll('[data-cli]').forEach(el=>{
       el.onclick = ()=> fichaCliente(el.dataset.cli);
     });
@@ -1786,7 +1821,7 @@
           <div class="nom">${escapar(c.nombre||'Sin nombre')}</div>
           <div class="meta">${sub}</div>
           ${(pc && pc.vencido && pc.cuotasAtraso>=1)
-            ? `<div class="prox mora">⚠ Debe ${Math.round(pc.cuotasAtraso)} cuota${Math.round(pc.cuotasAtraso)===1?'':'s'} · ${pesos(pc.montoAtraso)}</div>`
+            ? `<div class="prox mora">⚠ ${moraTxt(pc)}</div>`
             : ((pc && pc.enDias!==null)?`<div class="prox ${pc.enDias<=0?'hoy':''}">Próx. cuota ${pesos(pc.cuota)} · ${proxTxt(pc)}</div>`:'')}
         </div>
         ${badge}
@@ -1856,6 +1891,14 @@
         <select class="rx-fin" id="cliCob">${opcionesCobradores(editar?cli.cobradorId:'')}</select>
         <div class="hint">Define quién cobra a este cliente. Solo ese cobrador lo verá.</div>
       </div>` : ''}
+      ${!editar ? `
+      <label class="rx-habeas" for="cliHabeas">
+        <input type="checkbox" id="cliHabeas" />
+        <span>El cliente <b>autoriza</b> el tratamiento de sus datos personales (Ley 1581 de 2012).</span>
+      </label>
+      <details class="rx-legal"><summary>Ver qué se le informa al cliente</summary>
+        <p>Los datos (nombre, cédula, teléfono, dirección y foto) se recogen para administrar su préstamo y la cobranza. Se guardan mientras exista relación comercial y no se comparten con terceros ajenos a esta operación. El titular puede consultarlos, actualizarlos o pedir su supresión ante el responsable del tratamiento: <b>${escapar(S.empresaNombre||'esta empresa')}</b>.</p>
+      </details>` : ''}
       <div class="rx-acciones">
         <button class="rx-btn-prim" id="cliGuardar">${editar?'Guardar cambios':'Crear cliente'}</button>
         <button class="rx-btn-fant" id="cliCancelar">Cancelar</button>
@@ -1897,10 +1940,13 @@
       rutaId = S.perfil.rutaId || '';
     }
 
+    const hab = $('cliHabeas');
+    if(hab && !hab.checked) return valErr('cliErr','Marca la autorización de datos del cliente (Ley 1581). Léesela antes de continuar.');
     const btn = $('cliGuardar'); btn.disabled=true; btn.textContent='Creando…';
     try {
       await addDoc(collection(db,'empresas',S.empresaId,'clientes'), {
         nombre, cedula, telefono, direccion, foto:_fotoTmp, cobradorId, rutaId,
+        habeasData:true, habeasFecha: hoyISO(),
         activo:true, creadoEn: serverTimestamp()
       });
       cerrarHoja(); toast('Cliente creado ✓');
@@ -1961,7 +2007,7 @@
             </div>
             <div class="barra"><i style="width:${pct}%"></i></div>
             <div class="pie"><span>Saldo: <b>${pesos(r.saldo)}</b></span><span>Cuota <b>${pesos(r.cuota)}</b></span></div>
-            ${r.cuotasAtraso>=1?`<div class="pie" style="margin-top:2px"><span style="color:var(--peligro)">⚠ Debe <b>${Math.round(r.cuotasAtraso)} cuota${Math.round(r.cuotasAtraso)===1?'':'s'}</b></span><span style="color:var(--peligro)"><b>${pesos(r.montoAtraso)}</b></span></div>`:''}
+            ${r.cuotasAtraso>=1?`<div class="pie" style="margin-top:2px"><span style="color:var(--peligro)">⚠ En mora <b>${cuotasTxt(r.cuotasAtraso)}</b></span><span style="color:var(--peligro)"><b>${pesos(moraMonto(r))}</b></span></div>`:''}
             <button class="rx-pres-carton" data-carton="${p.id}">🎴 Ver cartón</button>
           </div>`;
         }).join('');
@@ -2079,6 +2125,7 @@
     const papeleria = Number($('prePap').value)||0;
     const fechaInicio = $('preFecha').value;
     $('preErr').classList.remove('visible');
+    if(S.suspendida) return valErr('preErr','Suscripción vencida: puedes seguir cobrando, pero no entregar préstamos nuevos hasta renovarla.');
     if(monto<=0) return valErr('preErr','Escribe el monto a prestar.');
     if(numeroCuotas<1) return valErr('preErr','El número de cuotas debe ser al menos 1.');
     if(!fechaInicio) return valErr('preErr','Elige la fecha de inicio.');
@@ -2121,7 +2168,8 @@
         monto, fecha: fechaInicio, cobradorId, creadoEn: serverTimestamp()
       });
       await lote.commit();
-      cerrarHoja(); toast(renov?'Préstamo renovado ✓':'Préstamo entregado ✓');
+      toast(renov?'Préstamo renovado ✓':'Préstamo entregado ✓');
+      confirmacionPrestamo(cli, { monto, papeleria, saldoViejo, modalidad, numeroCuotas, valorCuota, fechaInicio, renov: !!renov });
     } catch(e){
       btn.disabled=false; btn.textContent=renov?'Renovar y entregar':'Entregar préstamo';
       valErr('preErr', mensajeError(e.code) + (e.code?'':' ('+(e.message||e)+')'));
@@ -2283,7 +2331,7 @@
             <div class="info">
               <div class="nom">${escapar(f.cli.nombre||'Sin nombre')}${f.pagoHoy?'<span class="ok-hoy">✓ hoy</span>':''}${f.notaHoy?'<span class="nota-hoy">📝</span>':''}</div>
               <div class="sub">${f.r.cuotasAtraso>=1
-                ? `<span class="atr">Debe ${Math.round(f.r.cuotasAtraso)} cuota${Math.round(f.r.cuotasAtraso)===1?'':'s'} · ${pesos(f.r.montoAtraso)}</span> · Saldo ${pesos(f.r.saldo)}`
+                ? `<span class="atr">${moraTxt(f.r)}</span> · Saldo ${pesos(f.r.saldo)}`
                 : (!f.tocaHoy && f.proxDias!==null && f.proxDias>0
                   ? `Saldo ${pesos(f.r.saldo)} · Cuota ${pesos(f.r.cuota)} · próx. ${cuandoTxt(f.proxDias)}`
                   : `Saldo ${pesos(f.r.saldo)} · Cuota ${pesos(f.r.cuota)}`)}</div>
@@ -2623,7 +2671,7 @@
       const r = rxResumen(p, movsDe(p.id));
       if(r.saldo<=0 || r.estado!=='atrasado') continue;
       const o = por.get(p.clienteId) || { clienteId:p.clienteId, cobradorId:p.cobradorId, cuotas:0, monto:0, saldo:0 };
-      o.cuotas += Math.round(r.cuotasAtraso||0);
+      o.cuotas += (Number(r.cuotasAtraso)||0);
       o.monto  += rxRedondea(Math.min((r.cuotasAtraso||0) * r.cuota, r.saldo));
       o.saldo  += r.saldo;
       por.set(p.clienteId, o);
@@ -2642,7 +2690,7 @@
           ${avatarHTML(o.cli,'cli',44)}
           <div class="cuerpo">
             <div class="nom"><span class="rx-cob-dot" style="background:${colorCobrador(o.cobradorId)}"></span>${escapar(o.cli.nombre||'Sin nombre')}</div>
-            <div class="meta" style="color:var(--peligro);font-weight:600">Debe ${o.cuotas} cuota${o.cuotas===1?'':'s'} · ${pesos(o.monto)}</div>
+            <div class="meta" style="color:var(--peligro);font-weight:600">Debe ${pesos(o.monto)} · ${cuotasTxt(o.cuotas)}</div>
           </div>
           ${o.cli.telefono?`<button class="rx-wa-mini" data-wam="${escapar(o.cli.telefono)}" data-wamn="${escapar(o.cli.nombre||'')}" data-wamc="${o.cuotas}" data-wamm="${o.monto}" title="Cobrarle por WhatsApp">💬</button>`:''}
         </div>`).join('');
@@ -2656,7 +2704,7 @@
     document.querySelectorAll('[data-wam]').forEach(b=> b.addEventListener('click', (e)=>{
       e.stopPropagation();
       const n = Number(b.dataset.wamc)||0;
-      waAbrir(b.dataset.wam, `Buen día ${primerNombre(b.dataset.wamn||'')}, le saluda ${S.empresaNombre||'su cobrador'}. Presenta ${n} cuota${n===1?'':'s'} en mora por ${pesos(Number(b.dataset.wamm)||0)}. Por favor póngase al día. ¡Gracias!`);
+      waAbrir(b.dataset.wam, `Buen día ${primerNombre(b.dataset.wamn||'')}, le saluda ${S.empresaNombre||'su cobrador'}. Presenta ${pesos(Number(b.dataset.wamm)||0)} en mora (${cuotasTxt(n)}). Por favor póngase al día. ¡Gracias!`);
     }));
   }
 
@@ -2801,7 +2849,7 @@
       filas.push([cli.nombre||'', cli.cedula||'', cli.telefono||'', cli.direccion||'',
         nombreRuta(p.rutaId)||'', nombreCobrador(p.cobradorId)||'',
         Number(p.monto)||0, p.modalidad||'', r.cuota, r.saldo,
-        Math.round(r.cuotasAtraso||0), mora,
+        Math.round((Number(r.cuotasAtraso)||0)*100)/100, mora,
         r.estado==='atrasado' ? 'EN MORA' : 'Al día', p.fechaInicio||'']);
     }
     filas.push([]);
@@ -3048,6 +3096,85 @@
     });
   }
 
+  // NUEVO v3.0: TRASPASO DE CARTERA — cuando un cobrador se va o cambia de zona.
+  // Mueve clientes y préstamos al cobrador que recibe. El historial NO se toca:
+  // cada cobro y cada cierre ya hecho sigue a nombre de quien lo hizo (movimientos inmutables).
+  let _trOr = null, _trDe = null;
+  function carteraDe(cobId){
+    const cls = S.clientes.filter(c=> c.cobradorId===cobId);
+    const ids = new Set(cls.map(c=> c.id));
+    const prs = S.prestamos.filter(p=> ids.has(p.clienteId) || p.cobradorId===cobId);
+    const activos = prs.filter(p=> p.estado!=='pagado').length;
+    const deuda = cls.reduce((t,c)=> t + deudaCliente(c.id), 0);
+    return { cls, prs, activos, deuda };
+  }
+  function trFila(c, sel, attr){
+    const k = carteraDe(c.id);
+    return `<div class="rx-card" ${attr}="${c.id}" style="${sel?'border-color:var(--dorado);border-width:2px':''}">
+      ${avatarHTML(c,'',44)}
+      <div class="cuerpo">
+        <div class="nom"><span class="rx-cob-dot" style="background:${colorCobrador(c.id)}"></span>${escapar(c.nombre||'—')}${c.bloqueado?' <i style="color:var(--peligro);font-size:.72em">bloqueado</i>':''}</div>
+        <div class="meta">${k.cls.length} cliente${k.cls.length===1?'':'s'} · ${k.activos} préstamo${k.activos===1?'':'s'} activo${k.activos===1?'':'s'} · ${pesos(k.deuda)} en la calle</div>
+      </div>
+      ${sel?`<span class="rx-est rx-est-ok">✓</span>`:''}
+    </div>`;
+  }
+  function abrirTraspaso(pre){
+    if(pre!==undefined){ _trOr = pre || null; _trDe = null; }
+    const cobs = S.cobradores;
+    const kOr = _trOr ? carteraDe(_trOr) : null;
+    const otros = cobs.filter(c=> c.id!==_trOr);
+    abrirHoja(`
+      <h2>🔁 Traspasar cartera</h2>
+      <div class="sub">Cuando un cobrador se va o cambia de zona, pásale sus clientes a otro sin perder un solo dato.</div>
+      <div class="rx-seccion-titulo" style="margin-top:16px"><span>1 · ¿De quién?</span></div>
+      <div class="rx-lista">${cobs.length ? cobs.map(c=> trFila(c, c.id===_trOr, 'data-tror')).join('') : `<div class="rx-vacio-mini">Aún no tienes cobradores registrados.</div>`}</div>
+      ${_trOr ? `
+      <div class="rx-seccion-titulo" style="margin-top:18px"><span>2 · ¿Para quién?</span></div>
+      <div class="rx-lista">${otros.length ? otros.map(c=> trFila(c, c.id===_trDe, 'data-trde')).join('') : `<div class="rx-vacio-mini">Necesitas otro cobrador registrado para poder traspasar.</div>`}</div>` : ''}
+      ${(_trOr && _trDe && kOr) ? `
+      <div class="rx-banner ok" style="margin-top:18px">Vas a pasar <b>${kOr.cls.length} cliente${kOr.cls.length===1?'':'s'}</b> y <b>${kOr.prs.length} préstamo${kOr.prs.length===1?'':'s'}</b> (${pesos(kOr.deuda)} en la calle) de <b>${escapar(primerNombre(nombreCobrador(_trOr)))}</b> a <b>${escapar(primerNombre(nombreCobrador(_trDe)))}</b>.</div>
+      <button class="rx-btn-prim" id="trHacer" style="width:100%;margin-top:12px">🔁 Traspasar ahora</button>` : ''}
+      <div class="hint" style="margin-top:14px">El historial no se toca: los cobros y cierres ya hechos siguen a nombre de quien los hizo. Desde hoy, lo que se cobre es del que recibe. La ruta (el barrio) no cambia.</div>
+      <div class="rx-acciones" style="margin-top:16px"><button class="rx-btn-fant" id="trCerrarH">Cerrar</button></div>`);
+    $('trCerrarH').onclick = cerrarHoja;
+    document.querySelectorAll('[data-tror]').forEach(el=> el.onclick = ()=>{
+      _trOr = el.dataset.tror; if(_trDe===_trOr) _trDe = null; abrirTraspaso();
+    });
+    document.querySelectorAll('[data-trde]').forEach(el=> el.onclick = ()=>{ _trDe = el.dataset.trde; abrirTraspaso(); });
+    const _th = $('trHacer'); if(_th) _th.onclick = ()=> ejecutarTraspaso(_trOr, _trDe);
+  }
+  async function ejecutarTraspaso(origen, destino){
+    if(!origen || !destino || origen===destino) return;
+    const { cls, prs } = carteraDe(origen);
+    if(cls.length===0 && prs.length===0){ toast('Ese cobrador no tiene cartera para pasar.', true); return; }
+    if(!confirm(`¿Pasar ${cls.length} cliente(s) y ${prs.length} préstamo(s) de ${nombreCobrador(origen)} a ${nombreCobrador(destino)}?`)) return;
+    const btn = $('trHacer'); if(btn){ btn.disabled=true; btn.textContent='Traspasando…'; }
+    try{
+      const ops = [
+        ...cls.map(c=> doc(db,'empresas',S.empresaId,'clientes',c.id)),
+        ...prs.map(p=> doc(db,'empresas',S.empresaId,'prestamos',p.id))
+      ];
+      for(let i=0; i<ops.length; i+=400){
+        const lote = writeBatch(db);
+        ops.slice(i, i+400).forEach(ref=> lote.update(ref, { cobradorId: destino }));
+        await lote.commit();
+      }
+      await addDoc(collection(db,'empresas',S.empresaId,'movimientos'), {
+        tipo:'traspaso', fecha:hoyISO(), ts:Date.now(),
+        deCobradorId:origen, aCobradorId:destino,
+        nClientes:cls.length, nPrestamos:prs.length,
+        hechoPor:S.uid, creadoEn: serverTimestamp()
+      });
+      _trOr = null; _trDe = null;
+      cerrarHoja();
+      toast(`Cartera traspasada ✓ ${cls.length} cliente(s) ahora son de ${primerNombre(nombreCobrador(destino))}.`);
+    }catch(e){
+      if(btn){ btn.disabled=false; btn.textContent='🔁 Traspasar ahora'; }
+      toast('No se pudo traspasar: '+(e.message||e), true);
+    }
+  }
+
   function abrirCierresAdmin(){
     const cierres = S.movimientos.filter(m=> m.tipo==='cierre');
     const porFecha = {};
@@ -3248,7 +3375,7 @@
       <div class="sub">${escapar(cli.nombre||p.clienteNombre||'')} · ${modalidadTxt(p.modalidad)}</div>
       <div class="rx-res">
         <div class="c"><div class="k">Saldo actual</div><div class="v">${pesos(saldo)}</div></div>
-        <div class="c ${r.montoAtraso>0?'mora':''}"><div class="k">${r.montoAtraso>0?`Atraso · ${Math.round(r.cuotasAtraso)} cuota${Math.round(r.cuotasAtraso)===1?'':'s'}`:'Cuota'}</div><div class="v">${pesos(r.montoAtraso>0?r.montoAtraso:cuota)}</div></div>
+        <div class="c ${r.montoAtraso>0?'mora':''}"><div class="k">${r.montoAtraso>0?`Atraso · ${cuotasTxt(r.cuotasAtraso)}`:'Cuota'}</div><div class="v">${pesos(r.montoAtraso>0?moraMonto(r):cuota)}</div></div>
       </div>
       ${yaHoy>0?`<div class="rx-aviso-hoy"><span>⚠️</span><span>Hoy ya le cobraste <b>${pesos(yaHoy)}</b> a ${escapar(cli.nombre||p.clienteNombre||'este cliente')}. Si registras este cobro, será un <b>abono adicional</b> del mismo día.</span></div>`:''}
       <div class="rx-form-err" id="cobroErr"></div>
@@ -3358,6 +3485,53 @@
       btn.disabled=false; btn.textContent='Registrar cobro';
       valErr('cobroErr', mensajeError(e.code) + (e.code?'':' ('+(e.message||e)+')'));
     }
+  }
+
+  // NUEVO v3.1: resumen del crédito al cliente — queda por escrito cuánto recibió EN MANO.
+  function primeraCuotaISO(fechaInicio, modalidad){
+    const paso = RX_DIAS_CUOTA[modalidad] || 1;
+    return new Date(rxFecha(fechaInicio).getTime() + paso*86400000).toISOString().slice(0,10);
+  }
+  function textoResumenPrestamo(cli, d){
+    const neto = Math.max(0, d.monto - (Number(d.papeleria)||0) - (Number(d.saldoViejo)||0));
+    const deuda = rxSaldoInicial(d.monto);
+    const L = [
+      `*${S.empresaNombre || 'Rendix'}* — Resumen de su préstamo`,
+      ``,
+      `Cliente: ${cli.nombre||''}`,
+      `Fecha: ${d.fechaInicio}`,
+      `Efectivo recibido hoy: ${pesos(neto)}`
+    ];
+    if((Number(d.saldoViejo)||0) > 0) L.push(`(se descontó su saldo anterior: ${pesos(d.saldoViejo)})`);
+    if((Number(d.papeleria)||0) > 0)  L.push(`(papelería: ${pesos(d.papeleria)})`);
+    L.push(``, `Total a pagar: ${pesos(deuda)}`,
+      `Cuota ${d.modalidad}: ${pesos(d.valorCuota)}`,
+      `Número de cuotas: ${d.numeroCuotas}`,
+      `Primera cuota: ${primeraCuotaISO(d.fechaInicio, d.modalidad)}`,
+      ``, `Gracias por su confianza.`);
+    return L.join('\n');
+  }
+  function confirmacionPrestamo(cli, d){
+    const neto = Math.max(0, d.monto - (Number(d.papeleria)||0) - (Number(d.saldoViejo)||0));
+    const deuda = rxSaldoInicial(d.monto);
+    abrirHoja(`
+      <div class="rx-ok-wrap">
+        <div class="rx-ok-ico">💵</div>
+        <div class="sub" style="margin-bottom:2px">${d.renov?'Préstamo renovado':'Préstamo entregado'}</div>
+        <div class="rx-ok-monto">${pesos(neto)}</div>
+        <div class="sub">Efectivo que recibe ${escapar(cli.nombre||'el cliente')} en mano</div>
+        <div class="rx-detalle-fila" style="margin-top:14px"><span class="et">Deuda total</span><span class="va">${pesos(deuda)}</span></div>
+        <div class="rx-detalle-fila"><span class="et">Cuota ${escapar(d.modalidad)}</span><span class="va">${pesos(d.valorCuota)} × ${d.numeroCuotas}</span></div>
+        ${(Number(d.saldoViejo)||0)>0?`<div class="rx-detalle-fila"><span class="et">− Saldo anterior</span><span class="va">${pesos(d.saldoViejo)}</span></div>`:''}
+        ${(Number(d.papeleria)||0)>0?`<div class="rx-detalle-fila"><span class="et">− Papelería</span><span class="va">${pesos(d.papeleria)}</span></div>`:''}
+        <div class="rx-detalle-fila"><span class="et">Primera cuota</span><span class="va">${primeraCuotaISO(d.fechaInicio, d.modalidad)}</span></div>
+      </div>
+      <div class="rx-acciones" style="margin-top:16px">
+        <button class="rx-btn-wa" id="preWa">Enviar resumen por WhatsApp</button>
+        <button class="rx-btn-fant" id="preListo">Listo</button>
+      </div>`);
+    $('preWa').onclick = ()=> waAbrir(cli.telefono, textoResumenPrestamo(cli, d));
+    $('preListo').onclick = cerrarHoja;
   }
 
   function confirmacionCobro(p, cli, monto, nuevoSaldo, fecha, metodo, destino){

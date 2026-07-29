@@ -214,6 +214,7 @@
   .rx-legal{font-size:.8rem;color:var(--niebla);margin-bottom:6px}
   .rx-legal summary{cursor:pointer;color:var(--azul-claro);font-weight:600}
   .rx-legal p{margin:8px 0 0;line-height:1.5}
+  .rx-acta{max-height:280px;overflow-y:auto;background:#fff;border:1px solid var(--linea);border-radius:12px;padding:4px 12px}
   /* NUEVO v2.8: verificación de entregas */
   .rx-entrega{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:12px 13px;margin-top:8px}
   .rx-entrega .l1{display:flex;align-items:center;gap:7px;font-weight:700;color:var(--tinta)}
@@ -551,7 +552,7 @@
       <button class="rx-btn" type="submit" id="btnEntrar">Entrar</button>
       <div class="rx-error" id="errLogin" role="alert"></div>
     </form>
-    <div class="rx-firma">Rendix v3.1 · Powered by <b>Iván Jiménez</b></div>
+    <div class="rx-firma">Rendix v3.3 · Powered by <b>Iván Jiménez</b></div>
   </section>
 
   <!-- ===== APP ===== -->
@@ -574,7 +575,7 @@
       </main>
 
       <footer class="rx-pie">
-        <div class="firma">Rendix v3.1 · Powered by <b>Iván Jiménez</b></div>
+        <div class="firma">Rendix v3.3 · Powered by <b>Iván Jiménez</b></div>
       </footer>
     </div>
 
@@ -762,6 +763,8 @@
   //  PRINCIPIO SAGRADO: el saldo SIEMPRE se deriva de los
   //  movimientos. Interés fijo 20% → factor 1.20.
   // ===========================================================
+  // v3.3: UID del creador de Rendix. Solo esta cuenta ve el panel de licencias.
+  const RX_DUENO = 'kbw7AVmySxRXnUTkVuelNYFMKu72';
   const RX_FACTOR = 1.20;
   const RX_DIAS_CUOTA = { diario:1, semanal:7, quincenal:15, mensual:30 };
   const RX_MODALIDADES = [
@@ -979,12 +982,20 @@
       const perfil = userSnap.exists() ? userSnap.data() : {};
 
       S.uid = user.uid; S.empresaId = empresaId; S.rol = rol;
+      S.esDueno = user.uid === RX_DUENO;   // v3.3: creador de Rendix
       S.nombre = perfil.nombre || user.email || 'Usuario';
       S.empresaNombre = emp.nombre || 'Mi empresa';
       S.licenciaActiva = emp.licenciaActiva !== false;
       S.vence = emp.vence || null;                 // 'YYYY-MM-DD' — opcional
       S.soporte = emp.soporte || '';
       S.suspendida = !S.licenciaActiva || (!!S.vence && hoyISO() > S.vence);
+      if(emp.bloqueoTotal === true && user.uid !== RX_DUENO){
+        return pantallaEstado({
+          ico:'🔒', titulo:'Servicio suspendido',
+          msg:'Esta empresa tiene el servicio de Rendix suspendido. Comunícate con tu proveedor para reactivarlo. Tus datos están intactos.',
+          btnTexto:'Cerrar sesión', btnAccion:()=>signOut(auth)
+        });
+      }
       S.perfil = perfil;
 
       arrancarApp();
@@ -1336,6 +1347,9 @@
         <button class="rx-modulo" id="modTraspaso">
           <div class="ico">🔁</div><div class="nom">Traspasar cartera</div>
         </button>
+        ${S.esDueno?`<button class="rx-modulo" id="modDueno">
+          <div class="ico">👑</div><div class="nom">Licencias (dueño)</div>
+        </button>`:''}
         <button class="rx-modulo" id="modRespaldo">
           <div class="ico">💾</div><div class="nom">Respaldo y exportación</div>
         </button>
@@ -1345,6 +1359,7 @@
     const _mmo=$('modMorosos'); if(_mmo) _mmo.onclick = abrirMorosos;
     const _mpr=$('modPrestamoRapido'); if(_mpr) _mpr.onclick = selectorPrestamoRapido;
     const _mre=$('modRespaldo'); if(_mre) _mre.onclick = abrirRespaldo;
+    const _mdu=$('modDueno'); if(_mdu) _mdu.onclick = abrirPanelDueno;
     const _min=$('modInformes'); if(_min) _min.onclick = abrirInformes;
     const _mtr=$('modTraspaso'); if(_mtr) _mtr.onclick = ()=> abrirTraspaso(null);
     const _chm=$('chipsMora'); if(_chm) _chm.onclick = abrirMorosos;
@@ -1612,6 +1627,7 @@
       ${listaCli}
       <div class="rx-acciones" style="margin-top:18px">
         <button class="rx-btn-prim" id="fcEditar">Editar datos</button>
+        <button class="rx-btn-fant" id="fcBaja" style="color:var(--peligro)">⚠️ Dar de baja</button>
         <button class="rx-btn-fant" id="fcTras">🔁 Traspasar su cartera</button>
         <button class="rx-btn-fant" id="fcBloq">${c.bloqueado?'Reactivar acceso':'Bloquear acceso'}</button>
         <button class="rx-btn-fant" id="fcCerrar">Cerrar</button>
@@ -1620,6 +1636,7 @@
     $('fcEditar').onclick = ()=> formCobrador(c);
     $('fcBloq').onclick   = ()=> alternarBloqueo(c);
     $('fcTras').onclick   = ()=> abrirTraspaso(c.id);
+    const _fcb=$('fcBaja'); if(_fcb) _fcb.onclick = ()=> bajaCobrador(c);
     $('rxHojaContenido').querySelectorAll('[data-cli]').forEach(el=>{
       el.onclick = ()=> fichaCliente(el.dataset.cli);
     });
@@ -1772,10 +1789,12 @@
       <div class="rx-detalle-fila"><span class="et">Clientes</span><span class="va">Etapa 3</span></div>
       <div class="rx-acciones" style="margin-top:20px">
         <button class="rx-btn-prim" id="frEditar">Editar ruta</button>
+        <button class="rx-btn-fant" id="frBaja" style="color:var(--peligro)">⚠️ Eliminar ruta</button>
         <button class="rx-btn-fant" id="frCerrar">Cerrar</button>
       </div>`);
     $('frCerrar').onclick = cerrarHoja;
     $('frEditar').onclick = ()=> formRuta(r);
+    const _frb=$('frBaja'); if(_frb) _frb.onclick = ()=> bajaRuta(r);
   }
 
   // ===========================================================
@@ -2031,11 +2050,13 @@
       ${listaPres}
       <div class="rx-acciones" style="margin-top:18px">
         <button class="rx-btn-fant" id="fcliEditar">Editar datos</button>
+        ${esAdmin?`<button class="rx-btn-fant" id="fcliBaja" style="color:var(--peligro)">⚠️ Archivar o eliminar</button>`:''}
         <button class="rx-btn-fant" id="fcliCerrar">Cerrar</button>
       </div>`);
     $('fcliCerrar').onclick = cerrarHoja;
     $('fcliEditar').onclick = ()=> formCliente(c);
     const _fw=$('fcliWa'); if(_fw) _fw.onclick = ()=> waAbrir(c.telefono, waMsgCliente(c));
+    const _fb=$('fcliBaja'); if(_fb) _fb.onclick = ()=> bajaCliente(c);
     if(puedePrestar){
       $('fcliPrestar').onclick = ()=> {
         if(esAdmin && tieneActivo){
@@ -3134,7 +3155,22 @@
       <div class="rx-lista">${otros.length ? otros.map(c=> trFila(c, c.id===_trDe, 'data-trde')).join('') : `<div class="rx-vacio-mini">Necesitas otro cobrador registrado para poder traspasar.</div>`}</div>` : ''}
       ${(_trOr && _trDe && kOr) ? `
       <div class="rx-banner ok" style="margin-top:18px">Vas a pasar <b>${kOr.cls.length} cliente${kOr.cls.length===1?'':'s'}</b> y <b>${kOr.prs.length} préstamo${kOr.prs.length===1?'':'s'}</b> (${pesos(kOr.deuda)} en la calle) de <b>${escapar(primerNombre(nombreCobrador(_trOr)))}</b> a <b>${escapar(primerNombre(nombreCobrador(_trDe)))}</b>.</div>
-      <button class="rx-btn-prim" id="trHacer" style="width:100%;margin-top:12px">🔁 Traspasar ahora</button>` : ''}
+      <div class="rx-seccion-titulo" style="margin-top:18px"><span>3 · Acta de entrega (${kOr.cls.length})</span></div>
+      <div class="rx-acta">${kOr.cls.length===0 ? `<div class="rx-vacio-mini">Sin clientes que entregar.</div>` : kOr.cls.map(c=>{
+        const sal = deudaCliente(c.id); const pc = proximaCuota(c.id);
+        return `<div class="rx-detalle-fila"><span class="et">${escapar(c.nombre||'Sin nombre')}</span><span class="va">${pesos(sal)}${(pc&&pc.vencido&&pc.cuotasAtraso>=1)?` <b style="color:var(--peligro)">· ${Math.round(pc.cuotasAtraso)} en mora</b>`:''}</span></div>`;
+      }).join('')}</div>
+      <div class="rx-detalle-fila" style="border-top:2px solid var(--linea)"><span class="et"><b>TOTAL EN LA CALLE</b></span><span class="va"><b>${pesos(kOr.deuda)}</b></span></div>
+      <div class="rx-acciones" style="margin-top:10px">
+        <button class="rx-btn-fant" id="trActaWa">💬 Enviar acta</button>
+        <button class="rx-btn-fant" id="trActaCsv">📊 Descargar acta</button>
+      </div>
+      <label class="rx-habeas" for="trVerif">
+        <input type="checkbox" id="trVerif" />
+        <span>Recorrimos la ruta cliente por cliente y <b>${escapar(primerNombre(nombreCobrador(_trDe)))}</b> verificó que estos saldos son los que están en la calle.</span>
+      </label>
+      <button class="rx-btn-prim" id="trHacer" style="width:100%;margin-top:6px" disabled>🔁 Traspasar ahora</button>
+      <div class="hint" style="margin-top:5px;text-align:center">El acta queda sellada: si mañana falta plata, hay constancia de con qué saldo recibió.</div>` : ''}
       <div class="hint" style="margin-top:14px">El historial no se toca: los cobros y cierres ya hechos siguen a nombre de quien los hizo. Desde hoy, lo que se cobre es del que recibe. La ruta (el barrio) no cambia.</div>
       <div class="rx-acciones" style="margin-top:16px"><button class="rx-btn-fant" id="trCerrarH">Cerrar</button></div>`);
     $('trCerrarH').onclick = cerrarHoja;
@@ -3143,10 +3179,47 @@
     });
     document.querySelectorAll('[data-trde]').forEach(el=> el.onclick = ()=>{ _trDe = el.dataset.trde; abrirTraspaso(); });
     const _th = $('trHacer'); if(_th) _th.onclick = ()=> ejecutarTraspaso(_trOr, _trDe);
+    const _tv = $('trVerif'); if(_tv) _tv.onchange = ()=>{ const b=$('trHacer'); if(b) b.disabled = !_tv.checked; };
+    const _taw = $('trActaWa'); if(_taw) _taw.onclick = ()=> actaWhatsApp(_trOr, _trDe);
+    const _tac = $('trActaCsv'); if(_tac) _tac.onclick = ()=> actaCSV(_trOr, _trDe);
   }
+  // NUEVO v3.2: acta de entrega — evidencia de con qué saldo se recibió cada cliente.
+  function actaLineas(origen, destino){
+    const k = carteraDe(origen);
+    return k.cls.map(c=>{
+      const pc = proximaCuota(c.id);
+      return { nombre:c.nombre||'Sin nombre', cedula:c.cedula||'', tel:c.telefono||'',
+               saldo:deudaCliente(c.id), mora:(pc&&pc.vencido)?Math.round(pc.cuotasAtraso||0):0 };
+    });
+  }
+  function actaWhatsApp(origen, destino){
+    const k = carteraDe(origen), fs = actaLineas(origen);
+    const top = fs.slice(0,35);
+    const L = [`*${S.empresaNombre||'Rendix'}* — Acta de entrega de cartera`, ``,
+      `Entrega: ${nombreCobrador(origen)}`, `Recibe: ${nombreCobrador(destino)}`, `Fecha: ${hoyISO()}`, ``,
+      `Clientes: ${k.cls.length} · En la calle: ${pesos(k.deuda)}`, ``];
+    top.forEach((f,i)=> L.push(`${i+1}. ${f.nombre} — ${pesos(f.saldo)}${f.mora>0?` (${f.mora} en mora)`:''}`));
+    if(fs.length>top.length) L.push(`… y ${fs.length-top.length} más (ver archivo).`);
+    L.push(``, `Ambos verificamos estos saldos recorriendo la ruta.`);
+    const n = waNumero(S.soporte||'');
+    const url = 'https://wa.me/'+(n||'')+'?text='+encodeURIComponent(L.join('\n'));
+    window.open(url, '_blank');
+  }
+  function actaCSV(origen, destino){
+    const k = carteraDe(origen), fs = actaLineas(origen);
+    const filas = [['ACTA DE ENTREGA DE CARTERA'],['Entrega', nombreCobrador(origen)],['Recibe', nombreCobrador(destino)],['Fecha', hoyISO()],[],
+      ['Cliente','Cédula','Teléfono','Saldo','Cuotas en mora']];
+    fs.forEach(f=> filas.push([f.nombre, f.cedula, f.tel, f.saldo, f.mora]));
+    filas.push([], ['TOTAL', '', '', k.deuda, '']);
+    descargarArchivo(`acta-entrega-${hoyISO()}.csv`, '\uFEFF'+filas.map(f=> f.map(csvCelda).join(';')).join('\n'), 'text/csv;charset=utf-8');
+    toast('Acta descargada 📊 Guárdala como respaldo.');
+  }
+
   async function ejecutarTraspaso(origen, destino){
     if(!origen || !destino || origen===destino) return;
-    const { cls, prs } = carteraDe(origen);
+    const chk = $('trVerif');
+    if(chk && !chk.checked){ toast('Primero marca que verificaron la ruta cliente por cliente.', true); return; }
+    const { cls, prs, deuda } = carteraDe(origen);
     if(cls.length===0 && prs.length===0){ toast('Ese cobrador no tiene cartera para pasar.', true); return; }
     if(!confirm(`¿Pasar ${cls.length} cliente(s) y ${prs.length} préstamo(s) de ${nombreCobrador(origen)} a ${nombreCobrador(destino)}?`)) return;
     const btn = $('trHacer'); if(btn){ btn.disabled=true; btn.textContent='Traspasando…'; }
@@ -3164,6 +3237,8 @@
         tipo:'traspaso', fecha:hoyISO(), ts:Date.now(),
         deCobradorId:origen, aCobradorId:destino,
         nClientes:cls.length, nPrestamos:prs.length,
+        totalCalle: deuda, verificado: true,
+        acta: actaLineas(origen).slice(0,300).map(f=>({ n:f.nombre, s:f.saldo, m:f.mora })),
         hechoPor:S.uid, creadoEn: serverTimestamp()
       });
       _trOr = null; _trDe = null;
@@ -3173,6 +3248,88 @@
       if(btn){ btn.disabled=false; btn.textContent='🔁 Traspasar ahora'; }
       toast('No se pudo traspasar: '+(e.message||e), true);
     }
+  }
+
+  // NUEVO v3.3: PANEL DEL DUEÑO — controlar las licencias de tus clientes.
+  function estadoEmpresa(e){
+    if(e.bloqueoTotal === true) return { t:'🔒 Bloqueada', c:'var(--peligro)' };
+    if(e.licenciaActiva === false) return { t:'⛔ Suspendida', c:'var(--peligro)' };
+    if(e.vence && hoyISO() > e.vence) return { t:'⚠️ Vencida', c:'var(--peligro)' };
+    if(e.vence){
+      const faltan = Math.round((rxFecha(e.vence) - rxFecha(hoyISO()))/86400000);
+      if(faltan<=7) return { t:`⏳ Vence en ${faltan}d`, c:'var(--alerta)' };
+    }
+    return { t:'🟢 Al día', c:'var(--ok)' };
+  }
+  async function abrirPanelDueno(){
+    if(!S.esDueno) return;
+    abrirHoja(`<h2>👑 Licencias</h2><div class="sub">Consultando tus empresas…</div>`);
+    let empresas = [];
+    try{
+      const snap = await getDocs(collection(db,'empresas'));
+      snap.forEach(d=> empresas.push({ id:d.id, ...d.data() }));
+    }catch(e){
+      return abrirHoja(`
+        <h2>👑 Licencias</h2>
+        <div class="rx-conteo-dif falta" style="display:block;margin-top:14px">🔐 Firebase todavía no te deja ver las demás empresas. Falta autorizar tu cuenta de dueño en las <b>reglas de Firestore</b> (archivo aparte). Mientras tanto solo administras la tuya.</div>
+        <div class="rx-acciones" style="margin-top:16px"><button class="rx-btn-fant" id="pdCerrar">Cerrar</button></div>`),
+        ($('pdCerrar').onclick = cerrarHoja);
+    }
+    empresas.sort((a,b)=> String(a.nombre||'').localeCompare(String(b.nombre||'')));
+    const filas = empresas.map(e=>{
+      const st = estadoEmpresa(e); const mia = e.id===S.empresaId;
+      return `<div class="rx-repcob">
+        <div class="l1">${escapar(e.nombre||'(sin nombre)')}${mia?' <i style="color:var(--niebla);font-weight:400">· tu empresa</i>':''}
+          <span style="margin-left:auto;color:${st.c};font-size:.82rem;font-weight:700">${st.t}</span></div>
+        <div class="l2">Vence: <b>${escapar(e.vence||'sin fecha')}</b></div>
+        <div class="acc" style="display:flex;gap:8px;margin-top:9px;flex-wrap:wrap">
+          <button class="rx-tel-mini" data-dmas="${e.id}">+30 días</button>
+          <button class="rx-tel-mini" data-dfec="${e.id}">📅 Fecha</button>
+          ${mia?'' : (e.bloqueoTotal===true || e.licenciaActiva===false)
+            ? `<button class="rx-veri-btn" data-dact="${e.id}" style="background:var(--ok)">♻️ Reactivar</button>`
+            : `<button class="rx-tel-mini" data-dsua="${e.id}" style="background:#FBEFD8;color:#8a6a10">⛔ Suave</button>
+               <button class="rx-veri-btn" data-dtot="${e.id}" style="background:var(--peligro)">🔒 Bloquear</button>`}
+        </div>
+      </div>`;
+    }).join('');
+    abrirHoja(`
+      <h2>👑 Licencias</h2>
+      <div class="sub"><b>${empresas.length}</b> empresa(s) usando Rendix. <b>Suave</b>: siguen cobrando pero no pueden entregar préstamos. <b>Bloquear</b>: nadie entra (los datos quedan intactos).</div>
+      <div style="margin-top:14px">${filas || '<div class="rx-vacio-mini">Sin empresas.</div>'}</div>
+      <div class="hint" style="margin-top:12px">Tu propia empresa no se puede bloquear desde aquí — así no te dejas por fuera.</div>
+      <div class="rx-acciones" style="margin-top:16px"><button class="rx-btn-fant" id="pdCerrar">Cerrar</button></div>`);
+    $('pdCerrar').onclick = cerrarHoja;
+    const guardar = async (id, datos, msg)=>{
+      try{ await updateDoc(doc(db,'empresas',id), datos); toast(msg); abrirPanelDueno(); }
+      catch(e){ toast('No se pudo: '+(e.message||e), true); }
+    };
+    document.querySelectorAll('[data-dtot]').forEach(b=> b.onclick = ()=>{
+      const e = empresas.find(x=>x.id===b.dataset.dtot);
+      if(!confirm(`¿BLOQUEAR por completo a "${e.nombre}"? Nadie de esa empresa podrá entrar hasta que la reactives.`)) return;
+      guardar(e.id, { bloqueoTotal:true, licenciaActiva:false }, 'Empresa bloqueada 🔒');
+    });
+    document.querySelectorAll('[data-dsua]').forEach(b=> b.onclick = ()=>{
+      const e = empresas.find(x=>x.id===b.dataset.dsua);
+      if(!confirm(`¿Suspender a "${e.nombre}"? Podrán cobrar y cerrar caja, pero no entregar préstamos nuevos.`)) return;
+      guardar(e.id, { licenciaActiva:false, bloqueoTotal:false }, 'Suspensión suave aplicada ⛔');
+    });
+    document.querySelectorAll('[data-dact]').forEach(b=> b.onclick = ()=>{
+      const e = empresas.find(x=>x.id===b.dataset.dact);
+      guardar(e.id, { licenciaActiva:true, bloqueoTotal:false }, 'Empresa reactivada ♻️');
+    });
+    document.querySelectorAll('[data-dmas]').forEach(b=> b.onclick = ()=>{
+      const e = empresas.find(x=>x.id===b.dataset.dmas);
+      const base = (e.vence && e.vence > hoyISO()) ? e.vence : hoyISO();
+      const nueva = new Date(rxFecha(base).getTime() + 30*86400000).toISOString().slice(0,10);
+      guardar(e.id, { vence:nueva, licenciaActiva:true, bloqueoTotal:false }, `Pagó ✓ vence ${nueva}`);
+    });
+    document.querySelectorAll('[data-dfec]').forEach(b=> b.onclick = ()=>{
+      const e = empresas.find(x=>x.id===b.dataset.dfec);
+      const v = prompt(`Fecha de vencimiento de "${e.nombre}" (AAAA-MM-DD):`, e.vence || hoyISO());
+      if(!v) return;
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(v)) return toast('Formato inválido. Usa AAAA-MM-DD.', true);
+      guardar(e.id, { vence:v }, `Vencimiento: ${v}`);
+    });
   }
 
   function abrirCierresAdmin(){
@@ -3532,6 +3689,106 @@
       </div>`);
     $('preWa').onclick = ()=> waAbrir(cli.telefono, textoResumenPrestamo(cli, d));
     $('preListo').onclick = cerrarHoja;
+  }
+
+  // NUEVO v3.2: BAJAS SEGURAS — nada se borra sin ver antes qué se lleva por delante.
+  function impactoCliente(id){
+    const prs = prestamosDe(id);
+    const activos = prs.filter(p=> p.estado!=='pagado' && saldoPrestamo(p)>0);
+    const movs = S.movimientos.filter(m=> m.clienteId===id);
+    return { prs, activos, movs, saldo: deudaCliente(id) };
+  }
+  function bajaCliente(c){
+    const k = impactoCliente(c.id);
+    const limpio = k.prs.length===0 && k.movs.length===0;
+    const archivado = c.activo===false;
+    abrirHoja(`
+      <h2>⚠️ Dar de baja a ${escapar(c.nombre||'este cliente')}</h2>
+      <div class="sub">Lee bien antes de tocar nada.</div>
+      <div class="rx-detalle-fila" style="margin-top:14px"><span class="et">Préstamos en su historia</span><span class="va">${k.prs.length}</span></div>
+      <div class="rx-detalle-fila"><span class="et">Préstamos activos</span><span class="va" style="${k.activos.length?'color:var(--peligro)':''}">${k.activos.length}</span></div>
+      <div class="rx-detalle-fila"><span class="et">Debe en la calle</span><span class="va" style="${k.saldo>0?'color:var(--peligro)':''}">${pesos(k.saldo)}</span></div>
+      <div class="rx-detalle-fila"><span class="et">Movimientos registrados</span><span class="va">${k.movs.length}</span></div>
+      ${k.activos.length>0 ? `<div class="rx-conteo-dif falta" style="display:block;margin-top:14px">🚫 <b>Este cliente todavía debe plata.</b> No lo archives hasta que liquide o lo pases a pérdida. Si lo archivas, sale de las listas pero la deuda sigue existiendo.</div>` : ''}
+      ${limpio
+        ? `<div class="rx-banner ok" style="margin-top:14px">Este cliente no tiene préstamos ni movimientos: se puede borrar sin dañar nada.</div>
+           <button class="rx-btn-prim" id="bcBorrar" style="width:100%;margin-top:12px;background:var(--peligro)">🗑 Eliminar definitivamente</button>
+           <div class="hint" style="margin-top:5px;text-align:center">Esto no se puede deshacer.</div>`
+        : `<div class="rx-banner" style="margin-top:14px">🔒 Tiene historia, así que <b>no se puede borrar</b>: la plata que pasó por él no se toca nunca. Lo que puedes hacer es <b>archivarlo</b> — desaparece de tus listas y su historia queda intacta.</div>
+           <button class="rx-btn-prim" id="bcArchivar" style="width:100%;margin-top:12px">${archivado?'♻️ Reactivar cliente':'📦 Archivar cliente'}</button>`}
+      <div class="rx-acciones" style="margin-top:16px"><button class="rx-btn-fant" id="bcCancelar">Cancelar</button></div>`);
+    $('bcCancelar').onclick = ()=> fichaCliente(c.id);
+    const bA = $('bcArchivar');
+    if(bA) bA.onclick = async ()=>{
+      if(!confirm(archivado?`¿Reactivar a ${c.nombre}?`:`¿Archivar a ${c.nombre}? Sale de tus listas; su historia se conserva.`)) return;
+      bA.disabled=true; bA.textContent='Guardando…';
+      try{
+        await updateDoc(doc(db,'empresas',S.empresaId,'clientes',c.id), { activo: archivado });
+        cerrarHoja(); toast(archivado?'Cliente reactivado ♻️':'Cliente archivado 📦');
+      }catch(e){ bA.disabled=false; toast('No se pudo: '+(e.message||e), true); }
+    };
+    const bB = $('bcBorrar');
+    if(bB) bB.onclick = async ()=>{
+      if(!confirm(`¿ELIMINAR a ${c.nombre} (cédula ${c.cedula||'—'})? Esto no se puede deshacer.`)) return;
+      bB.disabled=true; bB.textContent='Eliminando…';
+      try{
+        await deleteDoc(doc(db,'empresas',S.empresaId,'clientes',c.id));
+        cerrarHoja(); toast('Cliente eliminado 🗑');
+      }catch(e){ bB.disabled=false; toast('No se pudo: '+(e.message||e), true); }
+    };
+  }
+  function bajaCobrador(c){
+    const k = carteraDe(c.id);
+    const movs = S.movimientos.filter(m=> m.cobradorId===c.id).length;
+    abrirHoja(`
+      <h2>⚠️ Dar de baja a ${escapar(c.nombre||'este cobrador')}</h2>
+      <div class="sub">Lee bien antes de tocar nada.</div>
+      <div class="rx-detalle-fila" style="margin-top:14px"><span class="et">Clientes a su nombre</span><span class="va" style="${k.cls.length?'color:var(--peligro)':''}">${k.cls.length}</span></div>
+      <div class="rx-detalle-fila"><span class="et">Préstamos activos</span><span class="va">${k.activos}</span></div>
+      <div class="rx-detalle-fila"><span class="et">En la calle</span><span class="va" style="${k.deuda>0?'color:var(--peligro)':''}">${pesos(k.deuda)}</span></div>
+      <div class="rx-detalle-fila"><span class="et">Movimientos suyos</span><span class="va">${movs}</span></div>
+      ${k.cls.length>0
+        ? `<div class="rx-conteo-dif falta" style="display:block;margin-top:14px">🚫 <b>Todavía tiene cartera.</b> Primero pásale sus ${k.cls.length} cliente(s) a otro cobrador con el acta de entrega. Después lo das de baja.</div>
+           <button class="rx-btn-prim" id="bkTras" style="width:100%;margin-top:12px">🔁 Traspasar su cartera</button>`
+        : `<div class="rx-banner" style="margin-top:14px">No tiene cartera. Al darlo de baja <b>pierde el acceso a la app</b>; sus cobros y cierres quedan en el historial a su nombre — eso no se borra jamás.</div>
+           <button class="rx-btn-prim" id="bkBaja" style="width:100%;margin-top:12px;background:var(--peligro)">🔒 Quitarle el acceso</button>`}
+      <div class="rx-acciones" style="margin-top:16px"><button class="rx-btn-fant" id="bkCancelar">Cancelar</button></div>`);
+    $('bkCancelar').onclick = ()=> fichaCobrador(c.id);
+    const bT = $('bkTras'); if(bT) bT.onclick = ()=> abrirTraspaso(c.id);
+    const bB = $('bkBaja');
+    if(bB) bB.onclick = async ()=>{
+      if(!confirm(`¿Quitarle el acceso a ${c.nombre}? No podrá entrar a la app.`)) return;
+      bB.disabled=true; bB.textContent='Aplicando…';
+      let global = true;
+      try{ await updateDoc(doc(db,'usuariosGlobal',c.id), { bloqueado:true }); }catch(_){ global = false; }
+      try{ await updateDoc(doc(db,'empresas',S.empresaId,'usuarios',c.id), { activo:false }); }catch(_){}
+      cerrarHoja();
+      toast(global ? 'Acceso bloqueado 🔒' : 'Marcado inactivo, pero el bloqueo de acceso falló: cámbiale la clave desde Firebase.', !global);
+    };
+  }
+  function bajaRuta(r){
+    const cls = S.clientes.filter(c=> c.rutaId===r.id).length;
+    const cobs = S.cobradores.filter(c=> c.rutaId===r.id).length;
+    const libre = cls===0 && cobs===0;
+    abrirHoja(`
+      <h2>⚠️ Eliminar la ruta ${escapar(r.nombre||'')}</h2>
+      <div class="rx-detalle-fila" style="margin-top:14px"><span class="et">Clientes en esta ruta</span><span class="va" style="${cls?'color:var(--peligro)':''}">${cls}</span></div>
+      <div class="rx-detalle-fila"><span class="et">Cobradores asignados</span><span class="va" style="${cobs?'color:var(--peligro)':''}">${cobs}</span></div>
+      ${libre
+        ? `<div class="rx-banner ok" style="margin-top:14px">Nadie usa esta ruta: se puede borrar sin dañar nada.</div>
+           <button class="rx-btn-prim" id="brBorrar" style="width:100%;margin-top:12px;background:var(--peligro)">🗑 Eliminar ruta</button>`
+        : `<div class="rx-conteo-dif falta" style="display:block;margin-top:14px">🚫 <b>No se puede borrar.</b> Primero mueve sus ${cls} cliente(s) y ${cobs} cobrador(es) a otra ruta.</div>`}
+      <div class="rx-acciones" style="margin-top:16px"><button class="rx-btn-fant" id="brCancelar">Cancelar</button></div>`);
+    $('brCancelar').onclick = ()=> fichaRuta(r.id);
+    const bB = $('brBorrar');
+    if(bB) bB.onclick = async ()=>{
+      if(!confirm(`¿Eliminar la ruta ${r.nombre}? Esto no se puede deshacer.`)) return;
+      bB.disabled=true; bB.textContent='Eliminando…';
+      try{
+        await deleteDoc(doc(db,'empresas',S.empresaId,'rutas',r.id));
+        cerrarHoja(); toast('Ruta eliminada 🗑');
+      }catch(e){ bB.disabled=false; toast('No se pudo: '+(e.message||e), true); }
+    };
   }
 
   function confirmacionCobro(p, cli, monto, nuevoSaldo, fecha, metodo, destino){

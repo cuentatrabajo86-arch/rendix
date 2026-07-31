@@ -487,8 +487,23 @@
   .rx-conteo-dif.falta{color:var(--peligro);background:rgba(178,58,51,.1)}
   .rx-conteo-dif.sobra{color:var(--alerta);background:rgba(192,83,43,.1)}
   .rx-cobro-row.bloq{opacity:.55;pointer-events:none}
+  /* v4.3 · pasos guiados del cobrador */
+  .rx-pasos{display:flex;flex-direction:column;gap:9px}
+  .rx-paso{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:13px 14px;border-radius:13px;
+    border:1.5px solid var(--linea);background:#fff;cursor:pointer;font-family:inherit;transition:.15s}
+  .rx-paso:active{transform:scale(.99)}
+  .rx-paso .n{flex:0 0 auto;width:31px;height:31px;border-radius:50%;display:grid;place-items:center;
+    font-weight:800;font-size:.95rem;background:var(--linea);color:var(--niebla)}
+  .rx-paso .tx{min-width:0;flex:1}
+  .rx-paso .t{font-weight:800;font-size:.97rem;color:var(--tinta)}
+  .rx-paso .d{font-size:.83rem;color:var(--niebla);margin-top:2px}
+  .rx-paso.ok{border-color:rgba(46,158,99,.45);background:rgba(46,158,99,.06)}
+  .rx-paso.ok .n{background:var(--ok);color:#fff}
+  .rx-paso.activo{border-color:var(--dorado);box-shadow:0 2px 10px rgba(201,162,39,.18)}
+  .rx-paso.activo .n{background:var(--dorado);color:#fff}
+  .rx-paso.espera{opacity:.55}
   .rx-cierre-fechagrupo{margin-top:16px}
-  .rx-cierre-fecha{display:flex;justify-content:space-between;align-items:center;font-size:.78rem;font-weight:700;color:var(--niebla);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;padding:0 2px}
+  .rx-cierre-fecha{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:1rem;font-weight:800;color:var(--tinta);margin-bottom:9px;padding:0 2px}
   .rx-cierre-fecha .tot{color:var(--azul-claro);font-size:.92rem;letter-spacing:0}
   .rx-cierre-item{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;text-align:left;background:#fff;border:1px solid var(--linea);border-radius:13px;padding:13px 15px;margin-bottom:8px;cursor:pointer;font-family:var(--texto);transition:transform .15s}
   .rx-cierre-item:active{transform:scale(.99)}
@@ -554,7 +569,7 @@
       <button class="rx-btn" type="submit" id="btnEntrar">Entrar</button>
       <div class="rx-error" id="errLogin" role="alert"></div>
     </form>
-    <div class="rx-firma">Rendix v4.1 · Powered by <b>Iván Jiménez</b></div>
+    <div class="rx-firma">Rendix v4.3 · Powered by <b>Iván Jiménez</b></div>
   </section>
 
   <!-- ===== APP ===== -->
@@ -577,7 +592,7 @@
       </main>
 
       <footer class="rx-pie">
-        <div class="firma">Rendix v4.1 · Powered by <b>Iván Jiménez</b></div>
+        <div class="firma">Rendix v4.3 · Powered by <b>Iván Jiménez</b></div>
       </footer>
     </div>
 
@@ -1219,6 +1234,19 @@
     }
     return mejor;
   }
+  // v4.3 · fecha en cristiano: "Hoy · jueves 31 de julio" en vez de "2026-07-31"
+  function fechaLarga(iso){
+    if(!iso) return '';
+    const d = rxFecha(iso);
+    if(!d || isNaN(d.getTime())) return iso;
+    const t = d.toLocaleDateString('es-CO',{weekday:'long', day:'numeric', month:'long', timeZone:'UTC'});
+    const cap = t.charAt(0).toUpperCase() + t.slice(1);
+    const hoy = hoyISO();
+    if(iso === hoy) return 'Hoy · ' + cap;
+    const ayer = new Date(rxFecha(hoy).getTime() - 86400000).toISOString().slice(0,10);
+    if(iso === ayer) return 'Ayer · ' + cap;
+    return cap;
+  }
   function proxTxt(pc){
     if(!pc || pc.enDias===null) return (pc && pc.vencido) ? 'plazo vencido' : '';
     if(pc.enDias<=0) return 'HOY';
@@ -1385,6 +1413,7 @@
     const _mtr=$('modTraspaso'); if(_mtr) _mtr.onclick = ()=> abrirTraspaso(null);
     const _chm=$('chipsMora'); if(_chm) _chm.onclick = abrirMorosos;
     const _vt=$('verTransfHoy'); if(_vt) _vt.onclick = abrirTransferenciasHoy;
+    const _vtc=$('verTransfCob'); if(_vtc) _vtc.onclick = abrirTransferenciasHoy;
     const _ve=$('verEntregasHoy'); if(_ve) _ve.onclick = abrirEntregasHoy;
     $('tabInicio').querySelectorAll('[data-rec]').forEach(b=> b.onclick = ()=> abrirRecarga(b.dataset.rec));
     pintarConexion();
@@ -1428,7 +1457,36 @@
         <div class="rx-chip"><div class="k">En la calle</div><div class="v">${pesos(miCartera)}</div></div>
         <div class="rx-chip"><div class="k">Mis clientes</div><div class="v">${S.clientes.length}</div></div>
       </div>
-      <div class="rx-seccion-titulo"><span>Tus módulos</span></div>
+      ${(()=>{   /* v4.2: sus transferencias de hoy — quien pago, cuanto y el comprobante */
+        const ct = S.movimientos.filter(m=> m.tipo==='cobro' && m.fecha===hoy && m.metodo==='transferencia' && !m.renovacion);
+        if(ct.length===0) return '';
+        const tot = ct.reduce((t,m)=> t+(Number(m.monto)||0), 0);
+        return `<button class="rx-verTransf" id="verTransfCob">📲 Recibiste ${pesos(tot)} en ${ct.length} transferencia${ct.length===1?'':'s'} · ver ›</button>`;
+      })()}
+      ${(()=>{   /* v4.3: el día del cobrador como una secuencia, no como módulos sueltos */
+        const misCobrosHoy = S.movimientos.filter(m=> m.tipo==='cobro' && m.fecha===hoy);
+        const recaudado = misCobrosHoy.reduce((t,m)=> t+(Number(m.monto)||0), 0);
+        const p1 = abierto || cerrado;
+        const p2 = misCobrosHoy.length > 0;
+        const p3 = cerrado;
+        const fila = (n, hecho, activo, espera, accion, titulo, detalle) => `
+          <button class="rx-paso ${hecho?'ok':(activo?'activo':(espera?'espera':''))}" data-paso="${accion}">
+            <div class="n">${hecho?'✓':n}</div>
+            <div class="tx"><div class="t">${titulo}</div><div class="d">${detalle}</div></div>
+          </button>`;
+        return `
+      <div class="rx-seccion-titulo"><span>Tu día, paso a paso</span></div>
+      <div class="rx-pasos">
+        ${fila(1, p1, !p1, false, 'abrir', 'Abre tu día',
+            p1 ? `Saliste con base ${pesos(baseHoy)}` : 'Confirma con cuánta plata sales')}
+        ${fila(2, p2, p1&&!p2&&!cerrado, !p1, 'cobrar', 'Cobra tu ruta',
+            p2 ? `${misCobrosHoy.length} pago${misCobrosHoy.length===1?'':'s'} · ${pesos(recaudado)} recaudado`
+               : (p1 ? 'Toca aquí para ver a quién le toca hoy' : 'Primero abre tu día'))}
+        ${fila(3, p3, p2&&!p3, !p1, 'cierre', 'Cierra y entrega',
+            p3 ? 'Ya entregaste tu cuadre' : 'Cuenta tu efectivo y entrégalo')}
+      </div>
+      <div class="rx-seccion-titulo"><span>Tus módulos</span></div>`;
+      })()}
       <div class="rx-modulos">
         <button class="rx-modulo" data-ir="clientes"><div class="ico">🧾</div><div class="nom">Mis clientes</div><span class="conteo">${S.clientes.length}</span></button>
         <button class="rx-modulo" data-ir="cobrar"><div class="ico">💵</div><div class="nom">Cobrar el día</div></button>
@@ -1444,6 +1502,12 @@
     $('tabInicio').querySelectorAll('[data-ir]').forEach(b=> b.onclick=()=>irATab(b.dataset.ir));
     const _mc=$('modCierre'); if(_mc) _mc.onclick = abrirCierreCaja;
     const _ad=$('cobAbrirDia'); if(_ad) _ad.onclick = abrirElDia;
+    $('tabInicio').querySelectorAll('[data-paso]').forEach(b=> b.onclick = ()=>{
+      const p = b.dataset.paso;
+      if(p==='abrir')  return (abierto || cerrado) ? toast('Tu día ya está abierto ✓') : abrirElDia();
+      if(p==='cobrar') return irATab('cobrar');
+      if(p==='cierre') return abrirCierreCaja();
+    });
     pintarConexion();
   }
 
@@ -3375,13 +3439,13 @@
                 <div class="sub">Efectivo${c.cobradoTransf>0?` · +${pesos(c.cobradoTransf)} transf.`:''}${c.nPendientes>0?` · ${c.nPendientes} sin pagar`:''}${recepcionDe(c.id)?` · <b style="color:var(--ok)">✓ recibido</b>`:''}</div>
               </div>
               <div class="der">
-                <div style="font-size:.66rem;font-weight:700;color:${c.efectivoFinal<0?'var(--peligro)':'var(--ok)'};margin-bottom:1px">${c.efectivoFinal<0?'Puso de su bolsillo':'Entregó'}</div>
+                <div style="font-size:.66rem;font-weight:700;color:${c.efectivoFinal<0?'var(--peligro)':'var(--ok)'};margin-bottom:1px">${c.efectivoFinal<0?'Puso de su bolsillo':'Entregó en efectivo'}</div>
                 <div style="${c.efectivoFinal<0?'color:var(--peligro)':''}">${pesos(Math.abs(c.efectivoFinal))}</div>
               </div>
             </button>`).join('');
           const totalDia = defin.reduce((t,c)=> t+(Number(c.efectivoFinal)||0), 0);
           return `<div class="rx-cierre-fechagrupo">
-            <div class="rx-cierre-fecha"><span>${f}</span><span class="tot">${pesos(totalDia)}</span></div>
+            <div class="rx-cierre-fecha"><span>${fechaLarga(f)}</span><span class="tot">${pesos(totalDia)}</span></div>
             ${items}
           </div>`;
         }).join('');

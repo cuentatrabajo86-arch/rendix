@@ -45,6 +45,7 @@
     --texto:"Hanken Grotesk",-apple-system,system-ui,sans-serif;
   }
   *{box-sizing:border-box;margin:0;padding:0}
+  html,body{overflow-x:clip;max-width:100%}   /* v4.1: bloquea el scroll lateral sin afectar sticky */
   html,body{height:100%}
   body{
     font-family:var(--texto);
@@ -138,6 +139,7 @@
   .rx-banner{
     margin:16px 0;padding:13px 15px;border-radius:12px;font-size:.9rem;font-weight:500;
     background:rgba(192,83,43,.1);border:1px solid rgba(192,83,43,.3);color:#8a3a1c;display:flex;gap:10px;align-items:flex-start;
+    flex-wrap:wrap;min-width:0;   /* v4.1: sin esto la lista de nombres estiraba la pagina y corria el encabezado */
   }
   .rx-banner.ok{background:rgba(46,125,91,.1);border-color:rgba(46,125,91,.3);color:#1d5c43}
 
@@ -552,7 +554,7 @@
       <button class="rx-btn" type="submit" id="btnEntrar">Entrar</button>
       <div class="rx-error" id="errLogin" role="alert"></div>
     </form>
-    <div class="rx-firma">Rendix v4.0 · Powered by <b>Iván Jiménez</b></div>
+    <div class="rx-firma">Rendix v4.1 · Powered by <b>Iván Jiménez</b></div>
   </section>
 
   <!-- ===== APP ===== -->
@@ -575,7 +577,7 @@
       </main>
 
       <footer class="rx-pie">
-        <div class="firma">Rendix v4.0 · Powered by <b>Iván Jiménez</b></div>
+        <div class="firma">Rendix v4.1 · Powered by <b>Iván Jiménez</b></div>
       </footer>
     </div>
 

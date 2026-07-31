@@ -552,7 +552,7 @@
       <button class="rx-btn" type="submit" id="btnEntrar">Entrar</button>
       <div class="rx-error" id="errLogin" role="alert"></div>
     </form>
-    <div class="rx-firma">Rendix v3.3 · Powered by <b>Iván Jiménez</b></div>
+    <div class="rx-firma">Rendix v4.0 · Powered by <b>Iván Jiménez</b></div>
   </section>
 
   <!-- ===== APP ===== -->
@@ -575,7 +575,7 @@
       </main>
 
       <footer class="rx-pie">
-        <div class="firma">Rendix v3.3 · Powered by <b>Iván Jiménez</b></div>
+        <div class="firma">Rendix v4.0 · Powered by <b>Iván Jiménez</b></div>
       </footer>
     </div>
 
@@ -988,6 +988,7 @@
       S.licenciaActiva = emp.licenciaActiva !== false;
       S.vence = emp.vence || null;                 // 'YYYY-MM-DD' — opcional
       S.soporte = emp.soporte || '';
+      S.indicativo = String(emp.indicativo || '57');   // v3.6: indicativo pais para WhatsApp (57=CO, 51=PE...)
       S.suspendida = !S.licenciaActiva || (!!S.vence && hoyISO() > S.vence);
       if(emp.bloqueoTotal === true && user.uid !== RX_DUENO){
         return pantallaEstado({
@@ -1092,15 +1093,30 @@
   // ===========================================================
   //  ESCUCHAR DATOS EN VIVO (onSnapshot)
   // ===========================================================
+  // v4.0 · Un solo repintado por ráfaga. Antes, 5 listeners disparando a la vez
+  // (o el eco local+servidor de Firestore) provocaban hasta 15 renders seguidos.
+  let _repintarPend = false;
+  function repintar(){
+    if(_repintarPend) return;
+    _repintarPend = true;
+    Promise.resolve().then(()=>{
+      _repintarPend = false;
+      if(S.tab==='clientes')        renderClientes();
+      else if(S.tab==='inicio')     (S.rol==='admin'?renderInicioAdmin:renderInicioCobrador)();
+      else if(S.tab==='cobrar')     renderCobrarDia();
+      else if(S.tab==='cobradores') renderCobradores();
+      else if(S.tab==='rutas')      renderRutas();
+      if($('cierreBody')) pintarCierre();
+    });
+  }
   function escucharCobradores(){
     const ref = collection(db, 'empresas', S.empresaId, 'usuarios');
     S.unsubCob = onSnapshot(ref, (snap)=>{
       S.cobradores = snap.docs.map(d=>({ id:d.id, ...d.data() }))
         .filter(u => u.rol === 'cobrador')
         .sort((a,b)=> (a.nombre||'').localeCompare(b.nombre||''));
-      if(S.tab==='cobradores') renderCobradores();
-      if(S.tab==='inicio') renderInicioAdmin();
-      if(S.tab==='rutas') renderRutas();
+      S.cobIdx = new Map(S.cobradores.map(c=>[c.id,c]));
+      repintar();
     }, (err)=> console.warn('cobradores:', err.message));
   }
   function escucharRutas(){
@@ -1108,9 +1124,7 @@
     S.unsubRut = onSnapshot(ref, (snap)=>{
       S.rutas = snap.docs.map(d=>({ id:d.id, ...d.data() }))
         .sort((a,b)=> (a.nombre||'').localeCompare(b.nombre||''));
-      if(S.tab==='rutas') renderRutas();
-      if(S.tab==='cobradores') renderCobradores();
-      if(S.tab==='inicio') renderInicioAdmin();
+      repintar();
     }, (err)=> console.warn('rutas:', err.message));
   }
   function escucharClientes(){
@@ -1120,9 +1134,8 @@
       S.clientes = snap.docs.map(d=>({ id:d.id, ...d.data() }))
         .filter(c=> c.activo !== false)
         .sort((a,b)=> (a.nombre||'').localeCompare(b.nombre||''));
-      if(S.tab==='clientes') renderClientes();
-      if(S.tab==='inicio') (S.rol==='admin'?renderInicioAdmin:renderInicioCobrador)();
-      if(S.tab==='cobrar') renderCobrarDia();
+      S.cliIdx = new Map(S.clientes.map(c=>[c.id,c]));
+      repintar();
     }, (err)=> console.warn('clientes:', err.message));
   }
   function escucharPrestamos(){
@@ -1130,10 +1143,8 @@
     const ref = (S.rol==='admin') ? base : query(base, where('cobradorId','==',S.uid));
     S.unsubPres = onSnapshot(ref, (snap)=>{
       S.prestamos = snap.docs.map(d=>({ id:d.id, ...d.data() }));
-      if(S.tab==='clientes') renderClientes();
-      if(S.tab==='inicio') (S.rol==='admin'?renderInicioAdmin:renderInicioCobrador)();
-      if(S.tab==='cobrar') renderCobrarDia();
-      if($('cierreBody')) pintarCierre();
+      S.presIdx = new Map(S.prestamos.map(p=>[p.id,p]));
+      repintar();
     }, (err)=> console.warn('prestamos:', err.message));
   }
   function escucharMovimientos(){
@@ -1145,14 +1156,21 @@
       const idx = new Map();
       for(const m of S.movimientos){ const a=idx.get(m.prestamoId); a ? a.push(m) : idx.set(m.prestamoId,[m]); }
       S.movIdx = idx;
-      if(S.tab==='clientes') renderClientes();
-      if(S.tab==='inicio') (S.rol==='admin'?renderInicioAdmin:renderInicioCobrador)();
-      if(S.tab==='cobrar') renderCobrarDia();
-      if($('cierreBody')) pintarCierre();
+      repintar();
     }, (err)=> console.warn('movimientos:', err.message));
   }
   // saldo REAL de un préstamo: reconstruido desde sus movimientos (principio sagrado)
   function movsDe(prestamoId){ return S.movIdx.get(prestamoId) || []; }
+  // v4.0 · índices O(1): las listas dejan de recorrer todo el arreglo en cada fila.
+  // Si el índice aún no existe (primer render), cae al find() de siempre: mismo resultado.
+  function _porId(arr, idx, id){
+    if(idx) return idx.get(id);
+    for(const x of (arr||[])) if(x.id===id) return x;   // fallback lineal, sin recursión
+    return undefined;
+  }
+  function clientePorId(id){  return _porId(S.clientes,   S.cliIdx,  id); }
+  function prestamoPorId(id){ return _porId(S.prestamos,  S.presIdx, id); }
+  function cobradorPorId(id){ return _porId(S.cobradores, S.cobIdx,  id); }
   function saldoPrestamo(p){ return rxResumen(p, movsDe(p.id)).saldo; }
   // préstamos de un cliente
   function prestamosDe(clienteId){
@@ -1169,7 +1187,8 @@
   function waNumero(tel){
     let d = String(tel||'').replace(/\D/g,'');
     if(!d) return null;
-    if(d.length===10 && d.startsWith('3')) d = '57'+d;   // celular colombiano sin indicativo
+    const ind = String(S.indicativo || '57');
+    if(d.length<=10 && !d.startsWith(ind)) d = ind + d;   // numero local sin indicativo
     return d;
   }
   function waAbrir(tel, msg){
@@ -1225,7 +1244,7 @@
   }
   function nombreCobrador(uid){
     if(!uid) return null;
-    const c = S.cobradores.find(x=>x.id===uid);
+    const c = cobradorPorId(uid);
     return c ? c.nombre : '(sin asignar)';
   }
 
@@ -1587,7 +1606,7 @@
 
   // ---- ficha (detalle) de cobrador con drill-down a sus clientes ----
   function fichaCobrador(uid){
-    const c = S.cobradores.find(x=>x.id===uid); if(!c) return;
+    const c = cobradorPorId(uid); if(!c) return;
     const r = c.rutaId ? (nombreRuta(c.rutaId)||'—') : 'Sin ruta';
     const estado = c.bloqueado
       ? '<span class="estado rx-estado-bloq">Bloqueado</span>'
@@ -1952,7 +1971,7 @@
     if(S.rol==='admin'){
       cobradorId = $('cliCob').value;
       if(!cobradorId) return valErr('cliErr','Asigna un cobrador para este cliente.');
-      const cob = S.cobradores.find(c=>c.id===cobradorId);
+      const cob = cobradorPorId(cobradorId);
       rutaId = cob?.rutaId || '';
     } else {
       cobradorId = S.uid;
@@ -1993,7 +2012,7 @@
       const cobradorId = $('cliCob').value;
       if(!cobradorId) return valErr('cliErr','Asigna un cobrador.');
       datos.cobradorId = cobradorId;
-      const cob = S.cobradores.find(c=>c.id===cobradorId);
+      const cob = cobradorPorId(cobradorId);
       datos.rutaId = cob?.rutaId || '';
     }
     const btn = $('cliGuardar'); btn.disabled=true; btn.textContent='Guardando…';
@@ -2008,7 +2027,7 @@
 
   // ---- ficha de cliente con sus préstamos ----
   function fichaCliente(id){
-    const c = S.clientes.find(x=>x.id===id); if(!c) return;
+    const c = clientePorId(id); if(!c) return;
     const esAdmin = S.rol==='admin';
     const pres = prestamosDe(id).slice().sort((a,b)=> (a.estado==='pagado'?1:0)-(b.estado==='pagado'?1:0));
     const tieneActivo = pres.some(p => p.estado !== 'pagado');
@@ -2070,7 +2089,7 @@
       el.onclick = ()=> fichaPrestamo(el.dataset.pres);
     });
     $('rxHojaContenido').querySelectorAll('[data-carton]').forEach(el=>{
-      el.onclick = (e)=>{ e.stopPropagation(); const p=S.prestamos.find(x=>x.id===el.dataset.carton); if(!p) return; abrirCarton(p, c, movsDe(p.id), rxResumen(p, movsDe(p.id))); };
+      el.onclick = (e)=>{ e.stopPropagation(); const p=prestamoPorId(el.dataset.carton); if(!p) return; abrirCarton(p, c, movsDe(p.id), rxResumen(p, movsDe(p.id))); };
     });
   }
 
@@ -2243,14 +2262,14 @@
       </div>`);
     $('cartonCerrar').onclick = ()=> fichaPrestamo(p.id);
     const _crv=$('cartonRenovar'); if(_crv) _crv.onclick = ()=>{
-      const cliR = S.clientes.find(c=>c.id===p.clienteId) || cli;
+      const cliR = clientePorId(p.clienteId) || cli;
       formPrestamo(cliR, { prestamoViejo:p, saldoViejo:r.saldo });
     };
   }
 
   // ---- ficha de un préstamo (carga sus movimientos) ----
   async function fichaPrestamo(prestamoId){
-    const p = S.prestamos.find(x=>x.id===prestamoId); if(!p) return;
+    const p = prestamoPorId(prestamoId); if(!p) return;
     abrirHoja(`<div style="text-align:center;padding:34px 0;color:var(--niebla)">Cargando préstamo…</div>`);
     let movs = [];
     try {
@@ -2262,7 +2281,7 @@
     } catch(_){}
     const r = rxResumen(p, movs);
     const est = RX_ESTADO[r.estado];
-    const cli = S.clientes.find(c=>c.id===p.clienteId) || { id:p.clienteId, nombre:p.clienteNombre, telefono:'' };
+    const cli = clientePorId(p.clienteId) || { id:p.clienteId, nombre:p.clienteNombre, telefono:'' };
     const histo = movs.filter(m=> m.tipo!=='desembolso' && m.tipo!=='verificacion')
       .sort((a,b)=> String(b.fecha).localeCompare(String(a.fecha)));
     const movsHtml = histo.length===0
@@ -2311,7 +2330,7 @@
     const filas = activos.map(p=>{
       const movs = movsDe(p.id);
       const r = rxResumen(p, movs);
-      const cli = S.clientes.find(c=>c.id===p.clienteId) || { nombre:p.clienteNombre };
+      const cli = clientePorId(p.clienteId) || { nombre:p.clienteNombre };
       const pagoHoy = movs.some(m=> m.tipo==='cobro' && m.fecha===hoy);
       const notaHoy = movs.some(m=> m.tipo==='nota' && m.fecha===hoy);
       // NUEVO v2.2: ¿a este préstamo le toca cuota HOY según su modalidad?
@@ -2387,9 +2406,9 @@
       row.onclick = ()=>{
         if(cerrado){ toast('El día está cerrado. Pídele al administrador que lo reabra.'); return; }
         if(!abierto){ toast('Primero abre tu día.'); abrirElDia(); return; }
-        const p = S.prestamos.find(x=>x.id===row.dataset.cobrar); if(!p) return;
+        const p = prestamoPorId(row.dataset.cobrar); if(!p) return;
         const r = rxResumen(p, movsDe(p.id));
-        const cli = S.clientes.find(c=>c.id===p.clienteId) || { nombre:p.clienteNombre, telefono:'' };
+        const cli = clientePorId(p.clienteId) || { nombre:p.clienteNombre, telefono:'' };
         if(r.saldo<=0){ toast('Este préstamo ya está liquidado.'); return; }
         _volverCobro = cerrarHoja;   // tras cobrar/cancelar volvemos a la planilla (se refresca sola)
         formCobro(p, r, cli);
@@ -2404,8 +2423,8 @@
         e.stopPropagation();
         if(cerrado){ toast('El día está cerrado. Pídele al administrador que lo reabra.'); return; }
         if(!abierto){ toast('Primero abre tu día.'); abrirElDia(); return; }
-        const p = S.prestamos.find(x=>x.id===btn.dataset.nota); if(!p) return;
-        const cli = S.clientes.find(c=>c.id===p.clienteId) || { nombre:p.clienteNombre };
+        const p = prestamoPorId(btn.dataset.nota); if(!p) return;
+        const cli = clientePorId(p.clienteId) || { nombre:p.clienteNombre };
         formNota(p, cli);
       });
     });
@@ -2513,7 +2532,7 @@
     const cobradoEfectivo = totalCobrado - cobradoTransf;
     // En una renovación solo salió en efectivo (monto − saldo anterior); por eso se descuenta.
     const prestadoHoy = desembHoy.reduce((t,m)=>{
-      const pr = S.prestamos.find(x=> x.id===m.prestamoId);
+      const pr = prestamoPorId(m.prestamoId);
       const desc = pr ? (Number(pr.saldoDescontado)||0) : 0;
       return t + (Number(m.monto)||0) - desc;
     }, 0);
@@ -2532,7 +2551,7 @@
         const diasP = Math.floor((rxFecha(hoy) - rxFecha(p.fechaInicio))/86400000);
         const toca = diasP>0 && diasP % paso === 0 && Math.floor(diasP/paso) <= (Number(p.numeroCuotas)||0);
         if(!(toca || r.estado==='atrasado')) continue;
-        const cli = S.clientes.find(c=>c.id===p.clienteId) || { nombre:p.clienteNombre };
+        const cli = clientePorId(p.clienteId) || { nombre:p.clienteNombre };
         pendientes.push({ nombre: cli.nombre||'Sin nombre', saldo: r.saldo, clienteId: p.clienteId||'', telefono: cli.telefono||'' });
       }
     }
@@ -2622,7 +2641,10 @@
     };
     inp.addEventListener('input', evaluar);
     $('conteoCancelar').onclick = ()=> { cerrarHoja(); pintarCierre(); };
-    $('conteoConfirmar').onclick = ()=> confirmarCierre(c, Number(inp.value)||0, inp.value==='');
+    const _cf = $('conteoConfirmar');
+    _cf.onclick = ()=>{ if(_cf.disabled) return; _cf.disabled = true;
+      Promise.resolve(confirmarCierre(c, Number(inp.value)||0, inp.value===''))
+        .finally(()=>{ _cf.disabled = false; }); };
   }
 
   async function confirmarCierre(c, efectivoReal, sinContar){
@@ -2698,7 +2720,7 @@
       por.set(p.clienteId, o);
     }
     return [...por.values()]
-      .map(o=> ({ ...o, cli: S.clientes.find(c=>c.id===o.clienteId) || { nombre:'Sin nombre' } }))
+      .map(o=> ({ ...o, cli: clientePorId(o.clienteId) || { nombre:'Sin nombre' } }))
       .sort((a,b)=> b.monto - a.monto);
   }
   function abrirMorosos(){
@@ -2748,7 +2770,7 @@
             </div>`;
           }).join('');
       $('prSel').querySelectorAll('[data-pr]').forEach(el=> el.onclick = ()=>{
-        const c = S.clientes.find(x=>x.id===el.dataset.pr); if(!c) return;
+        const c = clientePorId(el.dataset.pr); if(!c) return;
         prestamosDe(c.id).some(p=>p.estado!=='pagado') ? fichaCliente(c.id) : formPrestamo(c);
       });
     };
@@ -2809,7 +2831,7 @@
     const filas = trs.length===0
       ? `<div class="rx-vacio-mini">Hoy no han entrado transferencias.</div>`
       : trs.map(m=>{
-          const cli = S.clientes.find(x=> x.id===m.clienteId) || { nombre:'Cliente' };
+          const cli = clientePorId(m.clienteId) || { nombre:'Cliente' };
           return `<div class="rx-card" style="cursor:${m.comprobante?'pointer':'default'}" ${m.comprobante?`data-comp="${m.id}"`:''}>
             <div class="cuerpo">
               <div class="nom"><span class="rx-cob-dot" style="background:${colorCobrador(m.cobradorId)}"></span>${escapar(cli.nombre||'Cliente')}</div>
@@ -2829,7 +2851,7 @@
   function verComprobante(movId){
     const m = S.movimientos.find(x=> x.id===movId);
     if(!m || !m.comprobante){ toast('Este pago no tiene comprobante adjunto.'); return; }
-    const cli = S.clientes.find(x=> x.id===m.clienteId) || { nombre:'Cliente' };
+    const cli = clientePorId(m.clienteId) || { nombre:'Cliente' };
     abrirHoja(`
       <h2>Comprobante</h2>
       <div class="sub">${escapar(cli.nombre||'Cliente')} · ${pesos(m.monto)} · ${escapar(m.destino||'Transferencia')} · ${escapar(m.fecha||'')}</div>
@@ -2858,7 +2880,7 @@
     const orden = S.prestamos
       .filter(p=> p.estado!=='pagado')
       .map(p=>{
-        const cli = S.clientes.find(c=>c.id===p.clienteId) || {};
+        const cli = clientePorId(p.clienteId) || {};
         const r = rxResumen(p, movsDe(p.id));
         return { p, cli, r };
       })
@@ -3082,8 +3104,8 @@
     const filas = des.length===0
       ? `<div class="rx-vacio-mini">Hoy no se han entregado préstamos.</div>`
       : des.map(m=>{
-          const p = S.prestamos.find(x=> x.id===m.prestamoId) || {};
-          const cli = S.clientes.find(x=> x.id===(m.clienteId||p.clienteId)) || { nombre:'Cliente' };
+          const p = prestamoPorId(m.prestamoId) || {};
+          const cli = clientePorId((m.clienteId||p.clienteId)) || { nombre:'Cliente' };
           const monto = Number(m.monto)||0;
           const desc = Number(p.saldoDescontado)||0;
           const pap = Number(p.papeleria)||0;
@@ -3112,7 +3134,7 @@
     $('entCerrar').onclick = cerrarHoja;
     document.querySelectorAll('[data-vwa]').forEach(b=> b.onclick = ()=> waAbrir(b.dataset.vwa, b.dataset.vmsg));
     document.querySelectorAll('[data-veri]').forEach(b=> b.onclick = ()=>{
-      const p = S.prestamos.find(x=> x.id===b.dataset.veri); if(!p) return;
+      const p = prestamoPorId(b.dataset.veri); if(!p) return;
       marcarVerificada(p, Number(b.dataset.neto)||0);
     });
   }
@@ -3350,7 +3372,10 @@
                 <div class="nom"><span class="rx-cob-dot" style="background:${colorCobrador(c.cobradorId)}"></span>${escapar(nombreCobrador(c.cobradorId))}</div>
                 <div class="sub">Efectivo${c.cobradoTransf>0?` · +${pesos(c.cobradoTransf)} transf.`:''}${c.nPendientes>0?` · ${c.nPendientes} sin pagar`:''}${recepcionDe(c.id)?` · <b style="color:var(--ok)">✓ recibido</b>`:''}</div>
               </div>
-              <div class="der">${pesos(c.efectivoFinal)}</div>
+              <div class="der">
+                <div style="font-size:.66rem;font-weight:700;color:${c.efectivoFinal<0?'var(--peligro)':'var(--ok)'};margin-bottom:1px">${c.efectivoFinal<0?'Puso de su bolsillo':'Entregó'}</div>
+                <div style="${c.efectivoFinal<0?'color:var(--peligro)':''}">${pesos(Math.abs(c.efectivoFinal))}</div>
+              </div>
             </button>`).join('');
           const totalDia = defin.reduce((t,c)=> t+(Number(c.efectivoFinal)||0), 0);
           return `<div class="rx-cierre-fechagrupo">
@@ -3378,7 +3403,7 @@
     const pendHTML = pend.length===0
       ? `<div class="hint" style="margin-top:6px">Todos los clientes activos pagaron ese día. 🎉</div>`
       : pend.map(pp=>{
-          const cliP = S.clientes.find(x=> x.id===pp.clienteId) || S.clientes.find(x=> x.nombre===pp.nombre);
+          const cliP = clientePorId(pp.clienteId) || S.clientes.find(x=> x.nombre===pp.nombre);
           const tel = pp.telefono || (cliP && cliP.telefono) || '';
           return `<div class="rx-detalle-fila"><span class="et">${escapar(pp.nombre||'Sin nombre')}</span><span class="va">debe ${pesos(pp.saldo)}${tel?` <button class="rx-wa-mini" data-watel="${escapar(tel)}" data-wanom="${escapar(pp.nombre||'')}" title="Cobrarle por WhatsApp">💬</button>`:''}</span></div>`;
         }).join('');
@@ -3473,6 +3498,12 @@
     cont.innerHTML = `
       <h2 style="margin:6px 0 2px">Cierre de caja</h2>
       <div class="sub">${hoy} · ${ruta}</div>
+      <div class="rx-cierre-hero" style="margin:14px 0 8px;padding:18px 14px;border-radius:14px;text-align:center;background:${efectivoCaja<0?'rgba(178,58,51,.07)':'rgba(46,158,99,.09)'};border:1.5px solid ${efectivoCaja<0?'var(--peligro)':'var(--ok)'}">
+        <div style="font-size:.8rem;font-weight:700;letter-spacing:.02em;color:${efectivoCaja<0?'var(--peligro)':'var(--niebla)'};margin-bottom:5px">${efectivoCaja<0?'PUSISTE DE TU BOLSILLO':'ENTREGA ESTE EFECTIVO'}</div>
+        <div style="font-size:2.05rem;font-weight:800;line-height:1.1;color:${efectivoCaja<0?'var(--peligro)':'var(--tinta)'}">${pesos(Math.abs(efectivoCaja))}</div>
+      </div>
+      <details class="rx-cuadre-det">
+        <summary style="cursor:pointer;font-size:.84rem;font-weight:700;color:var(--niebla);padding:9px 2px;user-select:none">🧮 Ver cómo se calculó</summary>
       <div class="rx-cuadre">
         <div class="fila"><span>Base del día</span><span>${pesos(base)}</span></div>
         ${recargas>0?`<div class="fila pos"><span>+ Recarga de base</span><span>${pesos(recargas)}</span></div>`:''}
@@ -3481,6 +3512,7 @@
         ${papeleriaHoy>0?`<div class="fila nota"><span>Papelería retenida (ganancia)</span><span>${pesos(papeleriaHoy)}</span></div>`:''}
         <div class="fila total"><span>Efectivo a entregar</span><span style="${efectivoCaja<0?'color:var(--peligro)':''}">${pesos(efectivoCaja)}</span></div>
       </div>
+      </details>
       ${efectivoCaja<0
         ? `<div class="rx-conteo-dif falta" style="display:block;margin-top:8px">⚠️ Quedaste en negativo: pusiste <b>${pesos(Math.abs(efectivoCaja))}</b> de tu bolsillo. Si el administrador te dio plata durante el día, pídele que registre la <b>recarga de base</b> para que tu caja cuadre.</div>`
         : `<div class="hint" style="margin-top:4px">Este es el efectivo <b>físico</b> que le entregas al administrador.</div>`}
@@ -3825,7 +3857,7 @@
     const texto = encodeURIComponent(lineas.join('\n'));
     const tel = soloDigitos(cli.telefono||'');
     if(tel){
-      const num = tel.length<=10 ? '57'+tel : tel;   // Colombia por defecto
+      const num = waNumero(tel);   // v3.6: usa el indicativo de la empresa
       window.open(`https://wa.me/${num}?text=${texto}`, '_blank');
     } else {
       window.open(`https://wa.me/?text=${texto}`, '_blank');

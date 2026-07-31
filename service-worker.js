@@ -4,7 +4,7 @@
    - Estáticos propios (iconos, manifest): cache-first.
    - CDN (Firebase, Google Fonts): stale-while-revalidate (sirve offline tras la primera carga online).
    Sube el número de versión cada vez que cambies index.html para forzar actualización. */
-const VERSION = 'rendix-v3.1.0';
+const VERSION = 'rendix-v4.0.0';
 const SHELL = `${VERSION}-shell`;
 const RUNTIME = `${VERSION}-runtime`;
 const RED_TOPE_MS = 3000; // NUEVO v2.1: máximo que esperamos la red antes de servir el caché

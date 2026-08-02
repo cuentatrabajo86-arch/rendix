@@ -569,7 +569,7 @@
       <button class="rx-btn" type="submit" id="btnEntrar">Entrar</button>
       <div class="rx-error" id="errLogin" role="alert"></div>
     </form>
-    <div class="rx-firma">Rendix v4.3 · Powered by <b>Iván Jiménez</b></div>
+    <div class="rx-firma">Rendix v4.6 · Powered by <b>Iván Jiménez</b></div>
   </section>
 
   <!-- ===== APP ===== -->
@@ -592,7 +592,7 @@
       </main>
 
       <footer class="rx-pie">
-        <div class="firma">Rendix v4.3 · Powered by <b>Iván Jiménez</b></div>
+        <div class="firma">Rendix v4.6 · Powered by <b>Iván Jiménez</b></div>
       </footer>
     </div>
 
@@ -706,7 +706,7 @@
   const S = { uid:null, empresaId:null, rol:null, nombre:null, empresaNombre:null, perfil:null, licenciaActiva:true, vence:null, soporte:'', suspendida:false,
               cobradores:[], rutas:[], clientes:[], prestamos:[], movimientos:[], movIdx:new Map(),
               offsetReloj:0, relojCalibrado:false,
-              unsubCob:null, unsubRut:null, unsubCli:null, unsubPres:null, unsubMov:null, tab:'inicio' };
+              unsubCob:null, unsubRut:null, unsubCli:null, unsubPres:null, unsubMov:null, unsubEmp:null, tab:'inicio' };
 
   // ---- helpers de texto / formato ----
   function escapar(s){ return String(s ?? '').replace(/[&<>"']/g, c => (
@@ -931,6 +931,7 @@
     if(S.unsubCli){ S.unsubCli(); S.unsubCli=null; }
     if(S.unsubPres){ S.unsubPres(); S.unsubPres=null; }
     if(S.unsubMov){ S.unsubMov(); S.unsubMov=null; }
+    if(S.unsubEmp){ S.unsubEmp(); S.unsubEmp=null; }
   }
 
   // ===========================================================
@@ -1007,6 +1008,7 @@
       S.soporte = emp.soporte || '';
       S.indicativo = String(emp.indicativo || '57');   // v3.6: indicativo pais para WhatsApp (57=CO, 51=PE...)
       S.suspendida = !S.licenciaActiva || (!!S.vence && hoyISO() > S.vence);
+      S.bloqueoHasta = emp.bloqueoPrestamosHasta || null;   // v4.4: dia en que se REANUDAN
       if(emp.bloqueoTotal === true && user.uid !== RX_DUENO){
         return pantallaEstado({
           ico:'🔒', titulo:'Servicio suspendido',
@@ -1053,6 +1055,7 @@
     calibrarReloj();
     $('appEmpresa').textContent = S.empresaNombre;
     wireSalir();
+    escucharEmpresa();
     const esAdmin = S.rol === 'admin';
 
     if(esAdmin){
@@ -1125,6 +1128,23 @@
       else if(S.tab==='rutas')      renderRutas();
       if($('cierreBody')) pintarCierre();
     });
+  }
+  // v4.4 · el doc de la empresa en vivo: si el admin bloquea los prestamos (o el dueno
+  // renueva la licencia), le entra a todos al instante, sin reabrir la app.
+  function escucharEmpresa(){
+    S.unsubEmp = onSnapshot(doc(db, 'empresas', S.empresaId), (snap)=>{
+      if(!snap.exists()) return;
+      const emp = snap.data();
+      S.empresaNombre  = emp.nombre || 'Mi empresa';
+      S.licenciaActiva = emp.licenciaActiva !== false;
+      S.vence          = emp.vence || null;
+      S.soporte        = emp.soporte || '';
+      S.indicativo     = String(emp.indicativo || '57');
+      S.suspendida     = !S.licenciaActiva || (!!S.vence && hoyISO() > S.vence);
+      S.bloqueoHasta   = emp.bloqueoPrestamosHasta || null;
+      const _ae = $('appEmpresa'); if(_ae) _ae.textContent = S.empresaNombre;
+      repintar();
+    }, (err)=> console.warn('empresa:', err.message));
   }
   function escucharCobradores(){
     const ref = collection(db, 'empresas', S.empresaId, 'usuarios');
@@ -1247,6 +1267,10 @@
     if(iso === ayer) return 'Ayer · ' + cap;
     return cap;
   }
+  // v4.4 · el patron frena los prestamos nuevos hasta el dia que el diga.
+  // Se guarda el dia en que se REANUDAN: al llegar, se habilita solo.
+  function prestamosBloqueados(){ return !!S.bloqueoHasta && hoyISO() < S.bloqueoHasta; }
+  function diaMas(n){ return new Date(rxFecha(hoyISO()).getTime() + n*86400000).toISOString().slice(0,10); }
   function proxTxt(pc){
     if(!pc || pc.enDias===null) return (pc && pc.vencido) ? 'plazo vencido' : '';
     if(pc.enDias<=0) return 'HOY';
@@ -1336,6 +1360,9 @@
     const nombresDots = arr => arr.map(c=>`<span class="rx-cob-dot" style="background:${colorCobrador(c.id)}"></span>${escapar(primerNombre(c.nombre||'—'))}`).join(', ');
 
     const banner = (()=>{
+      if(prestamosBloqueados()){
+        return `<div class="rx-banner" style="border-color:rgba(178,58,51,.4);background:rgba(178,58,51,.08)">🚫 <b>Préstamos bloqueados.</b> Tus cobradores cobran y cierran normal, pero no entregan plata nueva. Se reanudan el <b>${escapar(fechaLarga(S.bloqueoHasta))}</b>.</div>`;
+      }
       if(S.suspendida){
         const wa = S.soporte ? ` <a href="https://wa.me/${escapar(waNumero(S.soporte)||'')}" target="_blank" style="color:inherit"><b>Escribir al soporte</b></a>` : '';
         return `<div class="rx-banner" style="border-color:rgba(178,58,51,.4);background:rgba(178,58,51,.08)">🔒 <b>Suscripción vencida.</b> Puedes seguir cobrando y cerrando caja, pero no entregar préstamos nuevos hasta renovar.${wa}</div>`;
@@ -1399,12 +1426,16 @@
         ${S.esDueno?`<button class="rx-modulo" id="modDueno">
           <div class="ico">👑</div><div class="nom">Licencias (dueño)</div>
         </button>`:''}
+        <button class="rx-modulo" id="modBloqueo">
+          <div class="ico">${prestamosBloqueados()?'🚫':'🚦'}</div><div class="nom">${prestamosBloqueados()?'Préstamos bloqueados':'Bloquear préstamos'}</div>
+        </button>
         <button class="rx-modulo" id="modRespaldo">
           <div class="ico">💾</div><div class="nom">Respaldo y exportación</div>
         </button>
       </div>
       ${cerraronHoy>0?`<div class="rx-banner ok" style="margin-top:22px">📥 Hoy <b>${cerraronHoy}</b> cobrador(es) cerraron y entregaron. Toca <b>Cierres</b> en la barra de abajo para confirmar el recibido.</div>`:''}`;
     $('tabInicio').querySelectorAll('[data-ir]').forEach(b=> b.onclick=()=>irATab(b.dataset.ir));
+    const _mbq=$('modBloqueo'); if(_mbq) _mbq.onclick = abrirBloqueoPrestamos;
     const _mmo=$('modMorosos'); if(_mmo) _mmo.onclick = abrirMorosos;
     const _mpr=$('modPrestamoRapido'); if(_mpr) _mpr.onclick = selectorPrestamoRapido;
     const _mre=$('modRespaldo'); if(_mre) _mre.onclick = abrirRespaldo;
@@ -1457,6 +1488,7 @@
         <div class="rx-chip"><div class="k">En la calle</div><div class="v">${pesos(miCartera)}</div></div>
         <div class="rx-chip"><div class="k">Mis clientes</div><div class="v">${S.clientes.length}</div></div>
       </div>
+      ${prestamosBloqueados()?`<div class="rx-banner" style="border-color:rgba(178,58,51,.4);background:rgba(178,58,51,.08)">🚫 <b>Préstamos bloqueados por el administrador.</b> Hoy solo cobras. Se reanudan el <b>${escapar(fechaLarga(S.bloqueoHasta))}</b>.</div>`:''}
       ${(()=>{   /* v4.2: sus transferencias de hoy — quien pago, cuanto y el comprobante */
         const ct = S.movimientos.filter(m=> m.tipo==='cobro' && m.fecha===hoy && m.metodo==='transferencia' && !m.renovacion);
         if(ct.length===0) return '';
@@ -2232,6 +2264,7 @@
     const fechaInicio = $('preFecha').value;
     $('preErr').classList.remove('visible');
     if(S.suspendida) return valErr('preErr','Suscripción vencida: puedes seguir cobrando, pero no entregar préstamos nuevos hasta renovarla.');
+    if(prestamosBloqueados()) return valErr('preErr','🚫 El administrador bloqueó los préstamos. Se reanudan el '+fechaLarga(S.bloqueoHasta)+'.');
     if(monto<=0) return valErr('preErr','Escribe el monto a prestar.');
     if(numeroCuotas<1) return valErr('preErr','El número de cuotas debe ser al menos 1.');
     if(!fechaInicio) return valErr('preErr','Elige la fecha de inicio.');
@@ -2966,6 +2999,57 @@
     return '\uFEFF' + filas.map(f=> f.map(csvCelda).join(';')).join('\n');
   }
 
+  // v4.4 · el patron decide cuando se vuelve a prestar
+  function abrirBloqueoPrestamos(){
+    const act = prestamosBloqueados();
+    abrirHoja(`
+      <h2>🚦 Bloquear préstamos</h2>
+      <div class="sub">Tus cobradores siguen cobrando y cerrando caja igual. Solo se frena la entrega de plata nueva.</div>
+      ${act?`<div class="rx-banner" style="border-color:rgba(178,58,51,.4);background:rgba(178,58,51,.08);margin-top:14px">🚫 <b>Bloqueados ahora.</b> Se reanudan el <b>${escapar(fechaLarga(S.bloqueoHasta))}</b>.</div>`:''}
+      <div class="rx-seccion-titulo" style="margin-top:16px"><span>¿Hasta cuándo?</span></div>
+      <div class="rx-destino" id="bloqChips">
+        <button type="button" data-d="1">Solo hoy</button>
+        <button type="button" data-d="2">2 días</button>
+        <button type="button" data-d="3">3 días</button>
+        <button type="button" data-d="7">1 semana</button>
+      </div>
+      <div class="rx-form-campo" style="margin-top:14px">
+        <label for="bloqFecha">O el día exacto en que se reanudan</label>
+        <input class="rx-fin" id="bloqFecha" type="date" min="${diaMas(1)}" value="${escapar(S.bloqueoHasta||diaMas(1))}" />
+      </div>
+      <div class="hint" id="bloqPrev" style="margin-top:6px"></div>
+      <button class="rx-btn-prim" id="bloqGuardar" style="width:100%;margin-top:18px">🚫 Bloquear préstamos</button>
+      ${act?`<button class="rx-btn-fant" id="bloqQuitar" style="width:100%;margin-top:10px">✅ Desbloquear ahora</button>`:''}
+      <div class="hint" style="margin-top:14px">Al llegar ese día los préstamos se habilitan solos — no tienes que acordarte de quitarlo.</div>
+    `);
+    const inp = $('bloqFecha'), prev = $('bloqPrev'), chips = $('bloqChips');
+    const pintar = ()=>{ prev.innerHTML = inp.value ? `Se reanudan el <b>${escapar(fechaLarga(inp.value))}</b>.` : ''; };
+    pintar();
+    inp.oninput = ()=>{ chips.querySelectorAll('[data-d]').forEach(x=> x.classList.remove('sel')); pintar(); };
+    chips.querySelectorAll('[data-d]').forEach(b=> b.onclick = ()=>{
+      chips.querySelectorAll('[data-d]').forEach(x=> x.classList.remove('sel'));
+      b.classList.add('sel');
+      inp.value = diaMas(Number(b.dataset.d));
+      pintar();
+    });
+    const guardarBloqueo = async (btn, valor, txtOk, txtBtn)=>{
+      if(btn.disabled) return; btn.disabled = true; btn.textContent = 'Guardando…';
+      try{
+        await updateDoc(doc(db,'empresas',S.empresaId), { bloqueoPrestamosHasta: valor });
+        cerrarHoja(); toast(txtOk);
+      }catch(e){
+        btn.disabled = false; btn.textContent = txtBtn;
+        toast('No se pudo guardar: ' + (e.code === 'permission-denied' ? 'falta permiso en las reglas de Firestore' : e.message));
+      }
+    };
+    $('bloqGuardar').onclick = ()=>{
+      const f = inp.value;
+      if(!f || f <= hoyISO()) return toast('Elige un día posterior a hoy.');
+      guardarBloqueo($('bloqGuardar'), f, 'Préstamos bloqueados 🚫', '🚫 Bloquear préstamos');
+    };
+    const q = $('bloqQuitar');
+    if(q) q.onclick = ()=> guardarBloqueo(q, null, 'Préstamos habilitados ✅', '✅ Desbloquear ahora');
+  }
   function abrirRespaldo(){
     const t = { clientes:S.clientes.length, cobradores:S.cobradores.length, rutas:S.rutas.length,
                 prestamos:S.prestamos.length, movimientos:S.movimientos.length };
@@ -3338,8 +3422,169 @@
     }
   }
 
+  // ===== v4.5 · ALTA DE CLIENTES DESDE LA APP (solo el dueño) =====
+  // El candado real NO es esta pantalla: es esDueno() en las reglas de Firestore.
+  // Aunque alguien fuerce el menú, Firebase le rebota toda escritura.
+  const RX_PAISES = [['57','🇨🇴 Colombia'],['51','🇵🇪 Perú'],['593','🇪🇨 Ecuador'],['52','🇲🇽 México'],['58','🇻🇪 Venezuela'],['56','🇨🇱 Chile']];
+  function formNuevaEmpresa(){
+    if(!S.esDueno) return;
+    abrirHoja(`
+      <h2>➕ Nueva empresa</h2>
+      <div class="sub">Crea el negocio y la cuenta de su administrador. Él después crea sus propios cobradores.</div>
+      <div class="rx-form-err" id="neErr"></div>
+      <div class="rx-form-campo">
+        <label for="neNegocio">Nombre del negocio</label>
+        <input class="rx-fin" id="neNegocio" type="text" placeholder="Ej. Inversiones El Progreso" />
+      </div>
+      <div class="rx-form-campo">
+        <label for="neAdmin">Nombre del administrador</label>
+        <input class="rx-fin" id="neAdmin" type="text" placeholder="Ej. Pedro Ramírez" />
+      </div>
+      <div class="rx-form-campo">
+        <label for="neCorreo">Correo (será su usuario)</label>
+        <input class="rx-fin" id="neCorreo" type="email" inputmode="email" placeholder="pedro@ejemplo.com" />
+      </div>
+      <div class="rx-form-campo">
+        <label for="neClave">Contraseña inicial</label>
+        <input class="rx-fin" id="neClave" type="text" placeholder="Mínimo 6 caracteres" />
+      </div>
+      <div class="rx-seccion-titulo" style="margin-top:16px"><span>¿Cuántos días le das?</span></div>
+      <div class="rx-destino" id="neDias">
+        <button type="button" data-d="3" class="sel">3 (prueba)</button>
+        <button type="button" data-d="15">15</button>
+        <button type="button" data-d="30">30</button>
+        <button type="button" data-d="60">60</button>
+      </div>
+      <div class="rx-form-campo" style="margin-top:12px">
+        <label for="neVence">Vence el</label>
+        <input class="rx-fin" id="neVence" type="date" min="${diaMas(1)}" value="${diaMas(3)}" />
+      </div>
+      <div class="rx-form-campo">
+        <label for="nePais">País (para los WhatsApp a sus clientes)</label>
+        <select class="rx-fin" id="nePais">${RX_PAISES.map(([c,n])=>`<option value="${c}">${n}</option>`).join('')}</select>
+      </div>
+      <div class="rx-form-campo">
+        <label for="neSoporte">Tu WhatsApp de soporte</label>
+        <input class="rx-fin" id="neSoporte" type="tel" inputmode="tel" value="${escapar(S.soporte||'')}" placeholder="3001234567" />
+      </div>
+      <div class="rx-acciones">
+        <button class="rx-btn-prim" id="neGuardar">Crear empresa y admin</button>
+        <button class="rx-btn-fant" id="neCancelar">Cancelar</button>
+      </div>`);
+    $('neCancelar').onclick = abrirPanelDueno;
+    const chips = $('neDias');
+    chips.querySelectorAll('[data-d]').forEach(b=> b.onclick = ()=>{
+      chips.querySelectorAll('[data-d]').forEach(x=> x.classList.remove('sel'));
+      b.classList.add('sel');
+      $('neVence').value = diaMas(Number(b.dataset.d));
+    });
+    $('neGuardar').onclick = crearEmpresaConAdmin;
+  }
+
+  async function crearEmpresaConAdmin(){
+    const negocio = $('neNegocio').value.trim();
+    const admin   = $('neAdmin').value.trim();
+    const correo  = $('neCorreo').value.trim();
+    const clave   = $('neClave').value;
+    const vence   = $('neVence').value;
+    const pais    = $('nePais').value;
+    const soporte = $('neSoporte').value.trim();
+    $('neErr').classList.remove('visible');
+    if(!negocio) return valErr('neErr','Escribe el nombre del negocio.');
+    if(!admin)   return valErr('neErr','Escribe el nombre del administrador.');
+    if(!correo)  return valErr('neErr','Escribe el correo del administrador.');
+    if(!clave || clave.length < 6) return valErr('neErr','La contraseña debe tener al menos 6 caracteres.');
+    if(!vence || vence <= hoyISO()) return valErr('neErr','El vencimiento debe ser posterior a hoy.');
+    if(!navigator.onLine) return valErr('neErr','Crear una empresa necesita conexión.');
+
+    const btn = $('neGuardar'); if(btn.disabled) return;
+    btn.disabled = true; btn.textContent = 'Creando…';
+    let appSec, cuentaCreada = false;
+    try{
+      // ID de la empresa nueva SIN escribir todavía — así el lote queda atómico.
+      const empRef = doc(collection(db,'empresas'));
+      // App secundaria: crea la cuenta sin sacarte de TU sesión.
+      appSec = initializeApp(firebaseConfig, 'rx-sec-' + Date.now());
+      const cred = await createUserWithEmailAndPassword(getAuth(appSec), correo, clave);
+      const uid = cred.user.uid; cuentaCreada = true;
+      // Las 3 escrituras van juntas: o entran todas, o no entra ninguna.
+      const lote = writeBatch(db);
+      lote.set(empRef, { nombre:negocio, vence, licenciaActiva:true, bloqueoTotal:false,
+                         indicativo:pais, soporte, creadoEn: serverTimestamp() });
+      lote.set(doc(db,'usuariosGlobal',uid), { empresaId: empRef.id, rol:'admin', bloqueado:false });
+      lote.set(doc(db,'empresas',empRef.id,'usuarios',uid), {
+        nombre: admin, correo, rol:'admin', bloqueado:false, creadoEn: serverTimestamp() });
+      await lote.commit();
+      try{ await signOut(getAuth(appSec)); }catch(_){}
+      toast('Empresa creada ✓');
+      abrirPanelDueno();
+    }catch(e){
+      btn.disabled = false; btn.textContent = 'Crear empresa y admin';
+      const extra = cuentaCreada ? ' ⚠️ La CUENTA sí se creó, pero la empresa no. Usa otro correo, o borra esa cuenta en Firebase → Authentication antes de reintentar.' : '';
+      valErr('neErr', mensajeError(e.code) + (e.code ? '' : ' ' + (e.message||e)) + extra);
+    }finally{
+      if(appSec){ try{ await deleteApp(appSec); }catch(_){} }
+    }
+  }
+
+  function formEditarEmpresa(e){
+    if(!S.esDueno || !e) return;
+    abrirHoja(`
+      <h2>✏️ ${escapar(e.nombre||'Empresa')}</h2>
+      <div class="sub">Cambia los datos del negocio. No toca clientes, préstamos ni movimientos.</div>
+      <div class="rx-form-err" id="eeErr"></div>
+      <div class="rx-form-campo">
+        <label for="eeNombre">Nombre del negocio</label>
+        <input class="rx-fin" id="eeNombre" type="text" value="${escapar(e.nombre||'')}" />
+      </div>
+      <div class="rx-form-campo">
+        <label for="eePais">País</label>
+        <select class="rx-fin" id="eePais">${RX_PAISES.map(([c,n])=>`<option value="${c}"${String(e.indicativo||'57')===c?' selected':''}>${n}</option>`).join('')}</select>
+      </div>
+      <div class="rx-form-campo">
+        <label for="eeSoporte">WhatsApp de soporte</label>
+        <input class="rx-fin" id="eeSoporte" type="tel" inputmode="tel" value="${escapar(e.soporte||'')}" />
+      </div>
+      <div class="rx-acciones">
+        <button class="rx-btn-prim" id="eeGuardar">Guardar cambios</button>
+        <button class="rx-btn-fant" id="eeCancelar">Cancelar</button>
+      </div>`);
+    $('eeCancelar').onclick = abrirPanelDueno;
+    $('eeGuardar').onclick = async ()=>{
+      const nombre = $('eeNombre').value.trim();
+      if(!nombre) return valErr('eeErr','El nombre no puede quedar vacío.');
+      const b = $('eeGuardar'); if(b.disabled) return; b.disabled = true; b.textContent = 'Guardando…';
+      try{
+        await updateDoc(doc(db,'empresas',e.id), { nombre, indicativo:$('eePais').value, soporte:$('eeSoporte').value.trim() });
+        toast('Empresa actualizada ✓'); abrirPanelDueno();
+      }catch(err){ b.disabled=false; b.textContent='Guardar cambios'; valErr('eeErr','No se pudo: '+(err.message||err)); }
+    };
+  }
+
+  // ARCHIVAR en vez de borrar. Firestore no borra en cascada: al eliminar la empresa,
+  // sus clientes/préstamos/movimientos quedarían huérfanos e irrecuperables. Y verificar
+  // que esté vacía obligaría a darle al dueño lectura sobre los datos de TODOS sus
+  // clientes — demasiado poder concentrado en una sola cuenta. Archivar cierra la puerta
+  // sin tocar un solo registro, y se deshace.
+  async function archivarEmpresa(e){
+    if(!S.esDueno || !e) return;
+    if(e.id === S.empresaId) return toast('No puedes archivar tu propia empresa.');
+    if(e.archivada === true){
+      if(!confirm(`¿Restaurar "${e.nombre}"? Vuelve a tu lista activa, pero sigue bloqueada hasta que la reactives.`)) return;
+      try{ await updateDoc(doc(db,'empresas',e.id), { archivada:false }); toast('Empresa restaurada ♻️'); abrirPanelDueno(); }
+      catch(err){ toast('No se pudo: '+(err.message||err), true); }
+      return;
+    }
+    if(!confirm(`¿Archivar "${e.nombre}"?\n\n• Nadie de esa empresa podrá entrar.\n• Sale de tu lista activa.\n• Sus clientes, préstamos y movimientos QUEDAN GUARDADOS.\n\nEsto se puede deshacer.`)) return;
+    try{
+      await updateDoc(doc(db,'empresas',e.id), { archivada:true, bloqueoTotal:true, licenciaActiva:false });
+      toast('Empresa archivada 📦'); abrirPanelDueno();
+    }catch(err){ toast('No se pudo archivar: '+(err.message||err), true); }
+  }
+
   // NUEVO v3.3: PANEL DEL DUEÑO — controlar las licencias de tus clientes.
   function estadoEmpresa(e){
+    if(e.archivada === true) return { t:'📦 Archivada', c:'var(--niebla)' };
     if(e.bloqueoTotal === true) return { t:'🔒 Bloqueada', c:'var(--peligro)' };
     if(e.licenciaActiva === false) return { t:'⛔ Suspendida', c:'var(--peligro)' };
     if(e.vence && hoyISO() > e.vence) return { t:'⚠️ Vencida', c:'var(--peligro)' };
@@ -3363,7 +3608,7 @@
         <div class="rx-acciones" style="margin-top:16px"><button class="rx-btn-fant" id="pdCerrar">Cerrar</button></div>`),
         ($('pdCerrar').onclick = cerrarHoja);
     }
-    empresas.sort((a,b)=> String(a.nombre||'').localeCompare(String(b.nombre||'')));
+    empresas.sort((a,b)=> (!!a.archivada - !!b.archivada) || String(a.nombre||'').localeCompare(String(b.nombre||'')));
     const filas = empresas.map(e=>{
       const st = estadoEmpresa(e); const mia = e.id===S.empresaId;
       return `<div class="rx-repcob">
@@ -3373,6 +3618,8 @@
         <div class="acc" style="display:flex;gap:8px;margin-top:9px;flex-wrap:wrap">
           <button class="rx-tel-mini" data-dmas="${e.id}">+30 días</button>
           <button class="rx-tel-mini" data-dfec="${e.id}">📅 Fecha</button>
+          <button class="rx-tel-mini" data-dedi="${e.id}">✏️ Editar</button>
+          ${mia?'':`<button class="rx-tel-mini" data-darc="${e.id}" style="background:#F6E3E1;color:#8a2a24">${e.archivada===true?'♻️ Restaurar':'📦 Archivar'}</button>`}
           ${mia?'' : (e.bloqueoTotal===true || e.licenciaActiva===false)
             ? `<button class="rx-veri-btn" data-dact="${e.id}" style="background:var(--ok)">♻️ Reactivar</button>`
             : `<button class="rx-tel-mini" data-dsua="${e.id}" style="background:#FBEFD8;color:#8a6a10">⛔ Suave</button>
@@ -3383,10 +3630,14 @@
     abrirHoja(`
       <h2>👑 Licencias</h2>
       <div class="sub"><b>${empresas.length}</b> empresa(s) usando Rendix. <b>Suave</b>: siguen cobrando pero no pueden entregar préstamos. <b>Bloquear</b>: nadie entra (los datos quedan intactos).</div>
+      <button class="rx-btn-prim" id="pdNueva" style="width:100%;margin-top:14px">➕ Nueva empresa + admin</button>
       <div style="margin-top:14px">${filas || '<div class="rx-vacio-mini">Sin empresas.</div>'}</div>
       <div class="hint" style="margin-top:12px">Tu propia empresa no se puede bloquear desde aquí — así no te dejas por fuera.</div>
       <div class="rx-acciones" style="margin-top:16px"><button class="rx-btn-fant" id="pdCerrar">Cerrar</button></div>`);
     $('pdCerrar').onclick = cerrarHoja;
+    $('pdNueva').onclick = formNuevaEmpresa;
+    document.querySelectorAll('[data-dedi]').forEach(b=> b.onclick = ()=> formEditarEmpresa(empresas.find(x=>x.id===b.dataset.dedi)));
+    document.querySelectorAll('[data-darc]').forEach(b=> b.onclick = ()=> archivarEmpresa(empresas.find(x=>x.id===b.dataset.darc)));
     const guardar = async (id, datos, msg)=>{
       try{ await updateDoc(doc(db,'empresas',id), datos); toast(msg); abrirPanelDueno(); }
       catch(e){ toast('No se pudo: '+(e.message||e), true); }

@@ -569,7 +569,7 @@
       <button class="rx-btn" type="submit" id="btnEntrar">Entrar</button>
       <div class="rx-error" id="errLogin" role="alert"></div>
     </form>
-    <div class="rx-firma">Rendix v4.6 · Powered by <b>Iván Jiménez</b></div>
+    <div class="rx-firma">Rendix v4.8 · Powered by <b>Iván Jiménez</b></div>
   </section>
 
   <!-- ===== APP ===== -->
@@ -592,7 +592,7 @@
       </main>
 
       <footer class="rx-pie">
-        <div class="firma">Rendix v4.6 · Powered by <b>Iván Jiménez</b></div>
+        <div class="firma">Rendix v4.8 · Powered by <b>Iván Jiménez</b></div>
       </footer>
     </div>
 
@@ -703,7 +703,7 @@
   }
 
   // ---- estado global de la sesión ----
-  const S = { uid:null, empresaId:null, rol:null, nombre:null, empresaNombre:null, perfil:null, licenciaActiva:true, vence:null, soporte:'', suspendida:false,
+  const S = { uid:null, empresaId:null, rol:null, nombre:null, empresaNombre:null, perfil:null, licenciaActiva:true, vence:null, soporte:'', suspendida:false, indicativo:'57',
               cobradores:[], rutas:[], clientes:[], prestamos:[], movimientos:[], movIdx:new Map(),
               offsetReloj:0, relojCalibrado:false,
               unsubCob:null, unsubRut:null, unsubCli:null, unsubPres:null, unsubMov:null, unsubEmp:null, tab:'inicio' };
@@ -772,8 +772,41 @@
       try{ _compTmp=await comprimirFoto(f, 720, 0.6); pintar(); }catch(e){ alert('No se pudo procesar la imagen. Intenta con otra.'); pintar(); }
       btn.disabled=false; };
   }
-  function pesos(n){ const v = Number(n)||0; return '$ ' + v.toLocaleString('es-CO'); }
-  function soloPesos(n){ const v = Number(n)||0; return v.toLocaleString('es-CO'); }
+  // v4.7 · UNA sola fuente: el pais de la empresa define moneda, separadores y huso.
+  // Guardamos solo el indicativo (ya existia); todo lo demas sale de aqui.
+  const RX_PAISES = {
+    '57' :{ p:'🇨🇴 Colombia',           m:'$',   loc:'es-CO', tz:'America/Bogota' },
+    '51' :{ p:'🇵🇪 Perú',               m:'S/',  loc:'es-PE', tz:'America/Lima' },
+    '593':{ p:'🇪🇨 Ecuador',            m:'$',   loc:'es-EC', tz:'America/Guayaquil' },
+    '52' :{ p:'🇲🇽 México',             m:'$',   loc:'es-MX', tz:'America/Mexico_City' },
+    '58' :{ p:'🇻🇪 Venezuela',          m:'Bs.', loc:'es-VE', tz:'America/Caracas' },
+    '56' :{ p:'🇨🇱 Chile',              m:'$',   loc:'es-CL', tz:'America/Santiago' },
+    '591':{ p:'🇧🇴 Bolivia',            m:'Bs.', loc:'es-BO', tz:'America/La_Paz' },
+    '54' :{ p:'🇦🇷 Argentina',          m:'$',   loc:'es-AR', tz:'America/Argentina/Buenos_Aires' },
+    '595':{ p:'🇵🇾 Paraguay',           m:'₲',   loc:'es-PY', tz:'America/Asuncion' },
+    '598':{ p:'🇺🇾 Uruguay',            m:'$U',  loc:'es-UY', tz:'America/Montevideo' },
+    '507':{ p:'🇵🇦 Panamá',             m:'B/.', loc:'es-PA', tz:'America/Panama' },
+    '506':{ p:'🇨🇷 Costa Rica',         m:'₡',   loc:'es-CR', tz:'America/Costa_Rica' },
+    '502':{ p:'🇬🇹 Guatemala',          m:'Q',   loc:'es-GT', tz:'America/Guatemala' },
+    '504':{ p:'🇭🇳 Honduras',           m:'L',   loc:'es-HN', tz:'America/Tegucigalpa' },
+    '505':{ p:'🇳🇮 Nicaragua',          m:'C$',  loc:'es-NI', tz:'America/Managua' },
+    '503':{ p:'🇸🇻 El Salvador',        m:'$',   loc:'es-SV', tz:'America/El_Salvador' },
+    '1'  :{ p:'🇩🇴 Rep. Dominicana',    m:'RD$', loc:'es-DO', tz:'America/Santo_Domingo' }
+  };
+  // OJO: JS reordena solo las claves numericas de un objeto. Sin esta lista el
+  // desplegable saldria en orden numerico y Colombia quedaria enterrada.
+  const RX_PAIS_ORDEN = ['57','593','51','58','507','591','52','56','54','595','598','506','502','504','505','503','1'];
+  function paisCfg(){ return RX_PAISES[String(S.indicativo||'57')] || RX_PAISES['57']; }
+  function opcionesPais(sel){
+    return RX_PAIS_ORDEN.map(c=>{
+      const v = RX_PAISES[c];
+      return `<option value="${c}"${String(sel||'57')===c?' selected':''}>${v.p} · ${v.m}</option>`;
+    }).join('');
+  }
+  // Sin decimales a proposito: en cobro diario se presta en cifras redondas, y asi
+  // ningun redondeo puede alterar un saldo. El pais solo cambia simbolo y separadores.
+  function pesos(n){ const c=paisCfg(); return c.m + ' ' + (Number(n)||0).toLocaleString(c.loc, {maximumFractionDigits:0}); }
+  function soloPesos(n){ return (Number(n)||0).toLocaleString(paisCfg().loc, {maximumFractionDigits:0}); }
 
   // ===========================================================
   //  MOTOR DE CÁLCULO  (validado · Etapa 3)
@@ -852,9 +885,16 @@
   // Fecha "hoy" en hora Colombia (UTC-5), corregida con el reloj del servidor.
   // Inmune a que el dispositivo tenga la hora o la zona horaria manipuladas.
   function hoyISO(){
-    const ms = Date.now() + (S.offsetReloj||0) - 5*60*60*1000;
-    const d = new Date(ms);
-    return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+    const d = new Date(Date.now() + (S.offsetReloj||0));
+    try{
+      const partes = new Intl.DateTimeFormat('en-CA', { timeZone: paisCfg().tz,
+        year:'numeric', month:'2-digit', day:'2-digit' }).formatToParts(d);
+      const g = t => partes.find(x=>x.type===t).value;
+      return `${g('year')}-${g('month')}-${g('day')}`;
+    }catch(_){   // si el navegador es viejo, cae al comportamiento de siempre (Colombia)
+      const u = new Date(d.getTime() - 5*60*60*1000);
+      return `${u.getUTCFullYear()}-${String(u.getUTCMonth()+1).padStart(2,'0')}-${String(u.getUTCDate()).padStart(2,'0')}`;
+    }
   }
   const RX_ESTADO = {
     al_dia:   { t:'Al día',    c:'rx-est-ok'   },
@@ -1228,6 +1268,15 @@
     if(d.length<=10 && !d.startsWith(ind)) d = ind + d;   // numero local sin indicativo
     return d;
   }
+  // El soporte es NUESTRO numero: jamas lleva el indicativo de la empresa del cliente.
+  // Si viene local (10 digitos) se asume Colombia; si ya trae indicativo, se respeta.
+  const RX_SOPORTE_IND = '57';
+  function waSoporte(tel){
+    let d = String(tel||'').replace(/\D/g,'');
+    if(!d) return null;
+    if(d.length<=10 && !d.startsWith(RX_SOPORTE_IND)) d = RX_SOPORTE_IND + d;
+    return d;
+  }
   function waAbrir(tel, msg){
     const n = waNumero(tel);
     if(!n){ toast('Este cliente no tiene teléfono guardado.', true); return; }
@@ -1259,7 +1308,7 @@
     if(!iso) return '';
     const d = rxFecha(iso);
     if(!d || isNaN(d.getTime())) return iso;
-    const t = d.toLocaleDateString('es-CO',{weekday:'long', day:'numeric', month:'long', timeZone:'UTC'});
+    const t = d.toLocaleDateString(paisCfg().loc,{weekday:'long', day:'numeric', month:'long', timeZone:'UTC'});
     const cap = t.charAt(0).toUpperCase() + t.slice(1);
     const hoy = hoyISO();
     if(iso === hoy) return 'Hoy · ' + cap;
@@ -1276,7 +1325,7 @@
     if(pc.enDias<=0) return 'HOY';
     if(pc.enDias===1) return 'mañana';
     const d = new Date(rxFecha(hoyISO()).getTime() + pc.enDias*86400000);
-    return d.toLocaleDateString('es-CO',{weekday:'short', day:'numeric', month:'short', timeZone:'UTC'});
+    return d.toLocaleDateString(paisCfg().loc,{weekday:'short', day:'numeric', month:'short', timeZone:'UTC'});
   }
   function waMsgCliente(cli){
     const pc = proximaCuota(cli.id);
@@ -1364,7 +1413,7 @@
         return `<div class="rx-banner" style="border-color:rgba(178,58,51,.4);background:rgba(178,58,51,.08)">🚫 <b>Préstamos bloqueados.</b> Tus cobradores cobran y cierran normal, pero no entregan plata nueva. Se reanudan el <b>${escapar(fechaLarga(S.bloqueoHasta))}</b>.</div>`;
       }
       if(S.suspendida){
-        const wa = S.soporte ? ` <a href="https://wa.me/${escapar(waNumero(S.soporte)||'')}" target="_blank" style="color:inherit"><b>Escribir al soporte</b></a>` : '';
+        const wa = S.soporte ? ` <a href="https://wa.me/${escapar(waSoporte(S.soporte)||'')}" target="_blank" style="color:inherit"><b>Escribir al soporte</b></a>` : '';
         return `<div class="rx-banner" style="border-color:rgba(178,58,51,.4);background:rgba(178,58,51,.08)">🔒 <b>Suscripción vencida.</b> Puedes seguir cobrando y cerrando caja, pero no entregar préstamos nuevos hasta renovar.${wa}</div>`;
       }
       if(S.vence){
@@ -2448,7 +2497,7 @@
 
     const abierto = !!aperturaDelDia(S.uid, hoy);   // v2.5: jornada obligatoria
     const pendientes = filas.filter(f=> !f.pagoHoy && (f.tocaHoy || f.r.estado==='atrasado')).length;
-    const cuandoTxt = d => d===1 ? 'mañana' : new Date(rxFecha(hoy).getTime()+d*86400000).toLocaleDateString('es-CO',{weekday:'short', day:'numeric', timeZone:'UTC'});
+    const cuandoTxt = d => d===1 ? 'mañana' : new Date(rxFecha(hoy).getTime()+d*86400000).toLocaleDateString(paisCfg().loc,{weekday:'short', day:'numeric', timeZone:'UTC'});
     // NUEVO v2.0: filtros rápidos (los conteos salen de la lista completa)
     const nAtras = filas.filter(f=> f.r.estado==='atrasado').length;
     const nAldia = filas.filter(f=> f.r.estado==='al_dia').length;
@@ -3373,7 +3422,7 @@
     top.forEach((f,i)=> L.push(`${i+1}. ${f.nombre} — ${pesos(f.saldo)}${f.mora>0?` (${f.mora} en mora)`:''}`));
     if(fs.length>top.length) L.push(`… y ${fs.length-top.length} más (ver archivo).`);
     L.push(``, `Ambos verificamos estos saldos recorriendo la ruta.`);
-    const n = waNumero(S.soporte||'');
+    const n = waSoporte(S.soporte||'');
     const url = 'https://wa.me/'+(n||'')+'?text='+encodeURIComponent(L.join('\n'));
     window.open(url, '_blank');
   }
@@ -3425,7 +3474,7 @@
   // ===== v4.5 · ALTA DE CLIENTES DESDE LA APP (solo el dueño) =====
   // El candado real NO es esta pantalla: es esDueno() en las reglas de Firestore.
   // Aunque alguien fuerce el menú, Firebase le rebota toda escritura.
-  const RX_PAISES = [['57','🇨🇴 Colombia'],['51','🇵🇪 Perú'],['593','🇪🇨 Ecuador'],['52','🇲🇽 México'],['58','🇻🇪 Venezuela'],['56','🇨🇱 Chile']];
+
   function formNuevaEmpresa(){
     if(!S.esDueno) return;
     abrirHoja(`
@@ -3460,11 +3509,11 @@
         <input class="rx-fin" id="neVence" type="date" min="${diaMas(1)}" value="${diaMas(3)}" />
       </div>
       <div class="rx-form-campo">
-        <label for="nePais">País (para los WhatsApp a sus clientes)</label>
-        <select class="rx-fin" id="nePais">${RX_PAISES.map(([c,n])=>`<option value="${c}">${n}</option>`).join('')}</select>
+        <label for="nePais">País — define la moneda, el huso horario y los WhatsApp</label>
+        <select class="rx-fin" id="nePais">${opcionesPais('57')}</select>
       </div>
       <div class="rx-form-campo">
-        <label for="neSoporte">Tu WhatsApp de soporte</label>
+        <label for="neSoporte">Tu WhatsApp de soporte (el tuyo, no el del cliente)</label>
         <input class="rx-fin" id="neSoporte" type="tel" inputmode="tel" value="${escapar(S.soporte||'')}" placeholder="3001234567" />
       </div>
       <div class="rx-acciones">
@@ -3538,8 +3587,8 @@
         <input class="rx-fin" id="eeNombre" type="text" value="${escapar(e.nombre||'')}" />
       </div>
       <div class="rx-form-campo">
-        <label for="eePais">País</label>
-        <select class="rx-fin" id="eePais">${RX_PAISES.map(([c,n])=>`<option value="${c}"${String(e.indicativo||'57')===c?' selected':''}>${n}</option>`).join('')}</select>
+        <label for="eePais">País — moneda, huso horario y WhatsApp</label>
+        <select class="rx-fin" id="eePais">${opcionesPais(e.indicativo)}</select>
       </div>
       <div class="rx-form-campo">
         <label for="eeSoporte">WhatsApp de soporte</label>
@@ -3553,9 +3602,13 @@
     $('eeGuardar').onclick = async ()=>{
       const nombre = $('eeNombre').value.trim();
       if(!nombre) return valErr('eeErr','El nombre no puede quedar vacío.');
+      const paisNuevo = $('eePais').value;
+      const tzVieja = (RX_PAISES[String(e.indicativo||'57')]||RX_PAISES['57']).tz;
+      const tzNueva = (RX_PAISES[paisNuevo]||RX_PAISES['57']).tz;
+      if(tzNueva !== tzVieja && !confirm('Ese país tiene otra hora. Si hay una jornada abierta en este momento, el día de trabajo puede correrse.\n\nLo seguro es cambiarlo con las jornadas cerradas. ¿Continuar?')) return;
       const b = $('eeGuardar'); if(b.disabled) return; b.disabled = true; b.textContent = 'Guardando…';
       try{
-        await updateDoc(doc(db,'empresas',e.id), { nombre, indicativo:$('eePais').value, soporte:$('eeSoporte').value.trim() });
+        await updateDoc(doc(db,'empresas',e.id), { nombre, indicativo:paisNuevo, soporte:$('eeSoporte').value.trim() });
         toast('Empresa actualizada ✓'); abrirPanelDueno();
       }catch(err){ b.disabled=false; b.textContent='Guardar cambios'; valErr('eeErr','No se pudo: '+(err.message||err)); }
     };

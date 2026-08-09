@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<meta name="theme-color" content="#0D1B3A" />
+<meta name="theme-color" content="#0B0B0F" />
 <meta name="description" content="Rendix — Control de préstamos y cobros por rutas." />
 <title>Rendix · Control de Cobros</title>
 <link rel="manifest" href="./manifest.json" />
@@ -24,22 +24,25 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
-  /* ===== RENDIX · Sistema de diseño · Identidad "Azul noche + dorado" ===== */
+  /* ===== v5.0 · Identidad "Negro premium + dorado" =====
+     Los nombres de variable siguen diciendo "azul" por historia: cambian los VALORES,
+     no los nombres, para no tocar cientos de usos. El área de contenido se mantiene
+     clara a propósito: el cobrador trabaja en la calle bajo el sol. */
   :root{
-    --azul-profundo:#0D1B3A;
-    --azul:#1E3D6B;
-    --azul-claro:#3461A8;
+    --azul-profundo:#0B0B0F;
+    --azul:#17171E;
+    --azul-claro:#8A6A10;
     --dorado:#C9A227;
-    --dorado-claro:#E4C766;
-    --marfil:#F6F4EE;
+    --dorado-claro:#E9D28A;
+    --marfil:#F7F5F0;
     --marfil-2:#EFEBE0;
-    --tinta:#0F1A30;
-    --niebla:#7A8699;
-    --linea:rgba(13,27,58,.12);
+    --tinta:#141318;
+    --niebla:#87868F;
+    --linea:rgba(0,0,0,.12);
     --ok:#2E9E63;
     --alerta:#C0532B;
     --peligro:#B23A33;
-    --sombra:0 10px 30px rgba(7,15,38,.18);
+    --sombra:0 12px 34px rgba(0,0,0,.30);
     --r:16px;
     --display:"Bricolage Grotesque",-apple-system,system-ui,sans-serif;
     --texto:"Hanken Grotesk",-apple-system,system-ui,sans-serif;
@@ -64,15 +67,22 @@
   /* ===== LOGIN ===== */
   #vistaLogin{
     display:none;min-height:100dvh;
-    background:radial-gradient(120% 90% at 50% -10%, #1A3566 0%, var(--azul-profundo) 55%, #08122B 100%);
+    background:radial-gradient(120% 90% at 50% -10%, #23200F 0%, #121016 40%, var(--azul-profundo) 55%, #000 100%);
     color:var(--marfil);
     padding:max(28px,env(safe-area-inset-top)) 22px max(28px,env(safe-area-inset-bottom));
     flex-direction:column;justify-content:space-between;align-items:center;
   }
   #vistaLogin.activa{display:flex}
   .rx-login-top{width:100%;max-width:420px;text-align:center;padding-top:8vh}
-  .rx-marca{font-family:var(--display);font-weight:800;font-size:2.9rem;letter-spacing:-.02em;color:var(--marfil)}
-  .rx-marca b{color:var(--dorado-claro)}
+  .rx-login-top{position:relative}
+  .rx-login-top::before{content:'';position:absolute;left:50%;top:-6%;width:520px;height:520px;transform:translateX(-50%);
+    background:radial-gradient(circle, rgba(201,162,39,.20) 0%, rgba(201,162,39,.07) 38%, transparent 68%);
+    pointer-events:none;animation:rxAura 6s ease-in-out infinite}
+  @keyframes rxAura{0%,100%{opacity:.75;transform:translateX(-50%) scale(1)}50%{opacity:1;transform:translateX(-50%) scale(1.08)}}
+  .rx-marca{position:relative;font-family:var(--display);font-weight:800;font-size:3.5rem;line-height:1.05;letter-spacing:-.03em;color:#fff;
+    text-shadow:0 2px 30px rgba(201,162,39,.28);word-break:break-word}
+  .rx-marca b{background:linear-gradient(100deg,var(--dorado) 0%,#F3E3A8 45%,var(--dorado) 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
   .rx-regla{height:3px;width:64px;margin:14px auto 0;border-radius:3px;background:linear-gradient(90deg,var(--dorado),var(--dorado-claro))}
   .rx-tagline{margin-top:14px;color:#C8D6EE;font-size:.96rem;max-width:300px;margin-left:auto;margin-right:auto}
   .rx-login-card{
@@ -98,6 +108,10 @@
     border:1px solid rgba(255,150,135,.4);border-radius:10px;padding:10px 12px;
   }
   .rx-error.visible{display:block}
+  .rx-sellos{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+  .rx-sellos span{font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700;
+    color:rgba(233,210,138,.92);border:1px solid rgba(201,162,39,.35);border-radius:20px;padding:5px 11px;
+    background:rgba(201,162,39,.07)}
   .rx-firma{font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(228,199,102,.85);text-align:center;width:100%;max-width:420px}
   .rx-firma b{color:var(--dorado-claro)}
 
@@ -327,7 +341,7 @@
   .rx-pie .firma b{color:var(--dorado)}
 
   /* estado / error pantalla completa */
-  #vistaEstado{display:none;min-height:100dvh;background:radial-gradient(120% 90% at 50% -10%, #1A3566 0%, var(--azul-profundo) 60%, #08122B 100%);color:var(--marfil);padding:32px 24px;flex-direction:column;justify-content:center;align-items:center;text-align:center}
+  #vistaEstado{display:none;min-height:100dvh;background:radial-gradient(120% 90% at 50% -10%, #23200F 0%, #121016 40%, var(--azul-profundo) 60%, #000 100%);color:var(--marfil);padding:32px 24px;flex-direction:column;justify-content:center;align-items:center;text-align:center}
   #vistaEstado.activa{display:flex}
   #vistaEstado .ico{font-size:2.6rem;margin-bottom:14px}
   #vistaEstado h2{font-size:1.5rem;margin-bottom:10px}
@@ -532,6 +546,15 @@
   .rx-carton .pie .va{font-family:var(--display);font-weight:800;font-size:1.35rem;color:var(--azul-claro)}
   .rx-renov-aviso{background:rgba(201,162,39,.12);border:1px solid rgba(201,162,39,.35);border-radius:11px;padding:11px 14px;margin:4px 0 14px;font-size:.86rem;color:var(--tinta);line-height:1.4}
   .rx-renov-aviso b{color:#8a6d16}
+  /* v4.9 */
+  .rx-card .prox .tot{color:var(--tinta);font-weight:700}
+  .rx-chip-ap{display:inline-block;font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:20px;vertical-align:middle}
+  .rx-chip-ap.ok{background:rgba(46,158,99,.13);color:#1E6E46}
+  .rx-chip-ap.pend{background:rgba(201,162,39,.16);color:#8a6a10}
+  .rx-chip-ap.mal{background:rgba(178,58,51,.13);color:var(--peligro)}
+  .rx-verTransf.urge{border-color:rgba(201,162,39,.55);background:rgba(201,162,39,.10);color:#7a5f10;font-weight:700}
+  .rx-prob-btn{border:none;background:#F7E7E5;color:var(--peligro);border-radius:8px;padding:6px 12px;font-size:.82rem;font-weight:700;cursor:pointer}
+  .rx-sol{background:#fff;border:1px solid rgba(201,162,39,.4);border-radius:12px;padding:11px 13px;margin-top:8px}
   .rx-pres-carton{margin-top:10px;width:100%;font-family:var(--texto);font-weight:700;font-size:.82rem;padding:9px;border-radius:9px;cursor:pointer;border:1.5px solid var(--azul-claro);background:rgba(52,97,168,.08);color:var(--azul-claro);transition:transform .15s}
   .rx-pres-carton:active{transform:scale(.99)}
   .rx-cierre-dia{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#fff;border:1px solid var(--linea);border-radius:12px;padding:11px 14px;margin-bottom:8px}
@@ -555,7 +578,8 @@
     <div class="rx-login-top">
       <div class="rx-marca">Rend<b>ix</b></div>
       <div class="rx-regla"></div>
-      <p class="rx-tagline">Control de préstamos y cobros por rutas. Cada peso, cuadrado.</p>
+      <p class="rx-tagline" id="loginTagline">Control de préstamos y cobros por rutas. Cada peso, cuadrado.</p>
+      <div class="rx-sellos"><span>Sin internet</span><span>Caja cuadrada</span><span>Nada se borra</span></div>
     </div>
     <form class="rx-login-card" id="formLogin" novalidate>
       <div class="rx-campo">
@@ -569,7 +593,7 @@
       <button class="rx-btn" type="submit" id="btnEntrar">Entrar</button>
       <div class="rx-error" id="errLogin" role="alert"></div>
     </form>
-    <div class="rx-firma">Rendix v4.8 · Powered by <b>Iván Jiménez</b></div>
+    <div class="rx-firma"><span class="rx-mkname">Rendix</span> v5.0 · Powered by <b>Iván Jiménez</b></div>
   </section>
 
   <!-- ===== APP ===== -->
@@ -577,7 +601,7 @@
     <div class="rx-app-bg">
       <header class="rx-topbar">
         <div>
-          <div class="marca">Rend<b>ix</b></div>
+          <div class="marca rx-app-marca">Rend<b>ix</b></div>
           <div class="rx-empresa" id="appEmpresa">—</div>
         </div>
         <button class="rx-salir" id="btnSalir">Salir</button>
@@ -592,7 +616,7 @@
       </main>
 
       <footer class="rx-pie">
-        <div class="firma">Rendix v4.8 · Powered by <b>Iván Jiménez</b></div>
+        <div class="firma"><span class="rx-mkname">Rendix</span> v5.0 · Powered by <b>Iván Jiménez</b></div>
       </footer>
     </div>
 
@@ -657,6 +681,53 @@
   // ============================================================
 
   const $ = (id) => document.getElementById(id);
+  // ---- v5.0: MARCA POR EMPRESA (white-label) ---------------------------
+  // Cada empresa puede tener su propio nombre visible y su color de acento.
+  // Se recuerda en el teléfono para que la PORTADA ya salga con SU marca antes de entrar.
+  function rxEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+  function marcaHTML(nombre){
+    const n = String(nombre||'Rendix').trim();
+    const partes = n.split(/\s+/);
+    if(partes.length > 1){                                   // "Créditos del Norte" -> última palabra dorada
+      const ult = partes.pop();
+      return rxEsc(partes.join(' ')) + ' <b>' + rxEsc(ult) + '</b>';
+    }
+    const camel = n.match(/^(.+?[a-z0-9áéíóúñ])([A-ZÁÉÍÓÚÑ].*)$/);
+    if(camel) return rxEsc(camel[1]) + '<b>' + rxEsc(camel[2]) + '</b>';   // "MilcoBros" -> Milco|Bros
+    if(n.length > 3) return rxEsc(n.slice(0,-2)) + '<b>' + rxEsc(n.slice(-2)) + '</b>';
+    return rxEsc(n);
+  }
+  function rxAclarar(hex, f){
+    const n = parseInt(String(hex).slice(1), 16);
+    const m = v => Math.round(v + (255-v)*f).toString(16).padStart(2,'0');
+    return '#' + m((n>>16)&255) + m((n>>8)&255) + m(n&255);
+  }
+  function aplicarMarca(nombre, acento, lema){
+    const n = (String(nombre||'').trim()) || 'Rendix';
+    const html = marcaHTML(n);
+    document.title = n + ' — Control de cobros';
+    document.querySelectorAll('.rx-marca, .rx-cargando-marca, .rx-app-marca').forEach(el=> el.innerHTML = html);
+    document.querySelectorAll('.rx-mkname').forEach(el=> el.textContent = n);
+    const tag = document.getElementById('loginTagline');
+    if(tag && lema) tag.textContent = lema;
+    const raiz = document.documentElement.style;
+    if(acento && /^#[0-9a-fA-F]{6}$/.test(acento)){
+      raiz.setProperty('--dorado', acento);
+      raiz.setProperty('--dorado-claro', rxAclarar(acento, .45));
+    } else {
+      raiz.removeProperty('--dorado'); raiz.removeProperty('--dorado-claro');
+    }
+    try{
+      localStorage.setItem('rx_marca', n);
+      acento ? localStorage.setItem('rx_acento', acento) : localStorage.removeItem('rx_acento');
+      lema   ? localStorage.setItem('rx_lema', lema)     : localStorage.removeItem('rx_lema');
+    }catch(_){}
+  }
+  try{
+    const _mg = localStorage.getItem('rx_marca');
+    if(_mg) aplicarMarca(_mg, localStorage.getItem('rx_acento'), localStorage.getItem('rx_lema'));
+  }catch(_){}
+
   function setCarga(txt){ const el=$('cargaMsg'); if(el) el.textContent = txt; }   // NUEVO v2.1
   const vistas = { login:$('vistaLogin'), app:$('vistaApp'), estado:$('vistaEstado') };
   function mostrar(nombre){
@@ -703,7 +774,7 @@
   }
 
   // ---- estado global de la sesión ----
-  const S = { uid:null, empresaId:null, rol:null, nombre:null, empresaNombre:null, perfil:null, licenciaActiva:true, vence:null, soporte:'', suspendida:false, indicativo:'57',
+  const S = { uid:null, empresaId:null, rol:null, nombre:null, empresaNombre:null, perfil:null, licenciaActiva:true, vence:null, soporte:'', suspendida:false, marca:'Rendix', acento:'', indicativo:'57',
               cobradores:[], rutas:[], clientes:[], prestamos:[], movimientos:[], movIdx:new Map(),
               offsetReloj:0, relojCalibrado:false,
               unsubCob:null, unsubRut:null, unsubCli:null, unsubPres:null, unsubMov:null, unsubEmp:null, tab:'inicio' };
@@ -872,7 +943,9 @@
     const n = ent ? Math.round(c) : Math.round(c*10)/10;
     return `${n} cuota${n===1?'':'s'}`;
   }
-  function moraTxt(r){ return `Debe ${pesos(moraMonto(r))} · ${cuotasTxt(r.cuotasAtraso)}`; }
+  // v4.9: NUNCA decir "Debe" al lado del monto de mora. Eso es solo lo ATRASADO,
+  // no lo que debe en total. Confundir esos dos números cuesta plata ajena.
+  function moraTxt(r){ return `Atrasado ${pesos(moraMonto(r))} · ${cuotasTxt(r.cuotasAtraso)}`; }
 
   function rxFecha(f){
     if(!f) return new Date();
@@ -1046,6 +1119,9 @@
       S.licenciaActiva = emp.licenciaActiva !== false;
       S.vence = emp.vence || null;                 // 'YYYY-MM-DD' — opcional
       S.soporte = emp.soporte || '';
+      S.marca  = (emp.marca||'').trim() || 'Rendix';
+      S.acento = emp.acento || '';
+      aplicarMarca(S.marca, S.acento, emp.lema || '');
       S.indicativo = String(emp.indicativo || '57');   // v3.6: indicativo pais para WhatsApp (57=CO, 51=PE...)
       S.suspendida = !S.licenciaActiva || (!!S.vence && hoyISO() > S.vence);
       S.bloqueoHasta = emp.bloqueoPrestamosHasta || null;   // v4.4: dia en que se REANUDAN
@@ -1445,7 +1521,17 @@
         ${(()=>{const th=cobrosHoy.filter(m=>m.metodo==='transferencia').reduce((t,m)=>t+(Number(m.monto)||0),0);return th>0?`<div class="pct">Efectivo ${pesos(realHoy-th)} · 📲 Transferencias ${pesos(th)}</div>`:'';})()}
       </div>
       ${(()=>{const ct=cobrosHoy.filter(m=>m.metodo==='transferencia');return ct.length>0?`<button class="rx-verTransf" id="verTransfHoy">📲 Ver las ${ct.length} transferencia${ct.length===1?'':'s'} de hoy ›</button>`:'';})()}
-      ${(()=>{const de=S.movimientos.filter(m=>m.tipo==='desembolso'&&m.fecha===hoy);return de.length>0?`<button class="rx-verTransf" id="verEntregasHoy">💸 Verificar las ${de.length} entrega${de.length===1?'':'s'} de préstamo de hoy ›</button>`:'';})()}
+      ${(()=>{
+        const pend=nSinAprobar(), prob=nConProblema();
+        const hoyN=S.movimientos.filter(m=>m.tipo==='desembolso'&&m.fecha===hoy).length;
+        const sols=S.movimientos.filter(m=>m.tipo==='solicitud'&&m.motivo==='renovacion'&&!autorizRenov(m.prestamoId)).length;
+        if(pend===0&&prob===0&&hoyN===0&&sols===0) return '';
+        const et = pend>0 ? `⏳ Aprobar ${pend} entrega${pend===1?'':'s'} de préstamo`
+                 : (prob>0 ? `⚠️ ${prob} entrega${prob===1?'':'s'} con problema`
+                 : `✅ Entregas de hoy (${hoyN}) · al día`);
+        const ex = sols>0 ? ` · ${sols} solicitud${sols===1?'':'es'} de renovación` : '';
+        return `<button class="rx-verTransf ${pend>0||prob>0?'urge':''}" id="verEntregasHoy">${et}${ex} ›</button>`;
+      })()}
       <button id="chipsMora" style="all:unset;display:block;width:100%;cursor:pointer">
       <div class="rx-info">
         <div class="rx-chip ${clientesMora.size>0?'mora':''}"><div class="k">Clientes en mora ${clientesMora.size>0?'›':''}</div><div class="v">${clientesMora.size}</div></div>
@@ -2006,7 +2092,7 @@
           <div class="nom">${escapar(c.nombre||'Sin nombre')}</div>
           <div class="meta">${sub}</div>
           ${(pc && pc.vencido && pc.cuotasAtraso>=1)
-            ? `<div class="prox mora">⚠ ${moraTxt(pc)}</div>`
+            ? `<div class="prox mora">⚠ ${moraTxt(pc)}<br><span class="tot">Debe ${pesos(deuda)} en total</span></div>`
             : ((pc && pc.enDias!==null)?`<div class="prox ${pc.enDias<=0?'hoy':''}">Próx. cuota ${pesos(pc.cuota)} · ${proxTxt(pc)}</div>`:'')}
         </div>
         ${badge}
@@ -2319,6 +2405,13 @@
     if(!fechaInicio) return valErr('preErr','Elige la fecha de inicio.');
     const saldoViejo = renov ? (Number(renov.saldoViejo)||0) : 0;
     if(renov && monto <= saldoViejo) return valErr('preErr',`El nuevo monto debe ser mayor al saldo anterior (${pesos(saldoViejo)}).`);
+    if(renov){
+      const pv = renov.prestamoViejo || {};
+      const totV = rxSaldoInicial(Number(pv.monto)||0);
+      const pctV = totV>0 ? (totV - saldoViejo)/totV : 1;
+      if(pctV < RX_MIN_RENOV && !autorizRenov(pv.id))
+        return valErr('preErr',`Solo lleva pagado el ${Math.round(pctV*100)}%. Para renovar necesita el ${Math.round(RX_MIN_RENOV*100)}% o la autorización del administrador.`);
+    }
 
     const cobradorId = cli.cobradorId || (S.rol!=='admin' ? S.uid : '');
     if(!cobradorId) return valErr('preErr','Este cliente no tiene cobrador asignado. Asígnale uno primero.');
@@ -2411,6 +2504,8 @@
     $('cartonCerrar').onclick = ()=> fichaPrestamo(p.id);
     const _crv=$('cartonRenovar'); if(_crv) _crv.onclick = ()=>{
       const cliR = clientePorId(p.clienteId) || cli;
+      const g = puedeRenovar(p, r);
+      if(!g.ok) return hojaRenovBloqueada(p, r, cliR, g);
       formPrestamo(cliR, { prestamoViejo:p, saldoViejo:r.saldo });
     };
   }
@@ -2440,10 +2535,10 @@
     abrirHoja(`
       <h2 style="margin:6px 0 2px">${pesos(p.monto)} <span style="font-weight:400;color:var(--niebla);font-size:.9rem">· ${modalidadTxt(p.modalidad)}</span></h2>
       <div class="sub">${escapar(p.clienteNombre||'')} · inicio ${escapar(p.fechaInicio||'')}</div>
-      <div style="margin:4px 0 2px"><span class="rx-est ${est.c}">${est.t}</span></div>
+      <div style="margin:4px 0 2px"><span class="rx-est ${est.c}">${est.t}</span> ${chipAprob(p.id)}</div>
       <div class="rx-res">
-        <div class="c"><div class="k">Saldo</div><div class="v">${pesos(r.saldo)}</div></div>
-        <div class="c ${r.montoAtraso>0?'mora':''}"><div class="k">En atraso</div><div class="v">${pesos(r.montoAtraso)}</div></div>
+        <div class="c"><div class="k">Debe en total</div><div class="v">${pesos(r.saldo)}</div></div>
+        <div class="c ${r.montoAtraso>0?'mora':''}"><div class="k">De eso, atrasado</div><div class="v">${pesos(moraMonto(r))}</div></div>
       </div>
       <div class="rx-detalle-fila"><span class="et">Valor de la cuota</span><span class="va">${pesos(r.cuota)}</span></div>
       <div class="rx-detalle-fila"><span class="et">Cuotas pagadas</span><span class="va">${r.cuotasPagadas} de ${p.numeroCuotas}</span></div>
@@ -2519,7 +2614,7 @@
             <div class="info">
               <div class="nom">${escapar(f.cli.nombre||'Sin nombre')}${f.pagoHoy?'<span class="ok-hoy">✓ hoy</span>':''}${f.notaHoy?'<span class="nota-hoy">📝</span>':''}</div>
               <div class="sub">${f.r.cuotasAtraso>=1
-                ? `<span class="atr">${moraTxt(f.r)}</span> · Saldo ${pesos(f.r.saldo)}`
+                ? `Debe <b>${pesos(f.r.saldo)}</b> en total · <span class="atr">⚠ ${moraTxt(f.r)}</span>`
                 : (!f.tocaHoy && f.proxDias!==null && f.proxDias>0
                   ? `Saldo ${pesos(f.r.saldo)} · Cuota ${pesos(f.r.cuota)} · próx. ${cuandoTxt(f.proxDias)}`
                   : `Saldo ${pesos(f.r.saldo)} · Cuota ${pesos(f.r.cuota)}`)}</div>
@@ -2881,7 +2976,7 @@
           ${avatarHTML(o.cli,'cli',44)}
           <div class="cuerpo">
             <div class="nom"><span class="rx-cob-dot" style="background:${colorCobrador(o.cobradorId)}"></span>${escapar(o.cli.nombre||'Sin nombre')}</div>
-            <div class="meta" style="color:var(--peligro);font-weight:600">Debe ${pesos(o.monto)} · ${cuotasTxt(o.cuotas)}</div>
+            <div class="meta">Debe <b>${pesos(o.saldo)}</b> en total<br><span style="color:var(--peligro);font-weight:600">⚠ Atrasado ${pesos(o.monto)} · ${cuotasTxt(o.cuotas)}</span></div>
           </div>
           ${o.cli.telefono?`<button class="rx-wa-mini" data-wam="${escapar(o.cli.telefono)}" data-wamn="${escapar(o.cli.nombre||'')}" data-wamc="${o.cuotas}" data-wamm="${o.monto}" title="Cobrarle por WhatsApp">💬</button>`:''}
         </div>`).join('');
@@ -3227,7 +3322,7 @@
       const x = padL + i*(bw+gap);
       const hR = alto(s.reditos), hP = alto(s.pap);
       const yBase = H-padB;
-      ctx.fillStyle = '#3461A8'; ctx.fillRect(x, yBase-hR, bw, hR);
+      ctx.fillStyle = '#8A6A10'; ctx.fillRect(x, yBase-hR, bw, hR);
       ctx.fillStyle = '#C9A227'; ctx.fillRect(x, yBase-hR-hP, bw, hP);
       ctx.fillStyle = '#7E8A84';
       if(n<=14 && (n<=8 || i%2===0)) ctx.fillText(s.label, x+bw/2, H-8);
@@ -3266,7 +3361,7 @@
         <div class="rx-rep-card oro"><div class="k">Papelería</div><div class="v">${pesos(d.papT)}</div></div>
       </div>
       <canvas class="rx-rep-canvas" id="repCanvas"></canvas>
-      <div class="hint" style="margin-top:4px"><span style="color:#3461A8">■</span> Réditos · <span style="color:#C9A227">■</span> Papelería</div>
+      <div class="hint" style="margin-top:4px"><span style="color:#8A6A10">■</span> Réditos · <span style="color:#C9A227">■</span> Papelería</div>
       <div class="rx-seccion-titulo" style="margin-top:16px"><span>Lo que entrega cada trabajador</span></div>
       ${filasCob}
       <div class="hint" style="margin-top:12px">Método: cada peso cobrado trae 1/6 de rédito (interés fijo del 20%). Las liquidaciones por renovación cuentan como rédito aunque no muevan efectivo. La papelería se gana el día del desembolso.</div>
@@ -3279,29 +3374,133 @@
   // NUEVO v2.8: VERIFICACIÓN DE ENTREGAS — el control anti-robo del rey.
   // El préstamo es la DEUDA; lo que se entrega es EFECTIVO (monto − saldo viejo − papelería).
   // La oficina llama al cliente con el número exacto y sella la verificación (inmutable).
+  // ---- v4.9: APROBACIÓN DE ENTREGAS -------------------------------------
+  // Todo préstamo entregado nace PENDIENTE. El administrador llama al cliente,
+  // confirma cuánto recibió en la mano, y aprueba o marca problema. Queda sellado.
+  const RX_APROB_DIAS = 45;
   function veriDe(prestamoId){
     return S.movimientos.find(m=> m.tipo==='verificacion' && m.prestamoId===prestamoId) || null;
   }
-  async function marcarVerificada(p, neto){
-    if(!confirm(`¿Confirmaste con el cliente que recibió ${pesos(neto)} en efectivo?`)) return;
+  function aprobEstado(prestamoId){
+    const v = veriDe(prestamoId);
+    if(!v) return 'pendiente';
+    return v.resultado === 'problema' ? 'problema' : 'aprobado';  // sin campo = aprobado (versiones viejas)
+  }
+  function desdeVentana(){
+    return new Date(rxFecha(hoyISO()).getTime() - RX_APROB_DIAS*86400000).toISOString().slice(0,10);
+  }
+  function nSinAprobar(){
+    const desde = desdeVentana();
+    return S.movimientos.filter(m=> m.tipo==='desembolso' && m.fecha>=desde && aprobEstado(m.prestamoId)==='pendiente').length;
+  }
+  function nConProblema(){
+    const desde = desdeVentana();
+    return S.movimientos.filter(m=> m.tipo==='desembolso' && m.fecha>=desde && aprobEstado(m.prestamoId)==='problema').length;
+  }
+  function chipAprob(prestamoId){
+    const e = aprobEstado(prestamoId);
+    if(e==='aprobado') return `<span class="rx-chip-ap ok">✓ Entrega aprobada</span>`;
+    if(e==='problema') return `<span class="rx-chip-ap mal">⚠️ Entrega con problema</span>`;
+    return `<span class="rx-chip-ap pend">⏳ Sin aprobar</span>`;
+  }
+
+  // ---- v4.9: REGLAS DE RENOVACIÓN ---------------------------------------
+  // Para renovar hay que tener pagado al menos el 60% del préstamo,
+  // o una autorización expresa del administrador para ese préstamo.
+  const RX_MIN_RENOV = 0.60;
+  function pctPagadoDe(p, r){
+    const tot = rxSaldoInicial(Number(p.monto)||0);
+    if(tot<=0) return 1;
+    return Math.max(0, Math.min(1, (tot - (Number(r.saldo)||0)) / tot));
+  }
+  function autorizRenov(prestamoId){
+    return S.movimientos.find(m=> m.tipo==='autorizacion' && m.prestamoId===prestamoId) || null;
+  }
+  function solicitudRenov(prestamoId){
+    return S.movimientos.find(m=> m.tipo==='solicitud' && m.prestamoId===prestamoId) || null;
+  }
+  function puedeRenovar(p, r){
+    const pct = pctPagadoDe(p, r);
+    if(pct >= RX_MIN_RENOV) return { ok:true, pct };
+    if(autorizRenov(p.id))  return { ok:true, pct, porAutorizacion:true };
+    return { ok:false, pct };
+  }
+  function hojaRenovBloqueada(p, r, cli, g){
+    const falta = rxRedondea(rxSaldoInicial(Number(p.monto)||0) * RX_MIN_RENOV - (rxSaldoInicial(Number(p.monto)||0) - r.saldo));
+    const yaPidio = !!solicitudRenov(p.id);
+    abrirHoja(`
+      <h2>🚫 Todavía no puede renovar</h2>
+      <div class="sub">${escapar(cli.nombre||'Este cliente')} lleva pagado el <b>${Math.round(g.pct*100)}%</b> de su préstamo.</div>
+      <div class="rx-detalle-fila" style="margin-top:14px"><span class="et">Se necesita mínimo</span><span class="va">${Math.round(RX_MIN_RENOV*100)}% pagado</span></div>
+      <div class="rx-detalle-fila"><span class="et">Le falta abonar</span><span class="va" style="color:var(--peligro)">${pesos(Math.max(0,falta))}</span></div>
+      <div class="rx-detalle-fila"><span class="et">Debe en total</span><span class="va">${pesos(r.saldo)}</span></div>
+      ${S.rol==='admin'
+        ? `<div class="rx-banner" style="margin-top:14px">Tú eres el administrador: puedes autorizar esta renovación bajo tu responsabilidad.</div>
+           <button class="rx-btn-prim" id="rbAutorizar" style="width:100%;margin-top:12px">✅ Autorizar y renovar ahora</button>`
+        : (yaPidio
+          ? `<div class="rx-banner" style="margin-top:14px">⏳ Ya pediste la autorización. El administrador la verá en su panel.</div>`
+          : `<div class="rx-banner" style="margin-top:14px">Si el cliente es bueno y quiere subir el cupo, pídele autorización al administrador.</div>
+             <button class="rx-btn-prim" id="rbPedir" style="width:100%;margin-top:12px">🙋 Pedir autorización</button>`)}
+      <div class="rx-acciones" style="margin-top:16px"><button class="rx-btn-fant" id="rbCerrar">Cerrar</button></div>`);
+    $('rbCerrar').onclick = cerrarHoja;
+    const _rp=$('rbPedir');     if(_rp) _rp.onclick = ()=> solicitarAutorizacion(p, r);
+    const _ra=$('rbAutorizar'); if(_ra) _ra.onclick = async ()=>{
+      await autorizarRenov(p, true);
+      formPrestamo(cli, { prestamoViejo:p, saldoViejo:r.saldo });
+    };
+  }
+  async function solicitarAutorizacion(p, r){
+    if(solicitudRenov(p.id)){ toast('Ya está pedida. Espera al administrador.'); return; }
     try{
       await addDoc(collection(db,'empresas',S.empresaId,'movimientos'), {
-        tipo:'verificacion', prestamoId:p.id, clienteId:p.clienteId, cobradorId:p.cobradorId,
+        tipo:'solicitud', motivo:'renovacion', prestamoId:p.id, clienteId:p.clienteId,
+        cobradorId: p.cobradorId || S.uid, fecha:hoyISO(), ts:Date.now(),
+        pctPagado: Math.round(pctPagadoDe(p,r)*100), saldo: r.saldo,
+        pedidoPor: S.uid, creadoEn: serverTimestamp()
+      });
+      cerrarHoja(); toast('Autorización pedida ⏳');
+    }catch(e){ toast('No se pudo pedir: '+(e.message||e), true); }
+  }
+  async function autorizarRenov(p, silencioso){
+    if(autorizRenov(p.id)) return true;
+    if(!silencioso && !confirm(`¿Autorizar que ${p.clienteNombre||'este cliente'} renueve sin llegar al ${Math.round(RX_MIN_RENOV*100)}%?`)) return false;
+    try{
+      await addDoc(collection(db,'empresas',S.empresaId,'movimientos'), {
+        tipo:'autorizacion', motivo:'renovacion', prestamoId:p.id, clienteId:p.clienteId,
+        cobradorId: p.cobradorId || '', fecha:hoyISO(), ts:Date.now(),
+        autorizadoPor:S.uid, creadoEn: serverTimestamp()
+      });
+      toast('Renovación autorizada ✓');
+      return true;
+    }catch(e){ toast('No se pudo autorizar: '+(e.message||e), true); return false; }
+  }
+  async function marcarAprobacion(p, neto, resultado){
+    const malo = resultado==='problema';
+    const txt = malo
+      ? `¿Marcar PROBLEMA en la entrega de ${p.clienteNombre||'este cliente'}? Queda en rojo hasta que lo aclares con el cobrador.`
+      : `¿El cliente confirmó que recibió ${pesos(neto)} en efectivo?`;
+    if(!confirm(txt)) return;
+    try{
+      await addDoc(collection(db,'empresas',S.empresaId,'movimientos'), {
+        tipo:'verificacion', resultado: malo?'problema':'aprobado',
+        prestamoId:p.id, clienteId:p.clienteId, cobradorId:p.cobradorId,
         fecha:hoyISO(), ts:Date.now(), montoVerificado:neto, verificadoPor:S.uid,
         creadoEn: serverTimestamp()
       });
-      toast('Entrega verificada ✓');
+      toast(malo ? 'Marcada con problema ⚠️' : 'Entrega aprobada ✓');
       abrirEntregasHoy();
-    }catch(e){ toast('No se pudo verificar: '+(e.message||e), true); }
+    }catch(e){ toast('No se pudo registrar: '+(e.message||e), true); }
   }
   function abrirEntregasHoy(){
-    const hoy = hoyISO();
+    const hoy = hoyISO(), desde = desdeVentana();
+    const orden = { pendiente:0, problema:1, aprobado:2 };
     const des = S.movimientos
-      .filter(m=> m.tipo==='desembolso' && m.fecha===hoy)
-      .sort((a,b)=> String(a.cobradorId).localeCompare(String(b.cobradorId)) || ((b.ts||0)-(a.ts||0)));
-    let totalNeto = 0;
+      .filter(m=> m.tipo==='desembolso' && m.fecha>=desde)
+      .filter(m=> m.fecha===hoy || aprobEstado(m.prestamoId)!=='aprobado')
+      .sort((a,b)=> (orden[aprobEstado(a.prestamoId)]-orden[aprobEstado(b.prestamoId)]) || ((b.ts||0)-(a.ts||0)));
+    let pendMonto = 0, nPend = 0;
     const filas = des.length===0
-      ? `<div class="rx-vacio-mini">Hoy no se han entregado préstamos.</div>`
+      ? `<div class="rx-vacio-mini">No hay entregas por revisar.</div>`
       : des.map(m=>{
           const p = prestamoPorId(m.prestamoId) || {};
           const cli = clientePorId((m.clienteId||p.clienteId)) || { nombre:'Cliente' };
@@ -3309,32 +3508,64 @@
           const desc = Number(p.saldoDescontado)||0;
           const pap = Number(p.papeleria)||0;
           const neto = monto - desc - pap;
-          totalNeto += neto;
           const deuda = rxSaldoInicial(monto);
-          const veri = veriDe(m.prestamoId);
+          const est = aprobEstado(m.prestamoId);
+          if(est==='pendiente'){ nPend++; pendMonto += neto; }
+          const quien = primerNombre(nombreCobrador(p.cobradorId||m.cobradorId));
           const tel = waNumero(cli.telefono);
-          const guion = `Buen día ${primerNombre(cli.nombre||'')}, le hablamos de ${S.empresaNombre||'la oficina'} para confirmar su préstamo de hoy: ¿recibió ${pesos(neto)} en efectivo de ${primerNombre(nombreCobrador(p.cobradorId||m.cobradorId))}? Su deuda queda en ${pesos(deuda)} con cuota de ${pesos(Number(p.valorCuota)||0)}. Gracias por confirmar.`;
-          return `<div class="rx-entrega">
+          const guion = `Buen día ${primerNombre(cli.nombre||'')}, le hablamos de ${S.empresaNombre||'la oficina'} para confirmar su préstamo${m.fecha===hoy?' de hoy':` del ${m.fecha}`}: ¿recibió ${pesos(neto)} en efectivo de ${quien}? Su deuda queda en ${pesos(deuda)} con cuota de ${pesos(Number(p.valorCuota)||0)}. Gracias por confirmar.`;
+          return `<div class="rx-entrega" style="${est==='problema'?'border-color:rgba(178,58,51,.55)':''}">
             <div class="l1"><span class="rx-cob-dot" style="background:${colorCobrador(p.cobradorId||m.cobradorId)}"></span>${escapar(cli.nombre||'Cliente')}<span class="neto">💵 ${pesos(neto)}</span></div>
-            <div class="l2">${desc>0?'🔄 Renovación · ':''}Préstamo <b>${pesos(monto)}</b> → deuda <b>${pesos(deuda)}</b>${desc>0?` · −saldo viejo ${pesos(desc)}`:''}${pap>0?` · −papelería ${pesos(pap)}`:''}</div>
+            <div class="l2">${desc>0?'🔄 Renovación · ':''}Préstamo <b>${pesos(monto)}</b> → debe <b>${pesos(deuda)}</b>${desc>0?` · −saldo viejo ${pesos(desc)}`:''}${pap>0?` · −papelería ${pesos(pap)}`:''}</div>
+            <div class="l2">${m.fecha===hoy?'Hoy':escapar(m.fecha)} · ${escapar(quien)} · ${chipAprob(m.prestamoId)}</div>
             <div class="acc">
               ${cli.telefono?`<a class="rx-tel-mini" href="tel:${escapar(String(cli.telefono).replace(/\D/g,''))}">📞 Llamar</a>`:''}
               ${tel?`<button class="rx-tel-mini" data-vwa="${escapar(cli.telefono)}" data-vmsg="${escapar(guion)}">💬 WhatsApp</button>`:''}
-              ${veri?`<span class="rx-veri-ok">✓ Verificada</span>`:`<button class="rx-veri-btn" data-veri="${m.prestamoId}" data-neto="${neto}">✓ Verificar</button>`}
+              ${est==='aprobado'
+                ? `<span class="rx-veri-ok">✓ Aprobada</span>`
+                : `<button class="rx-prob-btn" data-prob="${m.prestamoId}" data-neto="${neto}">⚠️ Problema</button>
+                   <button class="rx-veri-btn" data-veri="${m.prestamoId}" data-neto="${neto}">✓ Aprobar</button>`}
             </div>
           </div>`;
         }).join('');
+    const sols = S.movimientos
+      .filter(m=> m.tipo==='solicitud' && m.motivo==='renovacion' && !autorizRenov(m.prestamoId))
+      .sort((a,b)=> (b.ts||0)-(a.ts||0));
+    const solHtml = sols.length===0 ? '' : `
+      <div class="rx-seccion-titulo" style="margin-top:20px"><span>Piden renovar (${sols.length})</span></div>
+      ${sols.map(s=>{
+        const cli = clientePorId(s.clienteId) || { nombre:'Cliente' };
+        return `<div class="rx-sol">
+          <div style="font-weight:700">${escapar(cli.nombre||'Cliente')}</div>
+          <div style="font-size:.8rem;color:var(--niebla);margin-top:4px;line-height:1.5">Lleva pagado <b>${Number(s.pctPagado)||0}%</b> · debe <b>${pesos(Number(s.saldo)||0)}</b> · lo pide ${escapar(primerNombre(nombreCobrador(s.cobradorId)))}</div>
+          <div style="display:flex;gap:8px;margin-top:9px;align-items:center">
+            ${cli.telefono?`<a class="rx-tel-mini" href="tel:${escapar(String(cli.telefono).replace(/\D/g,''))}">📞 Llamar</a>`:''}
+            <button class="rx-veri-btn" data-aut="${s.prestamoId}">✅ Autorizar</button>
+          </div>
+        </div>`;
+      }).join('')}`;
     abrirHoja(`
-      <h2>💸 Entregas de hoy${des.length>0?` (${des.length})`:''}</h2>
-      <div class="sub">${des.length>0?`Efectivo entregado en préstamos: <b>${pesos(totalNeto)}</b>. Llama a cada cliente y confirma que recibió <b>ese número exacto</b> en la mano.`:'Cuando se entregue un préstamo, aparece aquí para verificarlo.'}</div>
+      <h2>💸 Entregas por aprobar</h2>
+      <div class="sub">${nPend>0
+        ? `<b>${nPend}</b> sin aprobar por <b>${pesos(pendMonto)}</b>. Llama a cada cliente y confirma que recibió <b>ese número exacto</b> en la mano.`
+        : 'Todo al día. Cada préstamo entregado aparece aquí hasta que lo confirmes con el cliente.'}</div>
       ${filas}
-      <div class="hint" style="margin-top:12px">El préstamo es la deuda; lo que se verifica es el <b>efectivo en mano</b>. La verificación queda sellada con tu firma y no se puede borrar.</div>
+      ${solHtml}
+      <div class="hint" style="margin-top:12px">El préstamo es la deuda; lo que se aprueba es el <b>efectivo en mano</b>. Queda sellado con tu firma y no se puede borrar.</div>
       <div class="rx-acciones" style="margin-top:16px"><button class="rx-btn-fant" id="entCerrar">Cerrar</button></div>`);
     $('entCerrar').onclick = cerrarHoja;
     document.querySelectorAll('[data-vwa]').forEach(b=> b.onclick = ()=> waAbrir(b.dataset.vwa, b.dataset.vmsg));
     document.querySelectorAll('[data-veri]').forEach(b=> b.onclick = ()=>{
       const p = prestamoPorId(b.dataset.veri); if(!p) return;
-      marcarVerificada(p, Number(b.dataset.neto)||0);
+      marcarAprobacion(p, Number(b.dataset.neto)||0, 'aprobado');
+    });
+    document.querySelectorAll('[data-prob]').forEach(b=> b.onclick = ()=>{
+      const p = prestamoPorId(b.dataset.prob); if(!p) return;
+      marcarAprobacion(p, Number(b.dataset.neto)||0, 'problema');
+    });
+    document.querySelectorAll('[data-aut]').forEach(b=> b.onclick = async ()=>{
+      const p = prestamoPorId(b.dataset.aut); if(!p) return;
+      if(await autorizarRenov(p)) abrirEntregasHoy();
     });
   }
 
@@ -3667,10 +3898,11 @@
       return `<div class="rx-repcob">
         <div class="l1">${escapar(e.nombre||'(sin nombre)')}${mia?' <i style="color:var(--niebla);font-weight:400">· tu empresa</i>':''}
           <span style="margin-left:auto;color:${st.c};font-size:.82rem;font-weight:700">${st.t}</span></div>
-        <div class="l2">Vence: <b>${escapar(e.vence||'sin fecha')}</b></div>
+        <div class="l2">Vence: <b>${escapar(e.vence||'sin fecha')}</b> · Marca: <b>${escapar(e.marca||'Rendix')}</b>${e.acento?` <span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:${escapar(e.acento)};vertical-align:middle"></span>`:''}</div>
         <div class="acc" style="display:flex;gap:8px;margin-top:9px;flex-wrap:wrap">
           <button class="rx-tel-mini" data-dmas="${e.id}">+30 días</button>
           <button class="rx-tel-mini" data-dfec="${e.id}">📅 Fecha</button>
+          <button class="rx-tel-mini" data-dmar="${e.id}">🎨 Marca</button>
           <button class="rx-tel-mini" data-dedi="${e.id}">✏️ Editar</button>
           ${mia?'':`<button class="rx-tel-mini" data-darc="${e.id}" style="background:#F6E3E1;color:#8a2a24">${e.archivada===true?'♻️ Restaurar':'📦 Archivar'}</button>`}
           ${mia?'' : (e.bloqueoTotal===true || e.licenciaActiva===false)
@@ -3714,6 +3946,16 @@
       const base = (e.vence && e.vence > hoyISO()) ? e.vence : hoyISO();
       const nueva = new Date(rxFecha(base).getTime() + 30*86400000).toISOString().slice(0,10);
       guardar(e.id, { vence:nueva, licenciaActiva:true, bloqueoTotal:false }, `Pagó ✓ vence ${nueva}`);
+    });
+    document.querySelectorAll('[data-dmar]').forEach(b=> b.onclick = ()=>{
+      const e = empresas.find(x=>x.id===b.dataset.dmar);
+      const nom = prompt(`Nombre que verá "${e.nombre}" dentro de la app:`, e.marca || 'Rendix');
+      if(nom===null) return;
+      const col = prompt('Color de acento #RRGGBB (vacío = dorado):', e.acento || '');
+      if(col===null) return;
+      const c = String(col).trim();
+      if(c && !/^#[0-9a-fA-F]{6}$/.test(c)) return toast('Color inválido. Usa #RRGGBB, ej: #C9A227', true);
+      guardar(e.id, { marca: String(nom).trim(), acento: c }, 'Marca actualizada 🎨');
     });
     document.querySelectorAll('[data-dfec]').forEach(b=> b.onclick = ()=>{
       const e = empresas.find(x=>x.id===b.dataset.dfec);
@@ -3933,8 +4175,8 @@
       <h2 style="margin:6px 0 2px">Registrar cobro</h2>
       <div class="sub">${escapar(cli.nombre||p.clienteNombre||'')} · ${modalidadTxt(p.modalidad)}</div>
       <div class="rx-res">
-        <div class="c"><div class="k">Saldo actual</div><div class="v">${pesos(saldo)}</div></div>
-        <div class="c ${r.montoAtraso>0?'mora':''}"><div class="k">${r.montoAtraso>0?`Atraso · ${cuotasTxt(r.cuotasAtraso)}`:'Cuota'}</div><div class="v">${pesos(r.montoAtraso>0?moraMonto(r):cuota)}</div></div>
+        <div class="c"><div class="k">Debe en total</div><div class="v">${pesos(saldo)}</div></div>
+        <div class="c ${r.montoAtraso>0?'mora':''}"><div class="k">${r.montoAtraso>0?`De eso, atrasado · ${cuotasTxt(r.cuotasAtraso)}`:'Cuota de hoy'}</div><div class="v">${pesos(r.montoAtraso>0?moraMonto(r):cuota)}</div></div>
       </div>
       ${yaHoy>0?`<div class="rx-aviso-hoy"><span>⚠️</span><span>Hoy ya le cobraste <b>${pesos(yaHoy)}</b> a ${escapar(cli.nombre||p.clienteNombre||'este cliente')}. Si registras este cobro, será un <b>abono adicional</b> del mismo día.</span></div>`:''}
       <div class="rx-form-err" id="cobroErr"></div>

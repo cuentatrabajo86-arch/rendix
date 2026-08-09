@@ -611,7 +611,7 @@
       <button class="rx-btn" type="submit" id="btnEntrar">Entrar</button>
       <div class="rx-error" id="errLogin" role="alert"></div>
     </form>
-    <div class="rx-firma"><span class="rx-mkname">Rendix</span> v5.1 · Powered by <b>Iván Jiménez</b></div>
+    <div class="rx-firma"><span class="rx-mkname">Rendix</span> v5.2 · Powered by <b>Iván Jiménez</b></div>
   </section>
 
   <!-- ===== APP ===== -->
@@ -634,7 +634,7 @@
       </main>
 
       <footer class="rx-pie">
-        <div class="firma"><span class="rx-mkname">Rendix</span> v5.1 · Powered by <b>Iván Jiménez</b></div>
+        <div class="firma"><span class="rx-mkname">Rendix</span> v5.2 · Powered by <b>Iván Jiménez</b></div>
       </footer>
     </div>
 
@@ -1582,6 +1582,9 @@
         <button class="rx-modulo" id="modBloqueo">
           <div class="ico">${prestamosBloqueados()?'🚫':'🚦'}</div><div class="nom">${prestamosBloqueados()?'Préstamos bloqueados':'Bloquear préstamos'}</div>
         </button>
+        <button class="rx-modulo" id="modGastosAdm">
+          <div class="ico">🧾</div><div class="nom">Gastos del negocio</div>
+        </button>
         <button class="rx-modulo" id="modRespaldo">
           <div class="ico">💾</div><div class="nom">Respaldo y exportación</div>
         </button>
@@ -1592,6 +1595,7 @@
     const _mmo=$('modMorosos'); if(_mmo) _mmo.onclick = abrirMorosos;
     const _mpr=$('modPrestamoRapido'); if(_mpr) _mpr.onclick = selectorPrestamoRapido;
     const _mre=$('modRespaldo'); if(_mre) _mre.onclick = abrirRespaldo;
+    const _mga=$('modGastosAdm'); if(_mga) _mga.onclick = abrirGastos;
     const _mdu=$('modDueno'); if(_mdu) _mdu.onclick = abrirPanelDueno;
     const _min=$('modInformes'); if(_min) _min.onclick = abrirInformes;
     const _mtr=$('modTraspaso'); if(_mtr) _mtr.onclick = ()=> abrirTraspaso(null);
@@ -1677,6 +1681,7 @@
         <button class="rx-modulo" data-ir="cobrar"><div class="ico">💵</div><div class="nom">Cobrar el día</div></button>
         <button class="rx-modulo" id="modCierre"><div class="ico">🧮</div><div class="nom">Cierre de caja</div></button>
         <button class="rx-modulo" data-ir="cobrar"><div class="ico">📝</div><div class="nom">Notas de visita</div></button>
+        <button class="rx-modulo" id="modGastos"><div class="ico">🧾</div><div class="nom">Gastos de ruta</div></button>
       </div>
       ${cerrado
         ? `<div class="rx-banner ok" style="margin-top:22px"><span>🔒 Cerraste tu día. Vuelve mañana para una nueva jornada.</span></div>`
@@ -1686,6 +1691,7 @@
              <div class="hint" style="margin-top:6px;text-align:center">Confirma tu base para empezar a cobrar.</div>`)}`;
     $('tabInicio').querySelectorAll('[data-ir]').forEach(b=> b.onclick=()=>irATab(b.dataset.ir));
     const _mc=$('modCierre'); if(_mc) _mc.onclick = abrirCierreCaja;
+    const _mg=$('modGastos'); if(_mg) _mg.onclick = abrirGastos;
     const _ad=$('cobAbrirDia'); if(_ad) _ad.onclick = abrirElDia;
     $('tabInicio').querySelectorAll('[data-paso]').forEach(b=> b.onclick = ()=>{
       const p = b.dataset.paso;
@@ -2799,7 +2805,12 @@
     }, 0);
     const papeleriaHoy = S.prestamos.filter(p=> p.fechaInicio===hoy).reduce((t,p)=> t+(Number(p.papeleria)||0), 0);
     const entregado = prestadoHoy - papeleriaHoy;
-    const efectivoFinal = base + recargas + cobradoEfectivo - entregado;
+    // v5.2: gastos de ruta. Los pagados CON LA CAJA salen del efectivo que entrega;
+    // los que el cobrador puso de su bolsillo no tocan la caja, la empresa se los debe.
+    const gastosHoy = movs.filter(m=> m.tipo==='gasto' && m.cobradorId===S.uid && m.fecha===hoy);
+    const gastosCaja = gastosHoy.filter(m=> m.fuente!=='bolsillo').reduce((t,m)=> t+(Number(m.monto)||0), 0);
+    const gastosBolsillo = gastosHoy.filter(m=> m.fuente==='bolsillo').reduce((t,m)=> t+(Number(m.monto)||0), 0);
+    const efectivoFinal = base + recargas + cobradoEfectivo - entregado - gastosCaja;
     const pendientes = [];
     for(const p of S.prestamos){
       if(p.estado==='pagado') continue;
@@ -2816,7 +2827,7 @@
         pendientes.push({ nombre: cli.nombre||'Sin nombre', saldo: r.saldo, clienteId: p.clienteId||'', telefono: cli.telefono||'' });
       }
     }
-    return { base, recargas, cobrosHoy, cobrosTransf, desembHoy, cobradoTransf, totalCobrado, cobradoEfectivo, entregado, papeleriaHoy, efectivoFinal, pendientes };
+    return { base, recargas, cobrosHoy, cobrosTransf, desembHoy, cobradoTransf, totalCobrado, cobradoEfectivo, entregado, papeleriaHoy, efectivoFinal, pendientes, gastosHoy, gastosCaja, gastosBolsillo };
   }
 
   // Estado del día (DERIVADO): cerrado si el último evento del día es 'cierre'.
@@ -2921,7 +2932,8 @@
       await addDoc(collection(db,'empresas',S.empresaId,'movimientos'), {
         tipo:'cierre', fecha:hoy, cobradorId:S.uid, ts:Date.now(),
         rutaId: S.perfil?.rutaId || '',
-        base: c.base, recargas: c.recargas||0, cobradoEfectivo: c.cobradoEfectivo, cobradoTransf: c.cobradoTransf,
+        base: c.base, recargas: c.recargas||0, gastos: c.gastosCaja||0, gastosBolsillo: c.gastosBolsillo||0, nGastos: (c.gastosHoy||[]).length,
+        cobradoEfectivo: c.cobradoEfectivo, cobradoTransf: c.cobradoTransf,
         totalCobrado: c.totalCobrado, entregado: c.entregado, efectivoFinal: c.efectivoFinal,
         ...(sinContar ? {} : { efectivoReal, diferencia }),
         nPendientes: c.pendientes.length, pendientes: c.pendientes,
@@ -3284,7 +3296,7 @@
     const desde = buckets[0].key.length===7 ? buckets[0].key+'-01' : buckets[0].key;
     let cobradoRango=0, cobradoSinRenov=0;
     const porCob = {};
-    const pc = id => porCob[id] || (porCob[id] = { cobros:0, ef:0, tr:0, pap:0, entrego:0, desc:0 });
+    const pc = id => porCob[id] || (porCob[id] = { cobros:0, ef:0, tr:0, pap:0, entrego:0, desc:0, gasto:0 });
     for(const m of S.movimientos){
       if(m.tipo==='cobro' && m.fecha >= desde){
         const i = idx.get(repClaveDe(m.fecha, modo));
@@ -3320,7 +3332,17 @@
     const serie = buckets.map((b,i)=>({ label:b.label, reditos:rxRedondea(cobrosB[i]/6), pap:papB[i] }));
     const reditosT = rxRedondea(cobradoRango/6);
     const papT = serie.reduce((t,s)=>t+s.pap,0);
-    return { serie, reditosT, papT, gananciaT:reditosT+papT, recaudadoT:cobradoSinRenov, porCob };
+    // v5.2: los gastos del rango bajan la ganancia. Antes el informe daba la BRUTA.
+    let gastosT = 0;
+    for(const m of S.movimientos){
+      if(m.tipo!=='gasto' || m.fecha < desde) continue;
+      if(idx.get(repClaveDe(m.fecha, modo))===undefined) continue;
+      const v = Number(m.monto)||0;
+      gastosT += v;
+      if(m.cobradorId) pc(m.cobradorId).gasto += v;
+    }
+    const brutaT = reditosT + papT;
+    return { serie, reditosT, papT, gastosT, brutaT, gananciaT: brutaT - gastosT, recaudadoT:cobradoSinRenov, porCob };
   }
 
   function repDibujar(serie){
@@ -3362,7 +3384,7 @@
         <div class="rx-repcob">
           <div class="l1"><span class="rx-cob-dot" style="background:${colorCobrador(c.id)}"></span>${escapar(c.nombre||'—')}</div>
           <div class="l2">Recaudó <b>${pesos(o.ef+o.tr)}</b> (efectivo ${pesos(o.ef)}${o.tr>0?` · 📲 ${pesos(o.tr)}`:''}) · Entregó en cierres <b>${pesos(o.entrego)}</b>${o.desc!==0?` · <span style="color:${o.desc<0?'var(--peligro)':'var(--ok)'}">descuadre ${pesos(o.desc)}</span>`:''}</div>
-          <div class="l2">Ganancia que generó: réditos <b>${pesos(rxRedondea(o.cobros/6))}</b> + papelería <b>${pesos(o.pap)}</b></div>
+          <div class="l2">Ganancia que generó: réditos <b>${pesos(rxRedondea(o.cobros/6))}</b> + papelería <b>${pesos(o.pap)}</b>${o.gasto>0?` · <span style="color:var(--peligro)">gastos ${pesos(o.gasto)}</span>`:''}</div>
         </div>`).join('');
     abrirHoja(`
       <h2>📈 Informes de ganancia</h2>
@@ -3373,16 +3395,18 @@
         <button class="rx-chip-sel ${_repModo==='mes'?'activa':''}" data-rm="mes">Meses</button>
       </div>
       <div class="rx-rep-cards">
-        <div class="rx-rep-card azul"><div class="k">GANANCIA TOTAL</div><div class="v">${pesos(d.gananciaT)}</div></div>
+        <div class="rx-rep-card azul"><div class="k">GANANCIA NETA</div><div class="v">${pesos(d.gananciaT)}</div></div>
         <div class="rx-rep-card"><div class="k">Recaudado</div><div class="v">${pesos(d.recaudadoT)}</div></div>
         <div class="rx-rep-card"><div class="k">Réditos</div><div class="v">${pesos(d.reditosT)}</div></div>
         <div class="rx-rep-card oro"><div class="k">Papelería</div><div class="v">${pesos(d.papT)}</div></div>
+        <div class="rx-rep-card"><div class="k">Ganancia bruta</div><div class="v">${pesos(d.brutaT)}</div></div>
+        <div class="rx-rep-card"><div class="k">Gastos</div><div class="v" style="color:var(--peligro)">− ${pesos(d.gastosT)}</div></div>
       </div>
       <canvas class="rx-rep-canvas" id="repCanvas"></canvas>
       <div class="hint" style="margin-top:4px"><span style="color:#8A6A10">■</span> Réditos · <span style="color:#C9A227">■</span> Papelería</div>
       <div class="rx-seccion-titulo" style="margin-top:16px"><span>Lo que entrega cada trabajador</span></div>
       ${filasCob}
-      <div class="hint" style="margin-top:12px">Método: cada peso cobrado trae 1/6 de rédito (interés fijo del 20%). Las liquidaciones por renovación cuentan como rédito aunque no muevan efectivo. La papelería se gana el día del desembolso.</div>
+      <div class="hint" style="margin-top:12px">Método: la ganancia neta es réditos + papelería − gastos. Cada peso cobrado trae 1/6 de rédito (interés fijo del 20%). Las liquidaciones por renovación cuentan como rédito aunque no muevan efectivo. La papelería se gana el día del desembolso.</div>
       <div class="rx-acciones" style="margin-top:16px"><button class="rx-btn-fant" id="repCerrar">Cerrar</button></div>`);
     $('repCerrar').onclick = cerrarHoja;
     document.querySelectorAll('#repChips [data-rm]').forEach(b=> b.onclick = ()=>{ _repModo = b.dataset.rm; abrirInformes(); });
@@ -3984,6 +4008,118 @@
     });
   }
 
+  // ---- v5.2: GASTOS DE RUTA Y DEL NEGOCIO ------------------------------
+  // Se dañó una llanta, se echó gasolina, se pagó un almuerzo: eso sale de la plata
+  // de la ruta y tiene que quedar registrado, o el cuadre no da y la ganancia miente.
+  const RX_GASTO_CAT = [
+    ['transporte','🛵','Transporte / gasolina'],
+    ['mantenimiento','🔧','Mantenimiento (llanta, moto)'],
+    ['alimentacion','🍽️','Alimentación'],
+    ['oficina','📄','Papelería / oficina'],
+    ['sueldo','💼','Sueldo / comisión'],
+    ['otro','📦','Otro']
+  ];
+  function gastoCat(id){ return RX_GASTO_CAT.find(x=>x[0]===id) || RX_GASTO_CAT[5]; }
+  function gastoTxt(id){ const c = gastoCat(id); return c[1]+' '+c[2]; }
+  let _gCat = 'transporte', _gFuente = 'caja';
+
+  function formGasto(cobradorId){
+    const hoy = hoyISO();
+    const cid = cobradorId || S.uid;
+    if(S.rol!=='admin' && diaEstaCerrado(S.uid, hoy)){
+      toast('Tu día ya está cerrado. Pídele al administrador que lo reabra.', true); return;
+    }
+    _gCat = 'transporte'; _gFuente = 'caja';
+    const pintaChips = ()=>{
+      const cc = $('gCats'); if(cc) cc.querySelectorAll('[data-gc]').forEach(b=>
+        b.classList.toggle('activa', b.dataset.gc===_gCat));
+      const ff = $('gFuentes'); if(ff) ff.querySelectorAll('[data-gf]').forEach(b=>
+        b.classList.toggle('activa', b.dataset.gf===_gFuente));
+      const av = $('gAviso');
+      if(av) av.innerHTML = _gFuente==='bolsillo'
+        ? 'Sale de <b>tu bolsillo</b>: no baja el efectivo que entregas y la empresa te lo debe.'
+        : 'Sale de <b>la caja</b>: baja el efectivo que tienes que entregar hoy.';
+    };
+    abrirHoja(`
+      <h2>🧾 Registrar un gasto</h2>
+      <div class="sub">${S.rol==='admin' && cid!==S.uid ? escapar(nombreCobrador(cid))+' · ' : ''}${hoy}</div>
+      <div class="rx-form-err" id="gErr"></div>
+      <div class="rx-form-campo" style="margin-top:12px">
+        <label for="gMonto">¿Cuánto costó?</label>
+        <input class="rx-fin" id="gMonto" type="number" inputmode="numeric" min="1" placeholder="Ej: 45000" />
+      </div>
+      <div class="rx-form-campo">
+        <label>¿En qué fue?</label>
+        <div class="rx-chips" id="gCats">
+          ${RX_GASTO_CAT.map(c=>`<button type="button" class="rx-chip-sel" data-gc="${c[0]}">${c[1]} ${escapar(c[2].split(' (')[0])}</button>`).join('')}
+        </div>
+      </div>
+      <div class="rx-form-campo">
+        <label>¿Con qué plata se pagó?</label>
+        <div class="rx-chips" id="gFuentes">
+          <button type="button" class="rx-chip-sel" data-gf="caja">💵 De la caja</button>
+          <button type="button" class="rx-chip-sel" data-gf="bolsillo">💼 De mi bolsillo</button>
+        </div>
+        <div class="hint" id="gAviso" style="margin-top:6px"></div>
+      </div>
+      <div class="rx-form-campo">
+        <label for="gNota">¿Qué pasó? (opcional)</label>
+        <input class="rx-fin" id="gNota" type="text" maxlength="90" placeholder="Ej: se pinchó la llanta trasera" />
+      </div>
+      <div class="rx-acciones" style="margin-top:16px">
+        <button class="rx-btn-prim" id="gGuardar">Registrar gasto</button>
+        <button class="rx-btn-fant" id="gCancelar">Cancelar</button>
+      </div>
+      <div class="hint" style="margin-top:8px">Los gastos quedan sellados igual que los cobros: revisa bien el monto antes de guardar.</div>`);
+    $('gCancelar').onclick = cerrarHoja;
+    $('gCats').querySelectorAll('[data-gc]').forEach(b=> b.onclick = ()=>{ _gCat=b.dataset.gc; pintaChips(); });
+    $('gFuentes').querySelectorAll('[data-gf]').forEach(b=> b.onclick = ()=>{ _gFuente=b.dataset.gf; pintaChips(); });
+    pintaChips();
+    $('gGuardar').onclick = async ()=>{
+      const monto = Number($('gMonto').value)||0;
+      if(monto<=0) return valErr('gErr','Escribe cuánto costó.');
+      if(!confirm(`¿Registrar un gasto de ${pesos(monto)} en ${gastoCat(_gCat)[2]}?\n\nQueda sellado y no se puede borrar.`)) return;
+      const btn=$('gGuardar'); btn.disabled=true; btn.textContent='Registrando…';
+      try{
+        await addDoc(collection(db,'empresas',S.empresaId,'movimientos'), {
+          tipo:'gasto', monto, categoria:_gCat, fuente:_gFuente,
+          nota: $('gNota').value.trim(), cobradorId: cid, fecha: hoyISO(), ts: Date.now(),
+          registradoPor: S.uid, creadoEn: serverTimestamp()
+        });
+        cerrarHoja();
+        toast(_gFuente==='bolsillo' ? 'Gasto registrado 💼 La empresa te lo debe.' : 'Gasto registrado 🧾 Ya salió de tu caja.');
+      }catch(e){ btn.disabled=false; btn.textContent='Registrar gasto'; valErr('gErr','No se pudo registrar: '+(e.message||e)); }
+    };
+  }
+
+  function abrirGastos(){
+    const hoy = hoyISO();
+    const esAdm = S.rol==='admin';
+    const lista = S.movimientos
+      .filter(m=> m.tipo==='gasto' && m.fecha===hoy && (esAdm || m.cobradorId===S.uid))
+      .sort((a,b)=> (b.ts||0)-(a.ts||0));
+    const tCaja = lista.filter(m=> m.fuente!=='bolsillo').reduce((t,m)=> t+(Number(m.monto)||0), 0);
+    const tBols = lista.filter(m=> m.fuente==='bolsillo').reduce((t,m)=> t+(Number(m.monto)||0), 0);
+    const filas = lista.length===0
+      ? `<div class="rx-vacio-mini">Hoy no hay gastos registrados.</div>`
+      : lista.map(m=>`
+        <div class="rx-repcob">
+          <div class="l1">${gastoTxt(m.categoria)}<span style="margin-left:auto;font-weight:800;color:var(--peligro)">− ${pesos(m.monto)}</span></div>
+          <div class="l2">${m.fuente==='bolsillo'?'💼 De su bolsillo':'💵 De la caja'}${esAdm?` · ${escapar(primerNombre(nombreCobrador(m.cobradorId)))}`:''}${m.nota?` · ${escapar(m.nota)}`:''}</div>
+        </div>`).join('');
+    abrirHoja(`
+      <h2>🧾 Gastos de hoy</h2>
+      <div class="sub">${lista.length>0
+        ? `De la caja <b>${pesos(tCaja)}</b>${tBols>0?` · del bolsillo <b>${pesos(tBols)}</b>`:''}`
+        : 'Aquí queda todo lo que se gasta en la ruta: gasolina, una llanta, un almuerzo.'}</div>
+      <button class="rx-btn-prim" id="gNuevo" style="width:100%;margin-top:14px">➕ Registrar un gasto</button>
+      <div style="margin-top:12px">${filas}</div>
+      <div class="hint" style="margin-top:12px">Lo que sale <b>de la caja</b> baja el efectivo a entregar. Lo del <b>bolsillo</b> no toca la caja: es plata que la empresa le debe al cobrador.</div>
+      <div class="rx-acciones" style="margin-top:16px"><button class="rx-btn-fant" id="gsCerrar">Cerrar</button></div>`);
+    $('gsCerrar').onclick = cerrarHoja;
+    $('gNuevo').onclick = ()=> formGasto(esAdm ? S.uid : null);
+  }
+
   function abrirCierresAdmin(){
     const cierres = S.movimientos.filter(m=> m.tipo==='cierre');
     const porFecha = {};
@@ -4043,6 +4179,7 @@
       <div class="rx-cuadre">
         <div class="fila"><span>Base del día</span><span>${pesos(c.base)}</span></div>
         ${(Number(c.recargas)||0)>0?`<div class="fila pos"><span>+ Recarga de base</span><span>${pesos(c.recargas)}</span></div>`:''}
+        ${(Number(c.gastos)||0)>0?`<div class="fila neg"><span>− Gastos de ruta${c.nGastos?` (${c.nGastos})`:''}</span><span>${pesos(c.gastos)}</span></div>`:''}
         <div class="fila pos"><span>+ Cobrado en efectivo</span><span>${pesos(c.cobradoEfectivo)}</span></div>
         <div class="fila neg"><span>− Entregado en préstamos</span><span>${pesos(c.entregado)}</span></div>
         <div class="fila total"><span>Efectivo entregado</span><span>${pesos(c.efectivoFinal)}</span></div>
@@ -4132,6 +4269,8 @@
         <div style="font-size:.8rem;font-weight:700;letter-spacing:.02em;color:${efectivoCaja<0?'var(--peligro)':'var(--niebla)'};margin-bottom:5px">${efectivoCaja<0?'PUSISTE DE TU BOLSILLO':'ENTREGA ESTE EFECTIVO'}</div>
         <div style="font-size:2.05rem;font-weight:800;line-height:1.1;color:${efectivoCaja<0?'var(--peligro)':'var(--tinta)'}">${pesos(Math.abs(efectivoCaja))}</div>
       </div>
+      <button class="rx-verTransf" id="cierreGastos" style="margin-bottom:8px">🧾 ${(c.gastosHoy||[]).length>0?`Gastos de hoy: ${pesos(c.gastosCaja+c.gastosBolsillo)} (${c.gastosHoy.length})`:'¿Gastaste algo hoy? Regístralo'} ›</button>
+      ${c.gastosBolsillo>0?`<div class="rx-banner" style="margin-bottom:8px">💼 Pusiste <b>${pesos(c.gastosBolsillo)}</b> de tu bolsillo en gastos. Eso <b>no</b> sale de la caja: la empresa te lo debe reembolsar.</div>`:''}
       <details class="rx-cuadre-det">
         <summary style="cursor:pointer;font-size:.84rem;font-weight:700;color:var(--niebla);padding:9px 2px;user-select:none">🧮 Ver cómo se calculó</summary>
       <div class="rx-cuadre">
@@ -4139,6 +4278,7 @@
         ${recargas>0?`<div class="fila pos"><span>+ Recarga de base</span><span>${pesos(recargas)}</span></div>`:''}
         <div class="fila pos"><span>+ Cobrado en efectivo (${nEfectivo})</span><span>${pesos(cobradoEfectivo)}</span></div>
         <div class="fila neg"><span>− Entregado en préstamos (${desembHoy.length})</span><span>${pesos(entregadoHoy)}</span></div>
+        ${c.gastosCaja>0?`<div class="fila neg"><span>− Gastos de ruta (${c.gastosHoy.filter(g=>g.fuente!=='bolsillo').length})</span><span>${pesos(c.gastosCaja)}</span></div>`:''}
         ${papeleriaHoy>0?`<div class="fila nota"><span>Papelería retenida (ganancia)</span><span>${pesos(papeleriaHoy)}</span></div>`:''}
         <div class="fila total"><span>Efectivo a entregar</span><span style="${efectivoCaja<0?'color:var(--peligro)':''}">${pesos(efectivoCaja)}</span></div>
       </div>

@@ -408,6 +408,24 @@
   .rx-carga-msg{margin-top:12px;font-size:.78rem;color:rgba(246,244,238,.78);letter-spacing:.03em;min-height:1em}
   @keyframes rx-girar{to{transform:rotate(360deg)}}
   @media(prefers-reduced-motion:reduce){.rx-spin{animation:none}}
+  /* v5.1: MODO HORIZONTAL. La app ya gira (manifest "any"); aquí se acomoda para que
+     en un teléfono acostado no quede todo apretado ni se salga nada de la pantalla. */
+  @media (orientation: landscape) and (max-height: 560px){
+    #vistaLogin{overflow-y:auto;padding-top:16px;padding-bottom:16px}
+    .rx-login-top{padding-top:2vh}
+    .rx-login-top::before{width:380px;height:380px;opacity:.55}
+    .rx-marca{font-size:2.3rem}
+    .rx-tagline{font-size:.86rem}
+    .rx-sellos{margin-top:10px}
+    .rx-sellos span{font-size:.62rem;padding:4px 9px}
+    .rx-topbar{padding-top:9px;padding-bottom:9px}
+    .rx-nav button{padding-top:6px;padding-bottom:6px}
+    .rx-cont{padding-top:12px}
+    .rx-hoja{max-height:94dvh}
+    .rx-hoja h2{font-size:1.18rem}
+    .rx-hoja .sub{margin-bottom:12px}
+    .rx-hoja-asa{margin:6px auto 10px}
+  }
   /* ===== Cobro · Bloque 3B ===== */
   .rx-cobro-chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 2px}
   .rx-cobro-chips button{flex:1;min-width:92px;font-family:var(--texto);font-weight:700;font-size:.9rem;
@@ -593,7 +611,7 @@
       <button class="rx-btn" type="submit" id="btnEntrar">Entrar</button>
       <div class="rx-error" id="errLogin" role="alert"></div>
     </form>
-    <div class="rx-firma"><span class="rx-mkname">Rendix</span> v5.0 · Powered by <b>Iván Jiménez</b></div>
+    <div class="rx-firma"><span class="rx-mkname">Rendix</span> v5.1 · Powered by <b>Iván Jiménez</b></div>
   </section>
 
   <!-- ===== APP ===== -->
@@ -616,7 +634,7 @@
       </main>
 
       <footer class="rx-pie">
-        <div class="firma"><span class="rx-mkname">Rendix</span> v5.0 · Powered by <b>Iván Jiménez</b></div>
+        <div class="firma"><span class="rx-mkname">Rendix</span> v5.1 · Powered by <b>Iván Jiménez</b></div>
       </footer>
     </div>
 

@@ -611,7 +611,7 @@
       <button class="rx-btn" type="submit" id="btnEntrar">Entrar</button>
       <div class="rx-error" id="errLogin" role="alert"></div>
     </form>
-    <div class="rx-firma"><span class="rx-mkname">Rendix</span> v5.2 · Powered by <b>Iván Jiménez</b></div>
+    <div class="rx-firma"><span class="rx-mkname">Rendix</span> v5.3 · Powered by <b>Iván Jiménez</b></div>
   </section>
 
   <!-- ===== APP ===== -->
@@ -634,7 +634,7 @@
       </main>
 
       <footer class="rx-pie">
-        <div class="firma"><span class="rx-mkname">Rendix</span> v5.2 · Powered by <b>Iván Jiménez</b></div>
+        <div class="firma"><span class="rx-mkname">Rendix</span> v5.3 · Powered by <b>Iván Jiménez</b></div>
       </footer>
     </div>
 
@@ -904,25 +904,40 @@
   // ===========================================================
   // v3.3: UID del creador de Rendix. Solo esta cuenta ve el panel de licencias.
   const RX_DUENO = 'kbw7AVmySxRXnUTkVuelNYFMKu72';
-  const RX_FACTOR = 1.20;
+  // v5.3: la tasa dejó de estar clavada. Cada EMPRESA define la suya y cada PRÉSTAMO
+  // congela la que tenía el día que nació: cambiar la tasa jamás mueve un saldo ya entregado.
+  const RX_FACTOR_DEF = 1.20;                       // 20% — el estándar del gremio
+  const RX_INTERES_MIN = 1, RX_INTERES_MAX = 100;
+  function rxFactorDesde(interes){
+    const i = Number(interes);
+    return (i >= RX_INTERES_MIN && i <= RX_INTERES_MAX) ? 1 + i/100 : RX_FACTOR_DEF;
+  }
+  function factorEmpresa(){ return S.factor || RX_FACTOR_DEF; }
+  function interesEmpresa(){ return Math.round((factorEmpresa()-1)*100); }
+  function factorDe(p){                             // préstamos viejos sin campo = 1.20
+    const f = Number(p && p.factor);
+    return (f && f > 1 && f <= 3) ? f : RX_FACTOR_DEF;
+  }
+  function interesDe(p){ return Math.round((factorDe(p)-1)*100); }
   const RX_DIAS_CUOTA = { diario:1, semanal:7, quincenal:15, mensual:30 };
   const RX_MODALIDADES = [
     { v:'diario', t:'Diario' }, { v:'semanal', t:'Semanal' },
     { v:'quincenal', t:'Quincenal' }, { v:'mensual', t:'Mensual' }
   ];
   const rxRedondea = n => Math.round(Number(n)||0);
-  function rxSaldoInicial(monto){ return rxRedondea(monto * RX_FACTOR); }
-  function rxValorCuota(monto, numeroCuotas){
+  function rxSaldoInicial(monto, factor){ return rxRedondea(monto * (factor || factorEmpresa())); }
+  function rxValorCuota(monto, numeroCuotas, factor){
     if(!numeroCuotas) return 0;
-    return rxRedondea((monto * RX_FACTOR) / numeroCuotas);
+    return rxRedondea((monto * (factor || factorEmpresa())) / numeroCuotas);
   }
   // Reconstruye el estado de un préstamo a partir de sus movimientos
   function rxResumen(prestamo, movimientos, hoy){
     hoy = hoy || new Date();
     const monto = Number(prestamo.monto)||0;
     const cuotas = Number(prestamo.numeroCuotas)||0;
-    const cuota = Number(prestamo.valorCuota) || rxValorCuota(monto, cuotas);
-    let saldo = monto * RX_FACTOR;
+    const f = factorDe(prestamo);                   // SIEMPRE el del préstamo, no el de hoy
+    const cuota = Number(prestamo.valorCuota) || rxValorCuota(monto, cuotas, f);
+    let saldo = monto * f;
     let cobrado=0, multas=0, reembolsos=0;
     (movimientos||[]).forEach(m=>{
       const v = Number(m.monto)||0;
@@ -1143,6 +1158,7 @@
       S.indicativo = String(emp.indicativo || '57');   // v3.6: indicativo pais para WhatsApp (57=CO, 51=PE...)
       S.suspendida = !S.licenciaActiva || (!!S.vence && hoyISO() > S.vence);
       S.bloqueoHasta = emp.bloqueoPrestamosHasta || null;   // v4.4: dia en que se REANUDAN
+      S.factor = rxFactorDesde(emp.interes);               // v5.3
       if(emp.bloqueoTotal === true && user.uid !== RX_DUENO){
         return pantallaEstado({
           ico:'🔒', titulo:'Servicio suspendido',
@@ -1276,6 +1292,7 @@
       S.indicativo     = String(emp.indicativo || '57');
       S.suspendida     = !S.licenciaActiva || (!!S.vence && hoyISO() > S.vence);
       S.bloqueoHasta   = emp.bloqueoPrestamosHasta || null;
+      S.factor         = rxFactorDesde(emp.interes);
       const _ae = $('appEmpresa'); if(_ae) _ae.textContent = S.empresaNombre;
       repintar();
     }, (err)=> console.warn('empresa:', err.message));
@@ -1579,6 +1596,10 @@
         ${S.esDueno?`<button class="rx-modulo" id="modDueno">
           <div class="ico">👑</div><div class="nom">Licencias (dueño)</div>
         </button>`:''}
+        <button class="rx-modulo" id="modTasa">
+          <div class="ico">💹</div><div class="nom">Tasa de interés</div>
+          <span class="conteo">${interesEmpresa()}%</span>
+        </button>
         <button class="rx-modulo" id="modBloqueo">
           <div class="ico">${prestamosBloqueados()?'🚫':'🚦'}</div><div class="nom">${prestamosBloqueados()?'Préstamos bloqueados':'Bloquear préstamos'}</div>
         </button>
@@ -1592,6 +1613,7 @@
       ${cerraronHoy>0?`<div class="rx-banner ok" style="margin-top:22px">📥 Hoy <b>${cerraronHoy}</b> cobrador(es) cerraron y entregaron. Toca <b>Cierres</b> en la barra de abajo para confirmar el recibido.</div>`:''}`;
     $('tabInicio').querySelectorAll('[data-ir]').forEach(b=> b.onclick=()=>irATab(b.dataset.ir));
     const _mbq=$('modBloqueo'); if(_mbq) _mbq.onclick = abrirBloqueoPrestamos;
+    const _mts=$('modTasa'); if(_mts) _mts.onclick = abrirTasa;
     const _mmo=$('modMorosos'); if(_mmo) _mmo.onclick = abrirMorosos;
     const _mpr=$('modPrestamoRapido'); if(_mpr) _mpr.onclick = selectorPrestamoRapido;
     const _mre=$('modRespaldo'); if(_mre) _mre.onclick = abrirRespaldo;
@@ -2356,7 +2378,7 @@
     const saldoViejo = renov ? (Number(renov.saldoViejo)||0) : 0;
     abrirHoja(`
       <h2>${renov ? 'Renovar préstamo' : 'Nuevo préstamo'}</h2>
-      <div class="sub">${renov ? `Para ${escapar(cli.nombre)} · se descuenta el saldo anterior` : `Para ${escapar(cli.nombre)} · interés fijo del 20%`}.</div>
+      <div class="sub">${renov ? `Para ${escapar(cli.nombre)} · se descuenta el saldo anterior` : `Para ${escapar(cli.nombre)} · interés del ${interesEmpresa()}%`}.</div>
       ${renov ? `<div class="rx-renov-aviso">🔄 El préstamo actual se <b>liquida</b> y arranca el nuevo. Saldo anterior a descontar: <b>${pesos(saldoViejo)}</b>.</div>` : ''}
       <div class="rx-form-err" id="preErr"></div>
       <div class="rx-form-campo">
@@ -2381,7 +2403,7 @@
         <input class="rx-fin" id="preFecha" type="date" value="${hoy}" />
       </div>
       <div class="rx-calc">
-        <div class="fila"><span>Saldo a pagar (monto + 20%)</span><b id="calcSaldo">$ 0</b></div>
+        <div class="fila"><span>Saldo a pagar (monto + <span id="calcTasa">${interesEmpresa()}%</span>)</span><b id="calcSaldo">$ 0</b></div>
         <div class="fila"><span>Valor de cada cuota</span><b id="calcCuota">$ 0</b></div>
         ${renov ? `<div class="fila"><span>− Saldo anterior</span><b>${pesos(saldoViejo)}</b></div>` : ''}
         <div class="fila" id="calcPapFila" style="display:none"><span>− Papelería</span><b id="calcPap">$ 0</b></div>
@@ -2395,6 +2417,7 @@
       const monto = Number($('preMonto').value)||0;
       const cuotas = Number($('preCuotas').value)||0;
       const pap = Number($('prePap').value)||0;
+      const _lt = $('calcTasa'); if(_lt) _lt.textContent = interesEmpresa()+'%';
       $('calcSaldo').textContent = pesos(rxSaldoInicial(monto));
       $('calcCuota').textContent = pesos(rxValorCuota(monto, cuotas));
       $('calcPapFila').style.display = pap>0 ? '' : 'none';
@@ -2431,7 +2454,7 @@
     if(renov && monto <= saldoViejo) return valErr('preErr',`El nuevo monto debe ser mayor al saldo anterior (${pesos(saldoViejo)}).`);
     if(renov){
       const pv = renov.prestamoViejo || {};
-      const totV = rxSaldoInicial(Number(pv.monto)||0);
+      const totV = rxSaldoInicial(Number(pv.monto)||0, factorDe(pv));
       const pctV = totV>0 ? (totV - saldoViejo)/totV : 1;
       if(pctV < RX_MIN_RENOV && !autorizRenov(pv.id))
         return valErr('preErr',`Solo lleva pagado el ${Math.round(pctV*100)}%. Para renovar necesita el ${Math.round(RX_MIN_RENOV*100)}% o la autorización del administrador.`);
@@ -2462,7 +2485,7 @@
       }
       lote.set(presRef, {
         clienteId: cli.id, clienteNombre: cli.nombre,
-        monto, factor: RX_FACTOR, modalidad, numeroCuotas, valorCuota, papeleria,
+        monto, factor: factorEmpresa(), modalidad, numeroCuotas, valorCuota, papeleria,
         cobradorId, rutaId, fechaInicio, estado:'activo',
         ...(renov ? { renovacionDe: renov.prestamoViejo.id, saldoDescontado: saldoViejo } : {}),
         creadoEn: serverTimestamp()
@@ -3174,6 +3197,64 @@
   }
 
   // v4.4 · el patron decide cuando se vuelve a prestar
+  // v5.3: la tasa de la empresa. Solo manda sobre préstamos NUEVOS.
+  let _tasaSel = 20;
+  function abrirTasa(){
+    _tasaSel = interesEmpresa();
+    const opciones = [10, 15, 20, 25, 30, 40];
+    const pinta = ()=>{
+      const c = $('tsChips'); if(c) c.querySelectorAll('[data-ts]').forEach(b=>
+        b.classList.toggle('activa', Number(b.dataset.ts)===_tasaSel));
+      const inp = $('tsOtro'); if(inp && Number(inp.value)!==_tasaSel && opciones.includes(_tasaSel)) inp.value='';
+      const ej = $('tsEjemplo');
+      if(ej){
+        const f = 1 + _tasaSel/100;
+        ej.innerHTML = `Prestando <b>${pesos(100000)}</b> a 20 cuotas diarias: el cliente debe <b>${pesos(rxRedondea(100000*f))}</b> y paga <b>${pesos(rxRedondea(100000*f/20))}</b> al día.`;
+      }
+    };
+    abrirHoja(`
+      <h2>💹 Tasa de interés</h2>
+      <div class="sub">Hoy tu empresa presta al <b>${interesEmpresa()}%</b>. Esto define cuánto debe el cliente sobre lo que recibe.</div>
+      <div class="rx-form-err" id="tsErr"></div>
+      <div class="rx-form-campo" style="margin-top:14px">
+        <label>Porcentaje</label>
+        <div class="rx-chips" id="tsChips">
+          ${opciones.map(o=>`<button type="button" class="rx-chip-sel" data-ts="${o}">${o}%</button>`).join('')}
+        </div>
+      </div>
+      <div class="rx-form-campo">
+        <label for="tsOtro">O escribe otro (${RX_INTERES_MIN}% a ${RX_INTERES_MAX}%)</label>
+        <input class="rx-fin" id="tsOtro" type="number" inputmode="numeric" min="${RX_INTERES_MIN}" max="${RX_INTERES_MAX}" placeholder="Ej: 22" />
+      </div>
+      <div class="rx-banner ok" style="margin-top:6px"><span id="tsEjemplo"></span></div>
+      <div class="rx-banner" style="margin-top:12px">🔒 <b>Los préstamos que ya entregaste no cambian.</b> Cada uno conserva la tasa con la que nació; esto solo manda sobre los nuevos.</div>
+      <div class="rx-acciones" style="margin-top:16px">
+        <button class="rx-btn-prim" id="tsGuardar">Guardar tasa</button>
+        <button class="rx-btn-fant" id="tsCancelar">Cancelar</button>
+      </div>`);
+    $('tsCancelar').onclick = cerrarHoja;
+    $('tsChips').querySelectorAll('[data-ts]').forEach(b=> b.onclick = ()=>{ _tasaSel=Number(b.dataset.ts); $('tsOtro').value=''; pinta(); });
+    $('tsOtro').oninput = ()=>{ const v=Number($('tsOtro').value); if(v) { _tasaSel=v; } pinta(); };
+    pinta();
+    $('tsGuardar').onclick = async ()=>{
+      const i = Number(_tasaSel);
+      if(!(i >= RX_INTERES_MIN && i <= RX_INTERES_MAX))
+        return valErr('tsErr', `La tasa debe estar entre ${RX_INTERES_MIN}% y ${RX_INTERES_MAX}%.`);
+      if(i === interesEmpresa()){ cerrarHoja(); return; }
+      if(!confirm(`¿Dejar la tasa en ${i}%?\n\nLos préstamos nuevos se calcularán así. Los que ya entregaste no se tocan.`)) return;
+      const btn=$('tsGuardar'); btn.disabled=true; btn.textContent='Guardando…';
+      try{
+        await updateDoc(doc(db,'empresas',S.empresaId), { interes: i });
+        cerrarHoja(); toast(`Tasa actualizada al ${i}% 💹`);
+      }catch(e){
+        btn.disabled=false; btn.textContent='Guardar tasa';
+        valErr('tsErr', String(e && e.code)==='permission-denied'
+          ? 'Las reglas de seguridad todavía no permiten guardar la tasa. Falta agregar "interes" a los campos que el admin puede escribir.'
+          : 'No se pudo guardar: '+(e.message||e));
+      }
+    };
+  }
+
   function abrirBloqueoPrestamos(){
     const act = prestamosBloqueados();
     abrirHoja(`
@@ -3261,7 +3342,7 @@
   }
 
   // NUEVO v2.7: INFORMES DE GANANCIA ------------------------------------------------
-  // Contabilidad: con el factor fijo 1.20, cada peso cobrado trae 1/6 de rédito
+  // Contabilidad: con factor f, cada peso cobrado trae (f-1)/f de rédito
   // (cuota 6.000 → 1.000 de ganancia). La papelería es ganancia el día del desembolso.
   // Las liquidaciones por renovación SÍ cuentan como rédito (la ganancia se realizó),
   // aunque no muevan efectivo físico.
@@ -3292,18 +3373,25 @@
   function repDatos(modo){
     const buckets = repBuckets(modo);
     const idx = new Map(buckets.map((b,i)=>[b.key,i]));
-    const cobrosB = buckets.map(()=>0), papB = buckets.map(()=>0);
+    const reditosB = buckets.map(()=>0), papB = buckets.map(()=>0);
     const desde = buckets[0].key.length===7 ? buckets[0].key+'-01' : buckets[0].key;
-    let cobradoRango=0, cobradoSinRenov=0;
+    let cobradoRango=0, cobradoSinRenov=0, reditoRango=0;
     const porCob = {};
-    const pc = id => porCob[id] || (porCob[id] = { cobros:0, ef:0, tr:0, pap:0, entrego:0, desc:0, gasto:0 });
+    const pc = id => porCob[id] || (porCob[id] = { cobros:0, redito:0, ef:0, tr:0, pap:0, entrego:0, desc:0, gasto:0 });
+    // v5.3: el rédito de un cobro sale de la tasa de SU préstamo: (f-1)/f.
+    // Con 20% da 1/6; con 30% da 3/13. Antes estaba quemado en /6.
+    const reditoDe = m => {
+      const f = factorDe(prestamoPorId(m.prestamoId) || {});
+      return f > 1 ? (Number(m.monto)||0) * (f-1)/f : 0;
+    };
     for(const m of S.movimientos){
       if(m.tipo==='cobro' && m.fecha >= desde){
         const i = idx.get(repClaveDe(m.fecha, modo));
         const v = Number(m.monto)||0;
-        if(i!==undefined){ cobrosB[i] += v; }
-        cobradoRango += v;
-        const o = pc(m.cobradorId); o.cobros += v;
+        const red = reditoDe(m);
+        if(i!==undefined){ reditosB[i] += red; }
+        cobradoRango += v; reditoRango += red;
+        const o = pc(m.cobradorId); o.cobros += v; o.redito += red;
         if(!m.renovacion){ cobradoSinRenov += v; if(m.metodo==='transferencia') o.tr += v; else o.ef += v; }
       }
     }
@@ -3329,8 +3417,8 @@
       o.entrego += Number(c.efectivoFinal)||0;
       if(typeof c.diferencia==='number') o.desc += c.diferencia;
     }
-    const serie = buckets.map((b,i)=>({ label:b.label, reditos:rxRedondea(cobrosB[i]/6), pap:papB[i] }));
-    const reditosT = rxRedondea(cobradoRango/6);
+    const serie = buckets.map((b,i)=>({ label:b.label, reditos:rxRedondea(reditosB[i]), pap:papB[i] }));
+    const reditosT = rxRedondea(reditoRango);
     const papT = serie.reduce((t,s)=>t+s.pap,0);
     // v5.2: los gastos del rango bajan la ganancia. Antes el informe daba la BRUTA.
     let gastosT = 0;
@@ -3384,11 +3472,11 @@
         <div class="rx-repcob">
           <div class="l1"><span class="rx-cob-dot" style="background:${colorCobrador(c.id)}"></span>${escapar(c.nombre||'—')}</div>
           <div class="l2">Recaudó <b>${pesos(o.ef+o.tr)}</b> (efectivo ${pesos(o.ef)}${o.tr>0?` · 📲 ${pesos(o.tr)}`:''}) · Entregó en cierres <b>${pesos(o.entrego)}</b>${o.desc!==0?` · <span style="color:${o.desc<0?'var(--peligro)':'var(--ok)'}">descuadre ${pesos(o.desc)}</span>`:''}</div>
-          <div class="l2">Ganancia que generó: réditos <b>${pesos(rxRedondea(o.cobros/6))}</b> + papelería <b>${pesos(o.pap)}</b>${o.gasto>0?` · <span style="color:var(--peligro)">gastos ${pesos(o.gasto)}</span>`:''}</div>
+          <div class="l2">Ganancia que generó: réditos <b>${pesos(rxRedondea(o.redito))}</b> + papelería <b>${pesos(o.pap)}</b>${o.gasto>0?` · <span style="color:var(--peligro)">gastos ${pesos(o.gasto)}</span>`:''}</div>
         </div>`).join('');
     abrirHoja(`
       <h2>📈 Informes de ganancia</h2>
-      <div class="sub">Réditos (el 20% realizado en cada cobro) + papelería · ${titRango}.</div>
+      <div class="sub">Réditos (el interés realizado en cada cobro) + papelería · ${titRango}.</div>
       <div class="rx-chips rx-filtros" id="repChips">
         <button class="rx-chip-sel ${_repModo==='dia'?'activa':''}" data-rm="dia">Días</button>
         <button class="rx-chip-sel ${_repModo==='semana'?'activa':''}" data-rm="semana">Semanas</button>
@@ -3406,7 +3494,7 @@
       <div class="hint" style="margin-top:4px"><span style="color:#8A6A10">■</span> Réditos · <span style="color:#C9A227">■</span> Papelería</div>
       <div class="rx-seccion-titulo" style="margin-top:16px"><span>Lo que entrega cada trabajador</span></div>
       ${filasCob}
-      <div class="hint" style="margin-top:12px">Método: la ganancia neta es réditos + papelería − gastos. Cada peso cobrado trae 1/6 de rédito (interés fijo del 20%). Las liquidaciones por renovación cuentan como rédito aunque no muevan efectivo. La papelería se gana el día del desembolso.</div>
+      <div class="hint" style="margin-top:12px">Método: la ganancia neta es réditos + papelería − gastos. El rédito sale de la tasa con la que nació cada préstamo. Las liquidaciones por renovación cuentan como rédito aunque no muevan efectivo. La papelería se gana el día del desembolso.</div>
       <div class="rx-acciones" style="margin-top:16px"><button class="rx-btn-fant" id="repCerrar">Cerrar</button></div>`);
     $('repCerrar').onclick = cerrarHoja;
     document.querySelectorAll('#repChips [data-rm]').forEach(b=> b.onclick = ()=>{ _repModo = b.dataset.rm; abrirInformes(); });
@@ -3451,7 +3539,7 @@
   // o una autorización expresa del administrador para ese préstamo.
   const RX_MIN_RENOV = 0.60;
   function pctPagadoDe(p, r){
-    const tot = rxSaldoInicial(Number(p.monto)||0);
+    const tot = rxSaldoInicial(Number(p.monto)||0, factorDe(p));
     if(tot<=0) return 1;
     return Math.max(0, Math.min(1, (tot - (Number(r.saldo)||0)) / tot));
   }
@@ -3468,7 +3556,8 @@
     return { ok:false, pct };
   }
   function hojaRenovBloqueada(p, r, cli, g){
-    const falta = rxRedondea(rxSaldoInicial(Number(p.monto)||0) * RX_MIN_RENOV - (rxSaldoInicial(Number(p.monto)||0) - r.saldo));
+    const totR = rxSaldoInicial(Number(p.monto)||0, factorDe(p));
+    const falta = rxRedondea(totR * RX_MIN_RENOV - (totR - r.saldo));
     const yaPidio = !!solicitudRenov(p.id);
     abrirHoja(`
       <h2>🚫 Todavía no puede renovar</h2>
@@ -3550,7 +3639,7 @@
           const desc = Number(p.saldoDescontado)||0;
           const pap = Number(p.papeleria)||0;
           const neto = monto - desc - pap;
-          const deuda = rxSaldoInicial(monto);
+          const deuda = rxSaldoInicial(monto, factorDe(p));
           const est = aprobEstado(m.prestamoId);
           if(est==='pendiente'){ nPend++; pendMonto += neto; }
           const quien = primerNombre(nombreCobrador(p.cobradorId||m.cobradorId));

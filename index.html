@@ -624,7 +624,7 @@
       <button type="button" class="rx-olvide" id="btnOlvide">¿Olvidaste tu contraseña?</button>
       <div class="rx-error" id="errLogin" role="alert"></div>
     </form>
-    <div class="rx-firma"><span class="rx-mkname">Rendix</span> v5.8 · Powered by <b>Iván Jiménez</b></div>
+    <div class="rx-firma"><span class="rx-mkname">Rendix</span> v5.9 · Powered by <b>Iván Jiménez</b></div>
   </section>
 
   <!-- ===== APP ===== -->
@@ -647,7 +647,7 @@
       </main>
 
       <footer class="rx-pie">
-        <div class="firma"><span class="rx-mkname">Rendix</span> v5.8 · Powered by <b>Iván Jiménez</b></div>
+        <div class="firma"><span class="rx-mkname">Rendix</span> v5.9 · Powered by <b>Iván Jiménez</b></div>
       </footer>
     </div>
 
@@ -2511,7 +2511,7 @@
       ${listaPres}
       <div class="rx-acciones" style="margin-top:18px">
         <button class="rx-btn-fant" id="fcliEditar">Editar datos</button>
-        ${esAdmin?`<button class="rx-btn-fant" id="fcliBaja" style="color:var(--peligro)">⚠️ Archivar o eliminar</button>`:''}
+        ${esAdmin?`<button class="rx-btn-fant" id="fcliBaja">📦 Archivar cliente</button>`:''}
         <button class="rx-btn-fant" id="fcliCerrar">Cerrar</button>
       </div>`);
     $('fcliCerrar').onclick = cerrarHoja;
@@ -4857,19 +4857,17 @@
     const limpio = k.prs.length===0 && k.movs.length===0;
     const archivado = c.activo===false;
     abrirHoja(`
-      <h2>⚠️ Dar de baja a ${escapar(c.nombre||'este cliente')}</h2>
-      <div class="sub">Lee bien antes de tocar nada.</div>
+      <h2>📦 Archivar a ${escapar(c.nombre||'este cliente')}</h2>
+      <div class="sub">Lee bien antes de tocar nada. En Rendix nada se borra.</div>
       <div class="rx-detalle-fila" style="margin-top:14px"><span class="et">Préstamos en su historia</span><span class="va">${k.prs.length}</span></div>
       <div class="rx-detalle-fila"><span class="et">Préstamos activos</span><span class="va" style="${k.activos.length?'color:var(--peligro)':''}">${k.activos.length}</span></div>
       <div class="rx-detalle-fila"><span class="et">Debe en la calle</span><span class="va" style="${k.saldo>0?'color:var(--peligro)':''}">${pesos(k.saldo)}</span></div>
       <div class="rx-detalle-fila"><span class="et">Movimientos registrados</span><span class="va">${k.movs.length}</span></div>
       ${k.activos.length>0 ? `<div class="rx-conteo-dif falta" style="display:block;margin-top:14px">🚫 <b>Este cliente todavía debe plata.</b> No lo archives hasta que liquide o lo pases a pérdida. Si lo archivas, sale de las listas pero la deuda sigue existiendo.</div>` : ''}
-      ${limpio
-        ? `<div class="rx-banner ok" style="margin-top:14px">Este cliente no tiene préstamos ni movimientos: se puede borrar sin dañar nada.</div>
-           <button class="rx-btn-prim" id="bcBorrar" style="width:100%;margin-top:12px;background:var(--peligro)">🗑 Eliminar definitivamente</button>
-           <div class="hint" style="margin-top:5px;text-align:center">Esto no se puede deshacer.</div>`
-        : `<div class="rx-banner" style="margin-top:14px">🔒 Tiene historia, así que <b>no se puede borrar</b>: la plata que pasó por él no se toca nunca. Lo que puedes hacer es <b>archivarlo</b> — desaparece de tus listas y su historia queda intacta.</div>
-           <button class="rx-btn-prim" id="bcArchivar" style="width:100%;margin-top:12px">${archivado?'♻️ Reactivar cliente':'📦 Archivar cliente'}</button>`}
+      <div class="rx-banner" style="margin-top:14px">🔒 ${limpio
+        ? `Este cliente no tiene historia todavía. Aun así <b>no se borra</b>: se archiva. Desaparece de tus listas y, si vuelve, lo reactivas con un toque.`
+        : `Tiene historia, así que <b>no se puede borrar</b>: la plata que pasó por él no se toca nunca. Al <b>archivarlo</b> desaparece de tus listas y su historia queda intacta.`}</div>
+      <button class="rx-btn-prim" id="bcArchivar" style="width:100%;margin-top:12px">${archivado?'♻️ Reactivar cliente':'📦 Archivar cliente'}</button>
       <div class="rx-acciones" style="margin-top:16px"><button class="rx-btn-fant" id="bcCancelar">Cancelar</button></div>`);
     $('bcCancelar').onclick = ()=> fichaCliente(c.id);
     const bA = $('bcArchivar');
@@ -4880,15 +4878,6 @@
         await updateDoc(doc(db,'empresas',S.empresaId,'clientes',c.id), { activo: archivado });
         cerrarHoja(); toast(archivado?'Cliente reactivado ♻️':'Cliente archivado 📦');
       }catch(e){ bA.disabled=false; toast('No se pudo: '+(e.message||e), true); }
-    };
-    const bB = $('bcBorrar');
-    if(bB) bB.onclick = async ()=>{
-      if(!confirm(`¿ELIMINAR a ${c.nombre} (cédula ${c.cedula||'—'})? Esto no se puede deshacer.`)) return;
-      bB.disabled=true; bB.textContent='Eliminando…';
-      try{
-        await deleteDoc(doc(db,'empresas',S.empresaId,'clientes',c.id));
-        cerrarHoja(); toast('Cliente eliminado 🗑');
-      }catch(e){ bB.disabled=false; toast('No se pudo: '+(e.message||e), true); }
     };
   }
   function bajaCobrador(c){

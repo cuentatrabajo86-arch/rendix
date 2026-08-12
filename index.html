@@ -493,6 +493,7 @@
   .rx-atajos button{flex:1;background:#fff;border:1px solid var(--linea);border-radius:12px;padding:11px 8px;
     font-family:var(--texto);font-weight:700;font-size:.84rem;color:var(--tinta);cursor:pointer}
   .rx-atajos button.ok{border-color:rgba(46,158,99,.5);color:#1E6E46;background:rgba(46,158,99,.07)}
+  .rx-cobro-row .info .dir{font-size:.76rem;color:var(--niebla);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .rx-cobrar-btn{width:38px;height:38px;border-radius:50%;border:none;background:var(--dorado);color:#3A2D05;font-family:var(--display);font-weight:800;font-size:1.15rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
   .rx-cobro-vacio{text-align:center;color:var(--niebla);font-size:.92rem;padding:34px 12px;background:#fff;border:1px dashed var(--linea);border-radius:14px}
 
@@ -623,7 +624,7 @@
       <button type="button" class="rx-olvide" id="btnOlvide">¿Olvidaste tu contraseña?</button>
       <div class="rx-error" id="errLogin" role="alert"></div>
     </form>
-    <div class="rx-firma"><span class="rx-mkname">Rendix</span> v5.7 · Powered by <b>Iván Jiménez</b></div>
+    <div class="rx-firma"><span class="rx-mkname">Rendix</span> v5.8 · Powered by <b>Iván Jiménez</b></div>
   </section>
 
   <!-- ===== APP ===== -->
@@ -646,7 +647,7 @@
       </main>
 
       <footer class="rx-pie">
-        <div class="firma"><span class="rx-mkname">Rendix</span> v5.7 · Powered by <b>Iván Jiménez</b></div>
+        <div class="firma"><span class="rx-mkname">Rendix</span> v5.8 · Powered by <b>Iván Jiménez</b></div>
       </footer>
     </div>
 
@@ -1623,7 +1624,7 @@
     // NUEVO: MÉTRICAS DEL DÍA — todo derivado de movimientos y préstamos, nada acumulado.
     const cobrosHoy = S.movimientos.filter(m=> m.tipo==='cobro' && m.fecha===hoy && !m.renovacion);
     const realHoy = cobrosHoy.reduce((t,m)=> t+(Number(m.monto)||0), 0);
-    let esperadoHoy = 0, vencidoTotal = 0;
+    let esperadoHoy = 0, vencidoTotal = 0, nActivos = 0, nProgHoy = 0;
     const clientesMora = new Set();
     const cobConCuotaHoy = new Set();   // NUEVO v2.2: cobradores a los que HOY sí les toca cobrar
     const hoyD = rxFecha(hoy);
@@ -1631,11 +1632,13 @@
       if(p.estado==='pagado') continue;
       const r = rxResumen(p, movsDe(p.id));
       if(r.saldo<=0) continue;
+      nActivos++;
       // ¿A este préstamo le toca cuota HOY? (el cobro arranca el día siguiente al desembolso)
       const paso = RX_DIAS_CUOTA[p.modalidad] || 1;
       const dias = Math.floor((hoyD - rxFecha(p.fechaInicio)) / 86400000);
       if(dias>0 && dias % paso === 0 && Math.floor(dias/paso) <= (Number(p.numeroCuotas)||0)){
         esperadoHoy += Math.min(r.cuota, r.saldo);
+        nProgHoy++;
         cobConCuotaHoy.add(p.cobradorId);
       }
       if(r.estado==='atrasado'){
@@ -1645,6 +1648,7 @@
       }
     }
     esperadoHoy = rxRedondea(esperadoHoy);
+    // v5.8: conteos reales, calculados en el mismo barrido de arriba
     const pctHoy = esperadoHoy>0 ? Math.min(100, Math.round(realHoy/esperadoHoy*100)) : null;
 
     // NUEVO: recaudo de hoy POR COBRADOR (efectivo vs transferencia) + alertas de jornada.
@@ -1702,6 +1706,11 @@
           ? `<div class="bar"><i style="width:${pctHoy}%"></i></div><div class="pct">${pctHoy}% de lo esperado hoy</div>`
           : `<div class="pct">Hoy no hay cuotas programadas.</div>`}
         ${(()=>{const th=cobrosHoy.filter(m=>m.metodo==='transferencia').reduce((t,m)=>t+(Number(m.monto)||0),0);return th>0?`<div class="pct">Efectivo ${pesos(realHoy-th)} · 📲 Transferencias ${pesos(th)}</div>`:'';})()}
+        ${esperadoHoy>0?`<div class="pct"><b>Pendiente de cobrar hoy: ${pesos(Math.max(0, esperadoHoy-realHoy))}</b></div>`:''}
+      </div>
+      <div class="rx-info">
+        <div class="rx-chip"><div class="k">Créditos activos</div><div class="v">${nActivos}</div></div>
+        <div class="rx-chip"><div class="k">Cobros programados hoy</div><div class="v">${nProgHoy}</div></div>
       </div>
       ${(()=>{const ct=cobrosHoy.filter(m=>m.metodo==='transferencia');return ct.length>0?`<button class="rx-verTransf" id="verTransfHoy">📲 Ver las ${ct.length} transferencia${ct.length===1?'':'s'} de hoy ›</button>`:'';})()}
       ${(()=>{
@@ -2838,6 +2847,7 @@
                 : (!f.tocaHoy && f.proxDias!==null && f.proxDias>0
                   ? `Saldo ${pesos(f.r.saldo)} · Cuota ${pesos(f.r.cuota)} · próx. ${cuandoTxt(f.proxDias)}`
                   : `Saldo ${pesos(f.r.saldo)} · Cuota ${pesos(f.r.cuota)}`)}</div>
+              ${f.cli.direccion ? `<div class="dir">📍 ${escapar(f.cli.direccion)}</div>` : ''}
             </div>
             <div class="acc">
               <span class="rx-est ${f.est.c}">${f.est.t}</span>
@@ -3618,6 +3628,17 @@
     const serie = buckets.map((b,i)=>({ label:b.label, reditos:rxRedondea(reditosB[i]), pap:papB[i] }));
     const reditosT = rxRedondea(reditoRango);
     const papT = serie.reduce((t,s)=>t+s.pap,0);
+    // v5.8: cuánto salió en préstamos en el rango (efectivo entregado y deuda generada).
+    let prestadoT = 0, entregadoT = 0, nPrestamos = 0;
+    for(const m of S.movimientos){
+      if(m.tipo!=='desembolso' || m.fecha < desde) continue;
+      if(idx.get(repClaveDe(m.fecha, modo))===undefined) continue;
+      const p = prestamoPorId(m.prestamoId) || {};
+      const monto = Number(m.monto)||0;
+      prestadoT  += monto;
+      entregadoT += Math.max(0, monto - (Number(p.saldoDescontado)||0) - (Number(p.papeleria)||0));
+      nPrestamos++;
+    }
     // v5.2: los gastos del rango bajan la ganancia. Antes el informe daba la BRUTA.
     let gastosT = 0;
     for(const m of S.movimientos){
@@ -3628,7 +3649,8 @@
       if(m.cobradorId) pc(m.cobradorId).gasto += v;
     }
     const brutaT = reditosT + papT;
-    return { serie, reditosT, papT, gastosT, brutaT, gananciaT: brutaT - gastosT, recaudadoT:cobradoSinRenov, porCob };
+    return { serie, reditosT, papT, gastosT, brutaT, gananciaT: brutaT - gastosT, recaudadoT:cobradoSinRenov,
+             prestadoT, entregadoT, nPrestamos, porCob };
   }
 
   function repDibujar(serie){
@@ -3687,12 +3709,14 @@
         <div class="rx-rep-card oro"><div class="k">Papelería</div><div class="v">${pesos(d.papT)}</div></div>
         <div class="rx-rep-card"><div class="k">Ganancia bruta</div><div class="v">${pesos(d.brutaT)}</div></div>
         <div class="rx-rep-card"><div class="k">Gastos</div><div class="v" style="color:var(--peligro)">− ${pesos(d.gastosT)}</div></div>
+        <div class="rx-rep-card"><div class="k">Prestado (${d.nPrestamos})</div><div class="v">${pesos(d.prestadoT)}</div></div>
+        <div class="rx-rep-card"><div class="k">Entregado en mano</div><div class="v">${pesos(d.entregadoT)}</div></div>
       </div>
       <canvas class="rx-rep-canvas" id="repCanvas"></canvas>
       <div class="hint" style="margin-top:4px"><span style="color:#8A6A10">■</span> Réditos · <span style="color:#C9A227">■</span> Papelería</div>
       <div class="rx-seccion-titulo" style="margin-top:16px"><span>Lo que entrega cada trabajador</span></div>
       ${filasCob}
-      <div class="hint" style="margin-top:12px">Método: la ganancia neta es réditos + papelería − gastos. El rédito sale de la tasa con la que nació cada préstamo. Las liquidaciones por renovación cuentan como rédito aunque no muevan efectivo. La papelería se gana el día del desembolso.</div>
+      <div class="hint" style="margin-top:12px"><b>Prestado</b> es el monto de los préstamos entregados en el período; <b>entregado en mano</b> es el efectivo que de verdad salió (descontando saldo anterior y papelería). Método: la ganancia neta es réditos + papelería − gastos. El rédito sale de la tasa con la que nació cada préstamo. Las liquidaciones por renovación cuentan como rédito aunque no muevan efectivo. La papelería se gana el día del desembolso.</div>
       <div class="rx-acciones" style="margin-top:16px"><button class="rx-btn-fant" id="repCerrar">Cerrar</button></div>`);
     $('repCerrar').onclick = cerrarHoja;
     document.querySelectorAll('#repChips [data-rm]').forEach(b=> b.onclick = ()=>{ _repModo = b.dataset.rm; abrirInformes(); });
@@ -4751,7 +4775,10 @@
       const metodo = (opts && opts.metodo==='transferencia') ? 'transferencia' : 'efectivo';
       const movData = {
         prestamoId: p.id, clienteId: p.clienteId, tipo:'cobro',
-        monto, fecha, cobradorId, metodo, creadoEn: serverTimestamp()
+        // v5.8: ts ordena los cobros del mismo día; registradoPor deja la firma real
+        // de quién lo tecleó (puede ser el admin cobrando por el cobrador).
+        monto, fecha, cobradorId, metodo, ts: Date.now(), registradoPor: S.uid,
+        creadoEn: serverTimestamp()
       };
       if(metodo==='transferencia'){
         movData.destino = (opts && opts.destino) || 'Otra';

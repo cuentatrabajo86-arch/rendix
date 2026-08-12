@@ -112,6 +112,10 @@
   .rx-sellos span{font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700;
     color:rgba(233,210,138,.92);border:1px solid rgba(201,162,39,.35);border-radius:20px;padding:5px 11px;
     background:rgba(201,162,39,.07)}
+  .rx-olvide{display:block;width:100%;margin-top:12px;background:none;border:none;cursor:pointer;
+    font-size:.82rem;color:rgba(233,210,138,.9);text-decoration:underline;padding:4px}
+  .rx-clave-form{text-align:left;margin-top:6px}
+  .rx-clave-form .rx-campo{margin-bottom:12px}
   .rx-firma{font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(228,199,102,.85);text-align:center;width:100%;max-width:420px}
   .rx-firma b{color:var(--dorado-claro)}
 
@@ -484,6 +488,11 @@
   .rx-cobro-row .ok-hoy{color:var(--ok);font-size:.76rem;font-weight:700;margin-left:4px}
   .rx-cobro-row .sub{font-size:.84rem;color:var(--niebla);margin-top:1px}
   .rx-cobro-row .acc{display:flex;flex-direction:column;align-items:flex-end;gap:7px;flex-shrink:0}
+  .rx-nota-btn.renov{border-color:rgba(46,158,99,.55);background:rgba(46,158,99,.10)}
+  .rx-atajos{display:flex;gap:8px;margin-top:12px}
+  .rx-atajos button{flex:1;background:#fff;border:1px solid var(--linea);border-radius:12px;padding:11px 8px;
+    font-family:var(--texto);font-weight:700;font-size:.84rem;color:var(--tinta);cursor:pointer}
+  .rx-atajos button.ok{border-color:rgba(46,158,99,.5);color:#1E6E46;background:rgba(46,158,99,.07)}
   .rx-cobrar-btn{width:38px;height:38px;border-radius:50%;border:none;background:var(--dorado);color:#3A2D05;font-family:var(--display);font-weight:800;font-size:1.15rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
   .rx-cobro-vacio{text-align:center;color:var(--niebla);font-size:.92rem;padding:34px 12px;background:#fff;border:1px dashed var(--linea);border-radius:14px}
 
@@ -564,6 +573,8 @@
   .rx-carton .pie .va{font-family:var(--display);font-weight:800;font-size:1.35rem;color:var(--azul-claro)}
   .rx-renov-aviso{background:rgba(201,162,39,.12);border:1px solid rgba(201,162,39,.35);border-radius:11px;padding:11px 14px;margin:4px 0 14px;font-size:.86rem;color:var(--tinta);line-height:1.4}
   .rx-renov-aviso b{color:#8a6d16}
+  .rx-fecha-aviso{margin-top:7px;font-size:.8rem;line-height:1.45;color:#8a5a10;background:rgba(201,162,39,.12);
+    border:1px solid rgba(201,162,39,.4);border-radius:10px;padding:9px 11px}
   /* v4.9 */
   .rx-card .prox .tot{color:var(--tinta);font-weight:700}
   .rx-chip-ap{display:inline-block;font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:20px;vertical-align:middle}
@@ -609,9 +620,10 @@
         <input class="rx-input" type="password" id="clave" autocomplete="current-password" placeholder="••••••••" required />
       </div>
       <button class="rx-btn" type="submit" id="btnEntrar">Entrar</button>
+      <button type="button" class="rx-olvide" id="btnOlvide">¿Olvidaste tu contraseña?</button>
       <div class="rx-error" id="errLogin" role="alert"></div>
     </form>
-    <div class="rx-firma"><span class="rx-mkname">Rendix</span> v5.3 · Powered by <b>Iván Jiménez</b></div>
+    <div class="rx-firma"><span class="rx-mkname">Rendix</span> v5.7 · Powered by <b>Iván Jiménez</b></div>
   </section>
 
   <!-- ===== APP ===== -->
@@ -634,7 +646,7 @@
       </main>
 
       <footer class="rx-pie">
-        <div class="firma"><span class="rx-mkname">Rendix</span> v5.3 · Powered by <b>Iván Jiménez</b></div>
+        <div class="firma"><span class="rx-mkname">Rendix</span> v5.7 · Powered by <b>Iván Jiménez</b></div>
       </footer>
     </div>
 
@@ -674,7 +686,8 @@
   import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
   import {
     getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut,
-    createUserWithEmailAndPassword
+    createUserWithEmailAndPassword, updatePassword, sendPasswordResetEmail,
+    EmailAuthProvider, reauthenticateWithCredential
   } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
   import {
     initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
@@ -764,6 +777,107 @@
     else { b.style.display='none'; }
     mostrar('estado');
   }
+  // ---- v5.5: SEGURIDAD DE LA CUENTA ------------------------------------
+  function claveValida(c){
+    return typeof c === 'string' && c.length >= 8 && /[a-zA-Z]/.test(c) && /[0-9]/.test(c);
+  }
+  function errAuthTxt(e){
+    const c = String(e && e.code || '');
+    if(c.includes('weak-password'))        return 'La contraseña es muy débil. Usa al menos 8 caracteres con letras y números.';
+    if(c.includes('requires-recent-login'))return 'Por seguridad, vuelve a entrar y cámbiala de una vez.';
+    if(c.includes('wrong-password') || c.includes('invalid-credential')) return 'La contraseña actual no es correcta.';
+    if(c.includes('too-many-requests'))    return 'Demasiados intentos. Espera unos minutos.';
+    if(c.includes('user-not-found'))       return 'No hay ninguna cuenta con ese correo.';
+    if(c.includes('invalid-email'))        return 'Ese correo no es válido.';
+    if(c.includes('network'))              return 'Sin conexión. Inténtalo de nuevo.';
+    return (e && e.message) || 'No se pudo completar.';
+  }
+  function pantallaClaveNueva(user){
+    $('estIco').textContent = '🔐';
+    $('estTitulo').textContent = 'Crea tu contraseña';
+    $('estMsg').textContent = 'Esta cuenta es tuya. Pon una contraseña que solo tú conozcas: desde ahora nadie más podrá entrar con ella.';
+    const d = $('estDet');
+    d.style.display = 'block';
+    d.innerHTML = `
+      <div class="rx-clave-form">
+        <div class="rx-campo"><label for="cnUno">Contraseña nueva</label>
+          <input class="rx-input" type="password" id="cnUno" autocomplete="new-password" placeholder="Mínimo 8, con letras y números" /></div>
+        <div class="rx-campo"><label for="cnDos">Escríbela otra vez</label>
+          <input class="rx-input" type="password" id="cnDos" autocomplete="new-password" placeholder="••••••••" /></div>
+        <div class="rx-error" id="cnErr" role="alert"></div>
+      </div>`;
+    const b = $('estBtn');
+    b.textContent = 'Guardar mi contraseña'; b.style.display = 'block';
+    b.onclick = async ()=>{
+      const c1 = $('cnUno').value, c2 = $('cnDos').value;
+      const err = $('cnErr');
+      const fallo = m => { err.textContent = m; err.classList.add('visible'); };
+      if(!claveValida(c1)) return fallo('Mínimo 8 caracteres, con letras y números.');
+      if(c1 !== c2)        return fallo('Las dos contraseñas no coinciden.');
+      b.disabled = true; b.textContent = 'Guardando…';
+      try{
+        await updatePassword(user, c1);   // si esto pasa, la clave YA cambió: nunca bloquear después
+        let bandera = true;
+        try{
+          await updateDoc(doc(db,'usuariosGlobal',user.uid), { debeCambiarClave:false, claveCambiadaEn: serverTimestamp() });
+        }catch(e2){
+          bandera = false;
+          console.warn('No se pudo bajar debeCambiarClave:', e2 && e2.code);
+        }
+        S.saltarCambioClave = true;       // esta sesión entra aunque la bandera siga arriba
+        toast(bandera
+          ? 'Contraseña guardada 🔐 Es tuya y de nadie más.'
+          : 'Tu contraseña ya quedó cambiada 🔐 Entra con la nueva. Avísale a tu proveedor que la app no pudo guardar la marca de "clave creada".');
+        await cargarPerfilYRender(user);
+      }catch(e){
+        b.disabled = false; b.textContent = 'Guardar mi contraseña';
+        if(String(e && e.code||'').includes('requires-recent-login')){
+          fallo('Por seguridad hay que volver a entrar. Vuelve a ingresar con la clave temporal y cámbiala de una.');
+          setTimeout(()=> signOut(auth), 2600);
+        } else fallo(errAuthTxt(e));
+      }
+    };
+    mostrar('estado');
+  }
+  function abrirMiCuenta(){
+    const u = auth.currentUser;
+    abrirHoja(`
+      <h2>🔐 Mi cuenta</h2>
+      <div class="sub">${escapar((u && u.email) || '')}</div>
+      <div class="rx-form-err" id="mcErr"></div>
+      <div class="rx-form-campo" style="margin-top:14px">
+        <label for="mcActual">Contraseña actual</label>
+        <input class="rx-fin" id="mcActual" type="password" autocomplete="current-password" placeholder="••••••••" />
+      </div>
+      <div class="rx-form-campo">
+        <label for="mcNueva">Contraseña nueva</label>
+        <input class="rx-fin" id="mcNueva" type="password" autocomplete="new-password" placeholder="Mínimo 8, con letras y números" />
+      </div>
+      <div class="rx-form-campo">
+        <label for="mcNueva2">Escríbela otra vez</label>
+        <input class="rx-fin" id="mcNueva2" type="password" autocomplete="new-password" placeholder="••••••••" />
+      </div>
+      <button class="rx-btn-prim" id="mcGuardar" style="width:100%">Cambiar mi contraseña</button>
+      <div class="rx-banner" style="margin-top:14px">🔒 Tu contraseña no la conoce nadie más, ni quien te vendió la aplicación. Si la pierdes, se recupera por tu correo.</div>
+      <div class="rx-acciones" style="margin-top:16px"><button class="rx-btn-fant" id="mcCerrar">Cerrar</button></div>`);
+    $('mcCerrar').onclick = cerrarHoja;
+    $('mcGuardar').onclick = async ()=>{
+      const act = $('mcActual').value, n1 = $('mcNueva').value, n2 = $('mcNueva2').value;
+      if(!act)              return valErr('mcErr','Escribe tu contraseña actual.');
+      if(!claveValida(n1))  return valErr('mcErr','La nueva debe tener mínimo 8 caracteres, con letras y números.');
+      if(n1 !== n2)         return valErr('mcErr','Las dos contraseñas nuevas no coinciden.');
+      if(n1 === act)        return valErr('mcErr','La nueva tiene que ser distinta de la actual.');
+      const b = $('mcGuardar'); b.disabled = true; b.textContent = 'Cambiando…';
+      try{
+        const cred = EmailAuthProvider.credential(u.email, act);
+        await reauthenticateWithCredential(u, cred);
+        await updatePassword(u, n1);
+        try{ await updateDoc(doc(db,'usuariosGlobal',u.uid), { claveCambiadaEn: serverTimestamp() }); }catch(_){}
+        cerrarHoja(); toast('Contraseña cambiada 🔐');
+      }catch(e){ b.disabled=false; b.textContent='Cambiar mi contraseña'; valErr('mcErr', errAuthTxt(e)); }
+    };
+  }
+
   function toast(msg, esError){
     const t = $('rxToast'); t.textContent = msg;
     t.className = 'show' + (esError ? ' err' : '');
@@ -792,7 +906,8 @@
   }
 
   // ---- estado global de la sesión ----
-  const S = { uid:null, empresaId:null, rol:null, nombre:null, empresaNombre:null, perfil:null, licenciaActiva:true, vence:null, soporte:'', suspendida:false, marca:'Rendix', acento:'', indicativo:'57',
+  const S = { uid:null, empresaId:null, rol:null, nombre:null, empresaNombre:null, perfil:null, licenciaActiva:true, vence:null, soporte:'', suspendida:false, marca:'Rendix', acento:'',
+    verIdx:new Map(), autIdx:new Map(), solIdx:new Map(), recIdx:new Map(), indicativo:'57',
               cobradores:[], rutas:[], clientes:[], prestamos:[], movimientos:[], movIdx:new Map(),
               offsetReloj:0, relojCalibrado:false,
               unsubCob:null, unsubRut:null, unsubCli:null, unsubPres:null, unsubMov:null, unsubEmp:null, tab:'inicio' };
@@ -1049,6 +1164,21 @@
   // ===========================================================
   //  LOGIN
   // ===========================================================
+  // v5.5: recuperar la clave por correo. El proveedor nunca tiene que conocerla.
+  $('btnOlvide').onclick = async ()=>{
+    const err = $('errLogin');
+    const correo = $('email').value.trim();
+    err.classList.remove('visible');
+    if(!correo){ err.textContent='Escribe tu correo arriba y vuelve a tocar aquí.'; err.classList.add('visible'); return; }
+    const b = $('btnOlvide'); b.disabled = true; b.textContent = 'Enviando…';
+    try{
+      await sendPasswordResetEmail(auth, correo);
+      err.textContent = 'Listo: te llegó un correo para poner una contraseña nueva. Revisa también la carpeta de spam.';
+      err.classList.add('visible');
+    }catch(e){ err.textContent = errAuthTxt(e); err.classList.add('visible'); }
+    b.disabled = false; b.textContent = '¿Olvidaste tu contraseña?';
+  };
+
   $('formLogin').addEventListener('submit', async (ev) => {
     ev.preventDefault();
     const email = $('email').value.trim();
@@ -1123,6 +1253,11 @@
       getDoc(doc(db,'usuariosGlobal',user.uid)).then(s=>{
         if(s.exists() && s.data().bloqueado===true) signOut(auth);
       }).catch(()=>{});
+      // v5.5: la clave que entregó el proveedor es TEMPORAL. En el primer ingreso
+      // el dueño de la empresa pone la suya y desde ahí nadie más puede entrar como él.
+      if(map.debeCambiarClave === true && !S.saltarCambioClave){
+        return pantallaClaveNueva(user);
+      }
       if(map.bloqueado === true){
         return pantallaEstado({
           ico:'🔒', titulo:'Acceso bloqueado',
@@ -1340,10 +1475,23 @@
     const ref = (S.rol==='admin') ? base : query(base, where('cobradorId','==',S.uid));
     S.unsubMov = onSnapshot(ref, (snap)=>{
       S.movimientos = snap.docs.map(d=>({ id:d.id, ...d.data() }));
-      // índice por préstamo: el cálculo de saldo en las listas no recorre todo el historial
-      const idx = new Map();
-      for(const m of S.movimientos){ const a=idx.get(m.prestamoId); a ? a.push(m) : idx.set(m.prestamoId,[m]); }
-      S.movIdx = idx;
+      // v5.7: TODOS los índices se arman en una sola pasada, aquí. Antes cada consulta
+      // recorría el historial completo y el costo crecía al cuadrado con el tiempo.
+      const idx = new Map();          // movimientos por préstamo (saldos)
+      const iVer = new Map();         // verificación de entrega por préstamo
+      const iAut = new Map();         // autorización de renovación por préstamo
+      const iSol = new Map();         // solicitud de renovación por préstamo
+      const iRec = new Map();         // recepción del efectivo por cierre
+      for(const m of S.movimientos){
+        const a=idx.get(m.prestamoId); a ? a.push(m) : idx.set(m.prestamoId,[m]);
+        switch(m.tipo){
+          case 'verificacion': if(!iVer.has(m.prestamoId)) iVer.set(m.prestamoId, m); break;
+          case 'autorizacion': if(!iAut.has(m.prestamoId)) iAut.set(m.prestamoId, m); break;
+          case 'solicitud':    if(!iSol.has(m.prestamoId)) iSol.set(m.prestamoId, m); break;
+          case 'recepcion':    if(!iRec.has(m.cierreId))   iRec.set(m.cierreId, m);   break;
+        }
+      }
+      S.movIdx = idx; S.verIdx = iVer; S.autIdx = iAut; S.solIdx = iSol; S.recIdx = iRec;
       repintar();
     }, (err)=> console.warn('movimientos:', err.message));
   }
@@ -1596,6 +1744,9 @@
         ${S.esDueno?`<button class="rx-modulo" id="modDueno">
           <div class="ico">👑</div><div class="nom">Licencias (dueño)</div>
         </button>`:''}
+        <button class="rx-modulo" id="modCuenta">
+          <div class="ico">🔐</div><div class="nom">Mi cuenta</div>
+        </button>
         <button class="rx-modulo" id="modTasa">
           <div class="ico">💹</div><div class="nom">Tasa de interés</div>
           <span class="conteo">${interesEmpresa()}%</span>
@@ -1614,6 +1765,7 @@
     $('tabInicio').querySelectorAll('[data-ir]').forEach(b=> b.onclick=()=>irATab(b.dataset.ir));
     const _mbq=$('modBloqueo'); if(_mbq) _mbq.onclick = abrirBloqueoPrestamos;
     const _mts=$('modTasa'); if(_mts) _mts.onclick = abrirTasa;
+    const _mcu=$('modCuenta'); if(_mcu) _mcu.onclick = abrirMiCuenta;
     const _mmo=$('modMorosos'); if(_mmo) _mmo.onclick = abrirMorosos;
     const _mpr=$('modPrestamoRapido'); if(_mpr) _mpr.onclick = selectorPrestamoRapido;
     const _mre=$('modRespaldo'); if(_mre) _mre.onclick = abrirRespaldo;
@@ -1704,6 +1856,7 @@
         <button class="rx-modulo" id="modCierre"><div class="ico">🧮</div><div class="nom">Cierre de caja</div></button>
         <button class="rx-modulo" data-ir="cobrar"><div class="ico">📝</div><div class="nom">Notas de visita</div></button>
         <button class="rx-modulo" id="modGastos"><div class="ico">🧾</div><div class="nom">Gastos de ruta</div></button>
+        <button class="rx-modulo" id="modCuentaCob"><div class="ico">🔐</div><div class="nom">Mi cuenta</div></button>
       </div>
       ${cerrado
         ? `<div class="rx-banner ok" style="margin-top:22px"><span>🔒 Cerraste tu día. Vuelve mañana para una nueva jornada.</span></div>`
@@ -1714,6 +1867,7 @@
     $('tabInicio').querySelectorAll('[data-ir]').forEach(b=> b.onclick=()=>irATab(b.dataset.ir));
     const _mc=$('modCierre'); if(_mc) _mc.onclick = abrirCierreCaja;
     const _mg=$('modGastos'); if(_mg) _mg.onclick = abrirGastos;
+    const _mcc=$('modCuentaCob'); if(_mcc) _mcc.onclick = abrirMiCuenta;
     const _ad=$('cobAbrirDia'); if(_ad) _ad.onclick = abrirElDia;
     $('tabInicio').querySelectorAll('[data-paso]').forEach(b=> b.onclick = ()=>{
       const p = b.dataset.paso;
@@ -1840,7 +1994,7 @@
 
       // Escrituras con TU sesión (la principal): mapa global + perfil en la empresa.
       const lote = writeBatch(db);
-      lote.set(doc(db, 'usuariosGlobal', uid), { empresaId:S.empresaId, rol:'cobrador', bloqueado:false });
+      lote.set(doc(db, 'usuariosGlobal', uid), { empresaId:S.empresaId, rol:'cobrador', bloqueado:false, correo: (correo||'').trim().toLowerCase() });
       lote.set(doc(db, 'empresas', S.empresaId, 'usuarios', uid), {
         nombre, correo, foto:_fotoTmp, rol:'cobrador', rutaId: rutaId||'',
         bloqueado:false, creadoEn: serverTimestamp()
@@ -2400,7 +2554,8 @@
       </div>
       <div class="rx-form-campo">
         <label for="preFecha">Fecha de inicio</label>
-        <input class="rx-fin" id="preFecha" type="date" value="${hoy}" />
+        <input class="rx-fin" id="preFecha" type="date" value="${hoy}" min="${new Date(rxFecha(hoy).getTime()-7*86400000).toISOString().slice(0,10)}" max="${hoy}" />
+        <div class="rx-fecha-aviso" id="preFechaAviso" style="display:none"></div>
       </div>
       <div class="rx-calc">
         <div class="fila"><span>Saldo a pagar (monto + <span id="calcTasa">${interesEmpresa()}%</span>)</span><b id="calcSaldo">$ 0</b></div>
@@ -2418,6 +2573,13 @@
       const cuotas = Number($('preCuotas').value)||0;
       const pap = Number($('prePap').value)||0;
       const _lt = $('calcTasa'); if(_lt) _lt.textContent = interesEmpresa()+'%';
+      const _fa = $('preFechaAviso'), _fv = $('preFecha') ? $('preFecha').value : hoy;
+      if(_fa){
+        if(_fv && _fv !== hoy){
+          _fa.style.display = '';
+          _fa.innerHTML = `⚠️ Las cuotas se contarán desde el <b>${escapar(_fv)}</b>, pero el efectivo sale de la caja de <b>HOY (${escapar(hoy)})</b>. Si te equivocaste de fecha, corrígela ya.`;
+        } else _fa.style.display = 'none';
+      }
       $('calcSaldo').textContent = pesos(rxSaldoInicial(monto));
       $('calcCuota').textContent = pesos(rxValorCuota(monto, cuotas));
       $('calcPapFila').style.display = pap>0 ? '' : 'none';
@@ -2427,6 +2589,7 @@
       $('calcEntrega').style.color = neto<0 ? 'var(--peligro)' : '';
     };
     ['preMonto','preCuotas','prePap'].forEach(id=> $(id).addEventListener('input', recalc));
+    $('preFecha').addEventListener('change', recalc);
     $('preCancelar').onclick = cerrarHoja;
     $('preGuardar').onclick = ()=>{
       const monto = Number($('preMonto').value)||0, pap = Number($('prePap').value)||0;
@@ -2476,7 +2639,7 @@
         const liqRef = doc(collection(db,'empresas',S.empresaId,'movimientos'));
         lote.set(liqRef, {
           prestamoId: renov.prestamoViejo.id, clienteId: cli.id, tipo:'cobro',
-          monto: saldoViejo, fecha: fechaInicio, cobradorId, metodo:'efectivo',
+          monto: saldoViejo, fecha: hoyISO(), cobradorId, metodo:'efectivo',
           renovacion: true, ts: Date.now(), creadoEn: serverTimestamp()
         });
         lote.update(doc(db,'empresas',S.empresaId,'prestamos',renov.prestamoViejo.id), {
@@ -2493,7 +2656,9 @@
       const movRef = doc(collection(db,'empresas',S.empresaId,'movimientos'));
       lote.set(movRef, {
         prestamoId: presRef.id, clienteId: cli.id, tipo:'desembolso',
-        monto, fecha: fechaInicio, cobradorId, creadoEn: serverTimestamp()
+        // v5.4: la fecha del movimiento es el día en que el EFECTIVO sale de la caja (hoy).
+        // fechaInicio puede ser otra: sirve para contar las cuotas, no para la caja.
+        monto, fecha: hoyISO(), fechaInicio, cobradorId, ts: Date.now(), creadoEn: serverTimestamp()
       });
       await lote.commit();
       toast(renov?'Préstamo renovado ✓':'Préstamo entregado ✓');
@@ -2505,6 +2670,8 @@
   }
 
   // ---- Cartón del cliente: tarjeta de cobro con el historial de abonos ----
+  // v5.6: a dónde regresa el cartón según desde dónde lo abrieron.
+  let _volverCarton = null;
   function abrirCarton(p, cli, movs, r){
     cli = cli || { nombre:p.clienteNombre };
     const totalInicial = (Number(r.saldo)||0) + (Number(r.cobrado)||0) - (Number(r.multas)||0);
@@ -2548,7 +2715,11 @@
         ${r.saldo>0 ? `<button class="rx-btn-prim" id="cartonRenovar">🔄  Renovar préstamo</button>` : ''}
         <button class="rx-btn-fant" id="cartonCerrar">Cerrar</button>
       </div>`);
-    $('cartonCerrar').onclick = ()=> fichaPrestamo(p.id);
+    $('cartonCerrar').onclick = ()=>{
+      const volver = _volverCarton || (()=> fichaPrestamo(p.id));   // sin origen = ficha, como siempre
+      _volverCarton = null;
+      volver();
+    };
     const _crv=$('cartonRenovar'); if(_crv) _crv.onclick = ()=>{
       const cliR = clientePorId(p.clienteId) || cli;
       const g = puedeRenovar(p, r);
@@ -2629,7 +2800,9 @@
       const tocaHoy = diasP>0 && diasP % paso === 0 && Math.floor(diasP/paso) <= (Number(p.numeroCuotas)||0);
       let proxDias = tocaHoy && !pagoHoy ? 0 : ((Math.floor(Math.max(diasP,0)/paso)+1)*paso - diasP);
       if((Math.floor(Math.max(diasP,0)/paso)+1) > (Number(p.numeroCuotas)||0) && !tocaHoy) proxDias = null;
-      return { p, cli, r, est:RX_ESTADO[r.estado], pagoHoy, notaHoy, tocaHoy, proxDias };
+      // v5.6: ¿ya cumple para renovar? (60% pagado o autorización del admin)
+      const renovable = r.saldo>0 && puedeRenovar(p, r).ok;
+      return { p, cli, r, est:RX_ESTADO[r.estado], pagoHoy, notaHoy, tocaHoy, proxDias, renovable };
     }).sort((a,b)=>{
       if(a.pagoHoy!==b.pagoHoy) return a.pagoHoy ? 1 : -1;        // pendientes arriba
       const oa = a.r.estado==='atrasado'?0:1, ob = b.r.estado==='atrasado'?0:1;
@@ -2668,6 +2841,8 @@
             </div>
             <div class="acc">
               <span class="rx-est ${f.est.c}">${f.est.t}</span>
+              <button class="rx-nota-btn" data-carton="${f.p.id}" tabindex="-1" title="Ver cartón de pagos">🧾</button>
+              ${f.renovable ? `<button class="rx-nota-btn renov" data-renov="${f.p.id}" tabindex="-1" title="Puede renovar">🔄</button>` : ''}
               <button class="rx-nota-btn" data-nota="${f.p.id}" tabindex="-1" title="Nota de visita">📝</button>
               <button class="rx-cobrar-btn" tabindex="-1">$</button>
             </div>
@@ -2707,6 +2882,29 @@
     const _pa=$('planillaAbrir'); if(_pa) _pa.onclick = abrirElDia;
     const _cf=$('cobFiltros'); if(_cf) _cf.querySelectorAll('[data-f]').forEach(b=>{
       b.onclick = ()=>{ _fCobro = b.dataset.f; renderCobrarDia(); };
+    });
+    $('tabCobrar').querySelectorAll('[data-carton]').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const p = prestamoPorId(btn.dataset.carton); if(!p) return;
+        const movs = movsDe(p.id);
+        const cliC = clientePorId(p.clienteId) || { nombre:p.clienteNombre };
+        _volverCarton = cerrarHoja;
+        abrirCarton(p, cliC, movs, rxResumen(p, movs));
+      });
+    });
+    $('tabCobrar').querySelectorAll('[data-renov]').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        if(cerrado){ toast('El día está cerrado. Pídele al administrador que lo reabra.'); return; }
+        if(!abierto){ toast('Primero abre tu día.'); abrirElDia(); return; }
+        const p = prestamoPorId(btn.dataset.renov); if(!p) return;
+        const r = rxResumen(p, movsDe(p.id));
+        const cli = clientePorId(p.clienteId) || { nombre:p.clienteNombre };
+        const g = puedeRenovar(p, r);
+        if(!g.ok) return hojaRenovBloqueada(p, r, cli, g);
+        formPrestamo(cli, { prestamoViejo:p, saldoViejo:r.saldo });
+      });
     });
     $('tabCobrar').querySelectorAll('[data-nota]').forEach(btn=>{
       btn.addEventListener('click', (e)=>{
@@ -2985,7 +3183,7 @@
   // ---- Historial de cierres (vista del ADMIN) ----
   // NUEVO v2.3: recepción — el admin confirma que recibió la plata del cierre (movimiento inmutable).
   function recepcionDe(cierreId){
-    return S.movimientos.find(m=> m.tipo==='recepcion' && m.cierreId===cierreId) || null;
+    return (S.recIdx && S.recIdx.get(cierreId)) || null;
   }
   async function confirmarRecepcion(c){
     const monto = Number($('recMonto').value)||0;
@@ -3509,7 +3707,7 @@
   // confirma cuánto recibió en la mano, y aprueba o marca problema. Queda sellado.
   const RX_APROB_DIAS = 45;
   function veriDe(prestamoId){
-    return S.movimientos.find(m=> m.tipo==='verificacion' && m.prestamoId===prestamoId) || null;
+    return (S.verIdx && S.verIdx.get(prestamoId)) || null;
   }
   function aprobEstado(prestamoId){
     const v = veriDe(prestamoId);
@@ -3544,10 +3742,10 @@
     return Math.max(0, Math.min(1, (tot - (Number(r.saldo)||0)) / tot));
   }
   function autorizRenov(prestamoId){
-    return S.movimientos.find(m=> m.tipo==='autorizacion' && m.prestamoId===prestamoId) || null;
+    return (S.autIdx && S.autIdx.get(prestamoId)) || null;
   }
   function solicitudRenov(prestamoId){
-    return S.movimientos.find(m=> m.tipo==='solicitud' && m.prestamoId===prestamoId) || null;
+    return (S.solIdx && S.solIdx.get(prestamoId)) || null;
   }
   function puedeRenovar(p, r){
     const pct = pctPagadoDe(p, r);
@@ -3922,7 +4120,7 @@
       const lote = writeBatch(db);
       lote.set(empRef, { nombre:negocio, vence, licenciaActiva:true, bloqueoTotal:false,
                          indicativo:pais, soporte, creadoEn: serverTimestamp() });
-      lote.set(doc(db,'usuariosGlobal',uid), { empresaId: empRef.id, rol:'admin', bloqueado:false });
+      lote.set(doc(db,'usuariosGlobal',uid), { empresaId: empRef.id, rol:'admin', bloqueado:false, correo: (correo||'').trim().toLowerCase() });
       lote.set(doc(db,'empresas',empRef.id,'usuarios',uid), {
         nombre: admin, correo, rol:'admin', bloqueado:false, creadoEn: serverTimestamp() });
       await lote.commit();
@@ -4034,6 +4232,7 @@
           <button class="rx-tel-mini" data-dmas="${e.id}">+30 días</button>
           <button class="rx-tel-mini" data-dfec="${e.id}">📅 Fecha</button>
           <button class="rx-tel-mini" data-dmar="${e.id}">🎨 Marca</button>
+          <button class="rx-tel-mini" data-dcla="${e.id}">🔐 Clave</button>
           <button class="rx-tel-mini" data-dedi="${e.id}">✏️ Editar</button>
           ${mia?'':`<button class="rx-tel-mini" data-darc="${e.id}" style="background:#F6E3E1;color:#8a2a24">${e.archivada===true?'♻️ Restaurar':'📦 Archivar'}</button>`}
           ${mia?'' : (e.bloqueoTotal===true || e.licenciaActiva===false)
@@ -4078,6 +4277,26 @@
       const nueva = new Date(rxFecha(base).getTime() + 30*86400000).toISOString().slice(0,10);
       guardar(e.id, { vence:nueva, licenciaActiva:true, bloqueoTotal:false }, `Pagó ✓ vence ${nueva}`);
     });
+    document.querySelectorAll('[data-dcla]').forEach(b=> b.onclick = async ()=>{
+      const e = empresas.find(x=>x.id===b.dataset.dcla);
+      try{
+        const q1 = await getDocs(query(collection(db,'usuariosGlobal'), where('empresaId','==',e.id)));
+        const admins = [];
+        q1.forEach(d=>{ const v=d.data(); if(v.rol==='admin') admins.push({ uid:d.id, correo:v.correo||'' }); });
+        if(admins.length===0) return toast('Esa empresa todavía no tiene administrador creado.', true);
+        let elegido = admins[0];
+        if(admins.length>1){
+          const lista = admins.map((a,i)=> `${i+1}. ${a.correo || a.uid}`).join('\n');
+          const sel = prompt(`"${e.nombre}" tiene ${admins.length} administradores.\n\n${lista}\n\nEscribe el número:`, '1');
+          const i = Number(sel)-1;
+          if(!(i>=0 && i<admins.length)) return;
+          elegido = admins[i];
+        }
+        if(!confirm(`¿Exigirle a ${elegido.correo || 'el administrador'} de "${e.nombre}" que cree su propia contraseña la próxima vez que entre?`)) return;
+        await updateDoc(doc(db,'usuariosGlobal',elegido.uid), { debeCambiarClave:true });
+        toast('Listo: la próxima vez que entre, creará su propia contraseña 🔐');
+      }catch(err){ toast('No se pudo: '+(err.message||err), true); }
+    });
     document.querySelectorAll('[data-dmar]').forEach(b=> b.onclick = ()=>{
       const e = empresas.find(x=>x.id===b.dataset.dmar);
       const nom = prompt(`Nombre que verá "${e.nombre}" dentro de la app:`, e.marca || 'Rendix');
@@ -4117,6 +4336,9 @@
     const cid = cobradorId || S.uid;
     if(S.rol!=='admin' && diaEstaCerrado(S.uid, hoy)){
       toast('Tu día ya está cerrado. Pídele al administrador que lo reabra.', true); return;
+    }
+    if(S.rol!=='admin' && !aperturaDelDia(S.uid, hoy)){
+      toast('Primero abre tu día: el gasto sale de la caja.', true); abrirElDia(); return;
     }
     _gCat = 'transporte'; _gFuente = 'caja';
     const pintaChips = ()=>{
@@ -4462,7 +4684,21 @@
       <div class="rx-acciones" style="margin-top:14px">
         <button class="rx-btn-prim" id="cobroGuardar">Registrar cobro</button>
         <button class="rx-btn-fant" id="cobroCancelar">Cancelar</button>
+      </div>
+      <div class="rx-atajos">
+        <button type="button" id="cobroCarton">🧾 Ver cartón</button>
+        ${(()=>{ const g = puedeRenovar(p, r);
+          return r.saldo>0 ? `<button type="button" id="cobroRenov" class="${g.ok?'ok':''}">🔄 ${g.ok?'Renovar':`Renovar (${Math.round(g.pct*100)}%)`}</button>` : ''; })()}
       </div>`);
+    const _cc = $('cobroCarton'); if(_cc) _cc.onclick = ()=>{
+      _volverCarton = ()=> formCobro(p, r, cli);
+      abrirCarton(p, cli, movsDe(p.id), r);
+    };
+    const _cr = $('cobroRenov');  if(_cr) _cr.onclick = ()=>{
+      const g = puedeRenovar(p, r);
+      if(!g.ok) return hojaRenovBloqueada(p, r, cli, g);
+      formPrestamo(cli, { prestamoViejo:p, saldoViejo:r.saldo });
+    };
 
     const inp = $('cobroMonto'), fb = $('cobroFb');
     const evaluar = ()=>{
